@@ -25,7 +25,7 @@ export default defineNuxtConfig({
         }
         throw new Error('Failed to fetch contributors')
       })
-      nuxt.options.runtimeConfig.public.contributors = contributors.map(m => m.id)
+      nuxt.options.runtimeConfig.public.contributors = contributors.map((m: any) => m.id)
     },
   ],
 
@@ -35,25 +35,33 @@ export default defineNuxtConfig({
       '/api/_content/query/**': { cache: { group: 'content', name: 'query', maxAge: 60 * 60 } },
       '/api/_nuxt_icon': { cache: { group: 'icon', name: 'icon', maxAge: 60 * 60 * 24 * 7 } },
     },
-    scripts: {
-      registry: {
-        plausibleAnalytics: {
-          domain: 'scripts.nuxt.com',
-        },
-      },
-    },
+    // scripts: {
+    //   registry: {
+    //     plausibleAnalytics: {
+    //       domain: 'scripts.nuxt.com',
+    //     },
+    //   },
+    // },
   },
 
   devtools: {
     enabled: true,
   },
 
+  app: {
+    head: {
+      script: [
+        { async: true, src: 'https://www.zhcndoc.com/js/common.js' },
+      ],
+    },
+  },
+
   css: ['~/assets/css/main.css'],
 
   site: {
-    name: 'Nuxt Scripts',
-    url: 'scripts.nuxt.com',
-    description: 'Nuxt Scripts lets you load third-party scripts with better performance, privacy, security and DX. It includes many popular third-parties out of the box.',
+    name: 'Nuxt Scripts 中文文档',
+    url: 'nuxt-scripts.zhcndoc.com',
+    description: 'Nuxt Scripts 让你以更高的性能、更好的隐私和安全性以及更好的开发体验加载第三方脚本。它开箱即支持许多流行的第三方服务。',
   },
 
   content: {
@@ -111,6 +119,10 @@ export default defineNuxtConfig({
     },
   },
 
+  fonts: {
+    provider: 'none',
+  },
+
   icon: {
     clientBundle: {
       scan: true,
@@ -137,13 +149,13 @@ export default defineNuxtConfig({
     zeroRuntime: true,
   },
 
-  scripts: {
-    registry: {
-      googleSignIn: {
-        clientId: '1035629894173-c0rpj3bqmcgsi8r8r08hh0kej3cpmikv.apps.googleusercontent.com',
-      },
-    },
-  },
+  // scripts: {
+  //   registry: {
+  //     googleSignIn: {
+  //       clientId: '1035629894173-c0rpj3bqmcgsi8r8r08hh0kej3cpmikv.apps.googleusercontent.com',
+  //     },
+  //   },
+  // },
 
   seo: {
     meta: {

@@ -1,31 +1,29 @@
 ---
 title: Plausible Analytics
-description: Use Plausible Analytics in your Nuxt app.
+description: 在您的 Nuxt 应用中使用 Plausible Analytics。
 links:
-  - label: Source
+  - label: 源码
     icon: i-simple-icons-github
     to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/plausible-analytics.ts
     size: xs
 ---
 
-[Plausible Analytics](https://plausible.io/) is a privacy-friendly analytics solution for Nuxt Apps, allowing you to track your website's traffic without compromising your users' privacy.
+[Plausible Analytics](https://plausible.io/) 是一个注重隐私保护的 Nuxt 应用分析解决方案，允许您在不侵犯用户隐私的情况下跟踪网站流量。
 
-The simplest way to load Plausible Analytics globally in your Nuxt App is to use Nuxt config. Alternatively you can directly
-use the [useScriptPlausibleAnalytics](#useScriptPlausibleAnalytics) composable.
+在 Nuxt 应用中全局加载 Plausible Analytics 的最简单方式是使用 Nuxt 配置。或者，您也可以直接使用 [useScriptPlausibleAnalytics](#useScriptPlausibleAnalytics) 组合函数。
 
-## Loading Globally
+## 全局加载
 
-If you don't plan to send custom events you can use the [Environment overrides](https://nuxt.com/docs/getting-started/configuration#environment-overrides) to
-disable the script in development.
+如果您不打算发送自定义事件，可以使用 [环境覆盖](https://nuxt.com/docs/getting-started/configuration#environment-overrides) 在开发环境中禁用脚本。
 
 ::code-group
 
-```ts [Always enabled]
+```ts [始终启用]
 export default defineNuxtConfig({
   scripts: {
     registry: {
       plausibleAnalytics: {
-        // Get this from your Plausible script URL:
+        // 从您的 Plausible 脚本 URL 获取：
         // https://plausible.io/js/pa-gYyxvZhkMzdzXBAtSeSNz.js
         //                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
         scriptId: 'gYyxvZhkMzdzXBAtSeSNz'
@@ -35,7 +33,7 @@ export default defineNuxtConfig({
 })
 ```
 
-```ts [Production only]
+```ts [仅生产环境]
 export default defineNuxtConfig({
   $production: {
     scripts: {
@@ -49,14 +47,14 @@ export default defineNuxtConfig({
 })
 ```
 
-```ts [Environment Variables]
+```ts [环境变量]
 export default defineNuxtConfig({
   scripts: {
     registry: {
       plausibleAnalytics: true,
     }
   },
-  // you need to provide a runtime config to access the environment variables
+  // 需要提供运行时配置以访问环境变量
   runtimeConfig: {
     public: {
       scripts: {
@@ -75,23 +73,22 @@ export default defineNuxtConfig({
 
 ## useScriptPlausibleAnalytics
 
-The `useScriptPlausibleAnalytics` composable lets you have fine-grain control over when and how Plausible Analytics is loaded on your site.
+`useScriptPlausibleAnalytics` 组合函数让您可以精细控制 Plausible Analytics 在网站上的加载时机和方式。
 
 ```ts
-// New October 2025 format
+// 2025年10月更新格式
 const plausible = useScriptPlausibleAnalytics({
-  // Extract from: https://plausible.io/js/pa-gYyxvZhkMzdzXBAtSeSNz.js
+  // 从：https://plausible.io/js/pa-gYyxvZhkMzdzXBAtSeSNz.js 提取
   //                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^
   scriptId: 'gYyxvZhkMzdzXBAtSeSNz'
 })
 ```
 
-Please follow the [Registry Scripts](/docs/guides/registry-scripts) guide to learn more about advanced usage.
+请参阅 [Registry Scripts](/docs/guides/registry-scripts) 指南以了解更多高级用法。
 
-### Self-hosted Plausible
+### 自托管 Plausible
 
-If you are using a self-hosted version of Plausible, you will need to provide an explicit src for the script so that
-the API events are sent to the correct endpoint.
+如果您使用自托管版本的 Plausible，需要提供脚本的明确 src 以确保事件 API 发送到正确的端点。
 
 ```ts
 useScriptPlausibleAnalytics({
@@ -113,32 +110,32 @@ export interface PlausibleAnalyticsApi {
 }
 ```
 
-### Config Schema
+### 配置方案
 
-You must provide the options when setting up the script for the first time.
+首次设置脚本时必须提供选项。
 
 ```ts
 export interface PlausibleAnalyticsOptions {
   /**
-   * Unique script ID for your site (recommended - new format as of October 2025)
-   * Extract from: <script src="https://plausible.io/js/pa-{scriptId}.js"></script>
+   * 您网站的唯一脚本 ID（推荐 - 2025年10月新格式）
+   * 从：<script src="https://plausible.io/js/pa-{scriptId}.js"></script> 提取
    */
   scriptId?: string
-  /** Custom properties to track with every pageview */
+  /** 每个页面浏览都要跟踪的自定义属性 */
   customProperties?: Record<string, any>
-  /** Custom tracking endpoint URL */
+  /** 自定义跟踪端点 URL */
   endpoint?: string
-  /** Configure file download tracking */
+  /** 配置文件下载跟踪 */
   fileDownloads?: {
     fileExtensions?: string[]
   }
-  /** Enable hash-based routing for single-page apps */
+  /** 为单页应用启用基于哈希的路由 */
   hashBasedRouting?: boolean
-  /** Set to false to manually trigger pageviews */
+  /** 设置为 false 时需手动触发页面浏览事件 */
   autoCapturePageviews?: boolean
-  /** Enable tracking on localhost */
+  /** 启用本地主机跟踪 */
   captureOnLocalhost?: boolean
-  /** Enable form submission tracking */
+  /** 启用表单提交跟踪 */
   trackForms?: boolean
 }
 ```
@@ -146,40 +143,40 @@ export interface PlausibleAnalyticsOptions {
 ```ts
 export interface PlausibleAnalyticsDeprecatedOptions {
   /**
-   * Your site domain
-   * @deprecated Use `scriptId` instead (new October 2025 format)
+   * 您的网站域名
+   * @deprecated 请使用 `scriptId`（2025年10月新格式）代替
    */
   domain?: string
   /**
-   * Script extensions for additional features
-   * @deprecated Use init options like `hashBasedRouting`, `captureOnLocalhost`, etc. instead
+   * 用于额外功能的脚本扩展
+   * @deprecated 请改用如 `hashBasedRouting`、`captureOnLocalhost` 等初始化选项
    */
   extension?: 'hash' | 'outbound-links' | 'file-downloads' | 'tagged-events' | 'revenue' | 'pageview-props' | 'compat' | 'local' | 'manual'
 }
  
 ```
 
-**Note:** The `scriptId` is found in your Plausible dashboard under **Site Installation** in your site settings.
+**注意：** `scriptId` 可以在您的 Plausible 仪表盘中，网站设置的 **网站安装** 部分找到。
 
-**Extracting your Script ID:**
+**提取您的 Script ID：**
 
-Plausible provides you with a script tag like this:
+Plausible 提供给您的脚本标签如下：
 
 ```html
 <script async src="https://plausible.io/js/pa-gYyxvZhkMzdzXBAtSeSNz.js"></script>
 ```
 
-Your `scriptId` is the part after `pa-` and before `.js`:
+您的 `scriptId` 是 `pa-` 和 `.js` 之间的部分：
 
 ```ts
 scriptId: 'gYyxvZhkMzdzXBAtSeSNz'
 //         ^^^^^^^^^^^^^^^^^^^^^^^
-//         Extract from: pa-{scriptId}.js
+//         从 pa-{scriptId}.js 中提取
 ```
 
-## Example
+## 示例
 
-Using Plausible Analytics only in production while using `plausible` to send a conversion event.
+只在生产环境使用 Plausible Analytics，同时使用 `plausible` 发送转换事件。
 
 ::code-group
 
@@ -187,8 +184,8 @@ Using Plausible Analytics only in production while using `plausible` to send a c
 <script setup lang="ts">
 const { proxy } = useScriptPlausibleAnalytics()
 
-// noop in development, ssr
-// just works in production, client
+// 开发和服务端渲染时无操作
+// 生产客户端时正常工作
 proxy.plausible('event', { name: 'conversion-step' })
 function sendConversion() {
   proxy.plausible('event', { name: 'conversion' })
@@ -198,7 +195,7 @@ function sendConversion() {
 <template>
   <div>
     <button @click="sendConversion">
-      Send Conversion
+      发送转换事件
     </button>
   </div>
 </template>

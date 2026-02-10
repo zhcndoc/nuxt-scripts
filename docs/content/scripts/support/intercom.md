@@ -1,8 +1,8 @@
 ---
 title: Intercom
-description: Use Intercom in your Nuxt app.
+description: 在你的 Nuxt 应用中使用 Intercom。
 links:
-  - label: Source
+  - label: 源码
     icon: i-simple-icons-github
     to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/intercom.ts
     size: xs
@@ -12,26 +12,25 @@ links:
     size: xs
 ---
 
-[Intercom](https://www.intercom.com/) is a customer messaging platform that helps you build better customer relationships.
+[Intercom](https://www.intercom.com/) 是一款客户消息平台，帮助你建立更好的客户关系。
 
-Nuxt Scripts provides a [useScriptIntercom](#usescriptintercom) composable and a headless Facade Component [ScriptIntercom](#scriptintercom) component to interact with Intercom.
+Nuxt Scripts 提供了一个 [useScriptIntercom](#usescriptintercom) 组合式函数和一个无头门面组件 [ScriptIntercom](#scriptintercom) 用于与 Intercom 交互。
 
 ## ScriptIntercom
 
+`ScriptIntercom` 组件是一个无头门面组件，封装了 [useScriptIntercom](#usescriptintercom) 组合式函数，提供了一种简单、高性能的方式在你的 Nuxt 应用中加载 Intercom。
 
-The `ScriptIntercom` component is headless Facade Component wrapping the [useScriptIntercom](#usescriptintercom) composable, providing a simple, performance optimized way to load Intercom in your Nuxt app.
+它通过利用 [元素事件触发器](/docs/guides/script-triggers#element-event-triggers) 实现性能优化，仅在特定元素事件发生时才加载 Intercom。
 
-It's optimized for performance by leveraging the [Element Event Triggers](/docs/guides/script-triggers#element-event-triggers), only loading Intercom when specific elements events happen.
+默认情况下，它会在 `click` DOM 事件时加载。
 
-By default, it will load on the `click` DOM event.
-
-### Demo
+### 演示
 
 ::code-group
 
-:intercom-demo{label="Output"}
+:intercom-demo{label="输出"}
 
-```vue [Input]
+```vue [输入]
 <script setup lang="ts">
 const isLoaded = ref(false)
 </script>
@@ -44,8 +43,8 @@ const isLoaded = ref(false)
     </div>
   </ScriptIntercom>
   <div class="text-center">
-    <UAlert v-if="!isLoaded" class="mb-5" size="sm" color="blue" variant="soft" title="Click to load" description="Clicking the button to the right will load the Intercom script" />
-    <UAlert v-else color="green" variant="soft" title="Intercom is loaded" description="The Intercom Facade component is no longer being displayed." />
+    <UAlert v-if="!isLoaded" class="mb-5" size="sm" color="blue" variant="soft" title="点击加载" description="点击右侧按钮将加载 Intercom 脚本" />
+    <UAlert v-else color="green" variant="soft" title="Intercom 已加载" description="Intercom 门面组件已不再显示。" />
   </div>
 </div>
 </template>
@@ -53,7 +52,7 @@ const isLoaded = ref(false)
 <style>
 .intercom {
   display: block;
-  position: relative; /* change to fixed */
+  position: relative; /* 可更改为 fixed */
   z-index: 100000;
   width: 48px;
   align-items: center;
@@ -69,27 +68,27 @@ const isLoaded = ref(false)
 
 ::
 
-### Component API
+### 组件 API
 
-See the [Facade Component API](/docs/guides/facade-components#facade-components-api) for full props, events, and slots.
+完整的属性、事件和插槽请参见 [门面组件 API](/docs/guides/facade-components#facade-components-api)。
 
 ### Props
 
-- `trigger`: The trigger event to load intercom. Default is `click`. See [Element Event Triggers](/docs/guides/script-triggers#element-event-triggers) for more information.
-- `app-id`: The Intercom app id.
-- `api-base`: The Intercom API base URL.
-- `name`: The name of the user.
-- `email`: The email of the user.
-- `user-id`: The user id.
-- `alignment`: The alignment of the messenger `left` or `right`. Default is `right`.
-- `horizontal-padding`: The horizontal padding of the messenger. Default is `20`.
-- `vertical-padding`: The vertical padding of the messenger. Default is `20`.
+- `trigger`：触发事件以加载 Intercom。默认是 `click`。详情参见 [元素事件触发器](/docs/guides/script-triggers#element-event-triggers)。
+- `app-id`：Intercom 应用 ID。
+- `api-base`：Intercom API 基础 URL。
+- `name`：用户姓名。
+- `email`：用户邮箱。
+- `user-id`：用户 ID。
+- `alignment`：消息组件对齐位置，可选 `left` 或 `right`，默认 `right`。
+- `horizontal-padding`：消息组件的水平内边距，默认 `20`。
+- `vertical-padding`：消息组件的垂直内边距，默认 `20`。
 
-See the [Config Schema](#config-schema) for full details.
+完整细节请参见 [配置 Schema](#config-schema)。
 
-#### With Environment Variables
+#### 使用环境变量配置
 
-If you prefer to configure your app ID using environment variables.
+如果你更倾向用环境变量配置 app ID。
 
 ```ts [nuxt.config.ts]
 export default defineNuxtConfig({
@@ -98,7 +97,7 @@ export default defineNuxtConfig({
       intercom: true,
     }
   },
-  // you need to provide a runtime config to access the environment variables
+  // 你需要提供一个运行时配置以访问环境变量
   runtimeConfig: {
     public: {
       scripts: {
@@ -115,9 +114,9 @@ export default defineNuxtConfig({
 NUXT_PUBLIC_SCRIPTS_INTERCOM_APP_ID=<YOUR_APP_ID>
 ```
 
-### Events
+### 事件
 
-The `ScriptIntercom` component emits a single `ready` event when Intercom is loaded.
+`ScriptIntercom` 组件在 Intercom 加载完成时会触发一个 `ready` 事件。
 
 ```ts
 const emits = defineEmits<{
@@ -128,7 +127,7 @@ const emits = defineEmits<{
 ```vue
 <script setup lang="ts">
 function onReady(intercom) {
-  console.log('Intercom is ready', intercom)
+  console.log('Intercom 已准备好', intercom)
 }
 </script>
 
@@ -139,7 +138,7 @@ function onReady(intercom) {
 
 ### Intercom API
 
-The component exposes a `intercom` instance that you can access the underlying Intercom API.
+该组件暴露了 `intercom` 实例，可用来访问底层 Intercom API。
 
 ```vue
 <script setup lang="ts">
@@ -154,24 +153,24 @@ onMounted(() => {
 </template>
 ```
 
-### Slots
+### 插槽
 
-The component provides minimal UI by default, only enough to be functional and accessible. There are a number of slots for you to customize the maps however you like.
+组件默认提供了最小化的 UI，仅保证功能性和可访问性。你可以通过多个插槽自由定制界面。
 
 **default**
 
-The default slot is used to display content that will always be visible.
+默认插槽，用于显示始终可见的内容。
 
 **awaitingLoad**
 
-The slot is used to display content while Intercom is not loading.
+当 Intercom 未加载时显示的内容。
 
 ```vue
 <template>
   <ScriptIntercom>
     <template #awaitingLoad>
     <div style="width: 54px; height: 54px; border-radius: 54px; cursor: pointer; background-color: #1972F5;">
-      chat!
+      聊天！
     </div>
     </template>
   </ScriptIntercom>
@@ -180,38 +179,37 @@ The slot is used to display content while Intercom is not loading.
 
 **loading**
 
-The slot is used to display content while Intercom is loading.
+Intercom 加载过程中显示的内容。
 
-Tip: You should use the `ScriptLoadingIndicator` by default for accessibility and UX.
+提示：一般建议默认用 `ScriptLoadingIndicator` 以提升可访问性和用户体验。
 
 ```vue
 <template>
   <ScriptIntercom>
     <template #loading>
       <div class="bg-blue-500 text-white p-5">
-        Loading...
+        加载中...
       </div>
     </template>
   </ScriptIntercom>
 </template>
 ```
 
-
 ## useScriptIntercom
 
-The `useScriptIntercom` composable lets you have fine-grain control over when and how Intercom is loaded on your site.
+`useScriptIntercom` 组合式函数允许你细粒度控制 Intercom 在你网站上的加载时机和方式。
 
 ```ts
 const { proxy } = useScriptIntercom({
   app_id: 'YOUR_APP_ID'
 })
 
-// examples
+// 示例
 proxy.Intercom('show')
 proxy.Intercom('update', { name: 'John Doe' })
 ```
 
-Please follow the [Registry Scripts](/docs/guides/registry-scripts) guide to learn more about advanced usage.
+请参考 [脚本注册指南](/docs/guides/registry-scripts) 了解更多高级用法。
 
 ### IntercomApi
 
@@ -242,7 +240,7 @@ export interface IntercomApi {
 }
 ```
 
-### Config Schema
+### 配置 Schema
 
 ```ts
 export const IntercomOptions = object({
@@ -251,16 +249,16 @@ export const IntercomOptions = object({
   name: optional(string()),
   email: optional(string()),
   user_id: optional(string()),
-  // customizing the messenger
+  // 定制消息组件
   alignment: optional(union([literal('left'), literal('right')])),
   horizontal_padding: optional(number()),
   vertical_padding: optional(number()),
 })
 ```
 
-## Example
+## 示例
 
-Using Intercom only in production.
+仅在生产环境中使用 Intercom。
 
 ::code-group
 
@@ -268,8 +266,8 @@ Using Intercom only in production.
 <script setup lang="ts">
 const { proxy } = useScriptIntercom()
 
-// noop in development, ssr
-// just works in production, client
+// 开发环境和 SSR 中为 noop
+// 生产环境客户端中正常工作
 function showIntercom() {
   proxy.Intercom('show')
 }
@@ -278,11 +276,10 @@ function showIntercom() {
 <template>
   <div>
     <button @click="showIntercom">
-      Chat with us
+      与我们聊天
     </button>
   </div>
 </template>
 ```
-
 
 ::

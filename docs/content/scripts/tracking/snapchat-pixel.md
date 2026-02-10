@@ -1,28 +1,26 @@
 ---
-title: Snapchat Pixel
-description: Use Snapchat Pixel in your Nuxt app.
+title: Snapchat 像素
+description: 在你的 Nuxt 应用中使用 Snapchat 像素。
 links:
-- label: Source
+- label: 源码
   icon: i-simple-icons-github
   to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/snapchat-pixel.ts
   size: xs
 ---
 
-[Snapchat Pixel](https://businesshelp.snapchat.com/s/article/snap-pixel-about){:target="_blank"} lets you measure the crossdevice impact for your Snapchat ad campaigns.
+[Snapchat 像素](https://businesshelp.snapchat.com/s/article/snap-pixel-about){:target="_blank"} 让你能够衡量 Snapchat 广告活动的跨设备影响。
 
-Nuxt Scripts provides a registry script composable `useScriptSnapchatPixel` to easily integrate Snapchat Pixel in your Nuxt app.
+Nuxt Scripts 提供了一个注册脚本组合式函数 `useScriptSnapchatPixel`，方便你在 Nuxt 应用中集成 Snapchat 像素。
 
-### Nuxt Config Setup
+### Nuxt 配置设置
 
-The simplest way to load Snpachat Pixel globally in your Nuxt App is to use Nuxt config. Alternatively you can directly
-use the [useScriptSnapchatPixel](#useScriptSnapchatPixel) composable.
+在 Nuxt 应用中全局加载 Snapchat 像素的最简单方式是使用 Nuxt 配置。或者，你也可以直接使用[useScriptSnapchatPixel](#useScriptSnapchatPixel)组合式函数。
 
-If you don't plan to send custom events you can use the [Environment overrides](https://nuxt.com/docs/getting-started/configuration#environment-overrides) to
-disable the script in development.
+如果你不打算发送自定义事件，可以使用[环境覆盖](https://nuxt.com/docs/getting-started/configuration#environment-overrides)来在开发环境禁用该脚本。
 
 ::code-group
 
-```ts [Always enabled]
+```ts [始终启用]
 export default defineNuxtConfig({
   scripts: {
     registry: {
@@ -34,7 +32,7 @@ export default defineNuxtConfig({
 })
 ```
 
-```ts [Production only]
+```ts [仅生产环境]
 export default defineNuxtConfig({
   $production: {
     scripts: {
@@ -50,9 +48,9 @@ export default defineNuxtConfig({
 
 ::
 
-#### With Environment Variables
+#### 使用环境变量配置
 
-If you prefer to configure your id using environment variables.
+如果你更喜欢通过环境变量来配置你的 ID。
 
 ```ts [nuxt.config.ts]
 export default defineNuxtConfig({
@@ -61,7 +59,7 @@ export default defineNuxtConfig({
       snapchatPixel: true,
     }
   },
-  // you need to provide a runtime config to access the environment variables
+  // 你需要提供运行时配置以访问环境变量
   runtimeConfig: {
     public: {
       scripts: {
@@ -80,14 +78,14 @@ NUXT_PUBLIC_SCRIPTS_SNAPCHAT_PIXEL_ID=<YOUR_ID>
 
 ## useScriptSnapchatPixel
 
-The `useScriptSnapchatPixel` composable lets you have fine-grain control over when and how Snapchat Pixel is loaded on your site.
+`useScriptSnapchatPixel` 组合式函数允许你精细控制 Snapchat 像素在你的网站上何时以及如何加载。
 
 ```ts
 const { proxy } = useScriptSnapchatPixel({
   id: 'YOUR_ID',
   user_email: 'USER_EMAIL'
 })
-// example
+// 示例
 proxy.snaptr('track', 'PURCHASE', {
   currency: 'USD',
   price: 120.10,
@@ -95,7 +93,7 @@ proxy.snaptr('track', 'PURCHASE', {
 })
 ```
 
-Please follow the [Registry Scripts](/docs/guides/registry-scripts) guide to learn more about advanced usage.
+请参阅[注册脚本](/docs/guides/registry-scripts)指南，了解更多高级用法。
 
 ### SnapchatPixelApi
 
@@ -151,9 +149,9 @@ interface InitObjectProperties {
 }
 ```
 
-### Config Schema
+### 配置 Schema
 
-You must provide the options when setting up the script for the first time.
+首次设置脚本时必须提供选项。
 
 ```ts
 export const SnapTrPixelOptions = object({
@@ -174,9 +172,9 @@ export const SnapTrPixelOptions = object({
 })
 ```
 
-## Example
+## 示例
 
-Using Snapchat Pixel only in production while using `snaptr` to send a conversion event.
+仅在生产环境中使用 Snapchat 像素，并通过 `snaptr` 发送转化事件。
 
 ::code-group
 
@@ -184,8 +182,8 @@ Using Snapchat Pixel only in production while using `snaptr` to send a conversio
 <script setup lang="ts">
 const { proxy } = useScriptSnapchatPixel()
 
-// noop in development, ssr
-// just works in production, client
+// 在开发环境和 SSR 中为 noop
+// 在生产客户端环境中正常工作
 function sendConversion() {
   proxy.snaptr('track', 'PURCHASE', {
     currency: 'USD',
@@ -198,7 +196,7 @@ function sendConversion() {
 <template>
   <div>
     <button @click="sendConversion">
-      Send Conversion
+      发送转化事件
     </button>
   </div>
 </template>

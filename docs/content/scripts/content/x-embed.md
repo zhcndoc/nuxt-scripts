@@ -1,6 +1,6 @@
 ---
-title: X Embed
-description: Server-side rendered X (Twitter) embeds with zero client-side API calls.
+title: X 嵌入
+description: 服务器端渲染的 X（Twitter）嵌入，无需任何客户端 API 调用。
 links:
   - label: ScriptXEmbed
     icon: i-simple-icons-github
@@ -8,42 +8,42 @@ links:
     size: xs
 ---
 
-[X (formerly Twitter)](https://x.com) is a social media platform for sharing posts.
+[X（前身为 Twitter）](https://x.com) 是一个用于分享帖子的社交媒体平台。
 
-Nuxt Scripts provides a `ScriptXEmbed` component that fetches tweet data server-side and exposes it via slots for complete styling control. All data is proxied through your server - no client-side API calls to X.
+Nuxt Scripts 提供了一个 `ScriptXEmbed` 组件，它在服务器端获取推文数据，并通过插槽暴露出来，实现完全的样式控制。所有数据均通过你的服务器代理 —— 不进行任何客户端对 X 的 API 调用。
 
 ## ScriptXEmbed
 
-The `ScriptXEmbed` component is a headless component that:
-- Fetches tweet data server-side via the X syndication API
-- Proxies all images through your server for privacy
-- Exposes tweet data via scoped slots for custom rendering
-- Caches responses for 10 minutes
+`ScriptXEmbed` 组件是一个无头组件，功能包括：
+- 通过 X 联合 API 在服务器端获取推文数据
+- 通过你的服务器代理所有图片以保护隐私
+- 通过作用域插槽暴露推文数据，实现自定义渲染
+- 缓存响应 10 分钟
 
-### Demo
+### 演示
 
 ::code-group
 
-```vue [Basic Usage]
+```vue [基础用法]
 <template>
   <ScriptXEmbed tweet-id="1754336034228171055">
     <template #default="{ userName, userHandle, text, datetime, likesFormatted }">
       <div class="border rounded-lg p-4 max-w-md">
         <p class="font-bold">{{ userName }} (@{{ userHandle }})</p>
         <p>{{ text }}</p>
-        <p class="text-gray-500 text-sm">{{ datetime }} - {{ likesFormatted }} likes</p>
+        <p class="text-gray-500 text-sm">{{ datetime }} - {{ likesFormatted }} 赞</p>
       </div>
     </template>
   </ScriptXEmbed>
 </template>
 ```
 
-```vue [Styled Tweet Card]
+```vue [样式化推文卡片]
 <template>
   <ScriptXEmbed tweet-id="1754336034228171055">
     <template #default="{ userName, userHandle, userAvatar, text, datetime, likesFormatted, repliesFormatted, tweetUrl, photos, isVerified }">
       <div class="max-w-lg bg-white dark:bg-gray-800 rounded-xl border p-4">
-        <!-- Header -->
+        <!-- 头部 -->
         <div class="flex items-start gap-3 mb-3">
           <img :src="userAvatar" :alt="userName" class="w-12 h-12 rounded-full">
           <div>
@@ -52,30 +52,30 @@ The `ScriptXEmbed` component is a headless component that:
             <p class="text-gray-500">@{{ userHandle }}</p>
           </div>
         </div>
-        <!-- Content -->
+        <!-- 内容 -->
         <p class="mb-3 whitespace-pre-wrap">{{ text }}</p>
-        <!-- Photos -->
+        <!-- 图片 -->
         <div v-if="photos?.length" class="mb-3 rounded-xl overflow-hidden">
           <img v-for="photo in photos" :key="photo.url" :src="photo.proxiedUrl" class="w-full">
         </div>
-        <!-- Footer -->
+        <!-- 底部 -->
         <div class="flex items-center gap-4 text-gray-500 text-sm">
           <span>{{ datetime }}</span>
-          <span>{{ repliesFormatted }} replies</span>
-          <span>{{ likesFormatted }} likes</span>
+          <span>{{ repliesFormatted }} 条回复</span>
+          <span>{{ likesFormatted }} 赞</span>
         </div>
       </div>
     </template>
 
     <template #loading>
       <div class="animate-pulse bg-gray-100 rounded-xl p-4 max-w-lg">
-        Loading tweet...
+        加载推文中...
       </div>
     </template>
 
     <template #error>
       <div class="bg-red-50 border border-red-200 rounded-xl p-4 max-w-lg">
-        Failed to load tweet
+        加载推文失败
       </div>
     </template>
   </ScriptXEmbed>
@@ -86,39 +86,39 @@ The `ScriptXEmbed` component is a headless component that:
 
 ### Props
 
-The `ScriptXEmbed` component accepts the following props:
+`ScriptXEmbed` 组件接受以下属性：
 
-| Prop | Type | Default | Description |
-|------|------|---------|-------------|
-| `tweetId` | `string` | Required | The ID of the tweet to embed |
-| `apiEndpoint` | `string` | `/api/_scripts/x-embed` | Custom API endpoint for fetching tweet data |
-| `imageProxyEndpoint` | `string` | `/api/_scripts/x-embed-image` | Custom endpoint for proxying images |
-| `rootAttrs` | `HTMLAttributes` | `{}` | Root element attributes |
+| 属性 | 类型 | 默认值 | 描述 |
+|------|------|---------|-----|
+| `tweetId` | `string` | 必填 | 要嵌入的推文 ID |
+| `apiEndpoint` | `string` | `/api/_scripts/x-embed` | 获取推文数据的自定义 API 端点 |
+| `imageProxyEndpoint` | `string` | `/api/_scripts/x-embed-image` | 代理图片的自定义端点 |
+| `rootAttrs` | `HTMLAttributes` | `{}` | 根元素属性 |
 
-### Slot Props
+### 插槽 Props
 
-The default slot receives the following props:
+默认插槽接收以下 props：
 
 ```ts
 interface SlotProps {
-  // Raw data
+  // 原始数据
   tweet: XEmbedTweetData
-  // User info
+  // 用户信息
   userName: string
   userHandle: string
-  userAvatar: string // Proxied URL
-  userAvatarOriginal: string // Original X URL
+  userAvatar: string // 代理 URL
+  userAvatarOriginal: string // X 原始 URL
   isVerified: boolean
-  // Tweet content
+  // 推文内容
   text: string
-  // Formatted values
+  // 格式化后数据
   datetime: string // "12:47 PM · Feb 5, 2024"
   createdAt: Date
   likes: number
   likesFormatted: string // "1.2K"
   replies: number
   repliesFormatted: string // "234"
-  // Media
+  // 媒体资源
   photos?: Array<{
     url: string
     proxiedUrl: string
@@ -130,40 +130,40 @@ interface SlotProps {
     posterProxied: string
     variants: Array<{ type: string; src: string }>
   }
-  // Links
+  // 链接
   tweetUrl: string
   userUrl: string
-  // Quote tweet
+  // 引用推文
   quotedTweet?: XEmbedTweetData
-  // Reply context
+  // 回复上下文
   isReply: boolean
   replyToUser?: string
-  // Helpers
+  // 辅助函数
   proxyImage: (url: string) => string
 }
 ```
 
-### Named Slots
+### 命名插槽
 
-| Slot | Description |
-|------|-------------|
-| `default` | Main content with slot props |
-| `loading` | Shown while fetching tweet data |
-| `error` | Shown if tweet fetch fails, receives `{ error }` |
+| 插槽 | 描述 |
+|------|------|
+| `default` | 主内容，带插槽 props |
+| `loading` | 获取推文数据时展示 |
+| `error` | 推文数据获取失败时展示，接收 `{ error }` |
 
-## How It Works
+## 工作原理
 
-1. **Server-side fetch**: Tweet data is fetched from `cdn.syndication.twimg.com` during SSR
-2. **Image proxying**: All images are rewritten to proxy through `/api/_scripts/x-embed-image`
-3. **Caching**: Responses are cached for 10 minutes at the server level
-4. **No client-side API calls**: The user's browser never contacts X directly
+1. **服务器端获取**：在 SSR 期间，从 `cdn.syndication.twimg.com` 获取推文数据
+2. **图片代理**：所有图片地址均重写为通过 `/api/_scripts/x-embed-image` 代理
+3. **缓存**：响应在服务器层缓存 10 分钟
+4. **无客户端 API 调用**：用户浏览器不会直接访问 X
 
-This approach is inspired by [Cloudflare Zaraz's embed implementation](https://blog.cloudflare.com/zaraz-supports-server-side-rendering-of-embeds/).
+此方案灵感来源于 [Cloudflare Zaraz 的嵌入实现](https://blog.cloudflare.com/zaraz-supports-server-side-rendering-of-embeds/)。
 
-## Privacy Benefits
+## 隐私优势
 
-- No third-party JavaScript loaded
-- No cookies set by X
-- No direct browser-to-X communication
-- User IP addresses not shared with X
-- All content served from your domain
+- 不加载第三方 JavaScript
+- X 不设置任何 Cookies
+- 无浏览器到 X 的直接通信
+- 用户 IP 不会泄露给 X
+- 所有内容均从你的域名提供

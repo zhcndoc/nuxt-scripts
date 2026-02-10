@@ -1,26 +1,24 @@
 ---
 title: Rybbit Analytics
-description: Use Rybbit Analytics in your Nuxt app.
+description: 在您的 Nuxt 应用中使用 Rybbit Analytics。
 links:
-  - label: Source
+  - label: 源码
     icon: i-simple-icons-github
     to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/rybbit.ts
     size: xs
 ---
 
-[Rybbit Analytics](https://www.rybbit.io/) is a privacy-focused analytics solution for tracking user activity on your website without compromising your users' privacy.
+[Rybbit Analytics](https://www.rybbit.io/) 是一款注重隐私保护的分析解决方案，能够在不侵犯用户隐私的前提下跟踪您网站上的用户活动。
 
-The simplest way to load Rybbit Analytics globally in your Nuxt App is to use Nuxt config. Alternatively you can directly
-use the [useScriptRybbitAnalytics](#useScriptRybbitAnalytics) composable.
+在您的 Nuxt 应用中全局加载 Rybbit Analytics 最简单的方法是使用 Nuxt 配置。或者，您也可以直接使用 [useScriptRybbitAnalytics](#useScriptRybbitAnalytics) 组合函数。
 
-## Loading Globally
+## 全局加载
 
-If you don't plan to send custom events you can use the [Environment overrides](https://nuxt.com/docs/getting-started/configuration#environment-overrides) to
-disable the script in development.
+如果您不打算发送自定义事件，可以使用 [环境覆盖](https://nuxt.com/docs/getting-started/configuration#environment-overrides) 在开发环境中禁用该脚本。
 
 ::code-group
 
-```ts [Always enabled]
+```ts [始终启用]
 export default defineNuxtConfig({
   scripts: {
     registry: {
@@ -32,7 +30,7 @@ export default defineNuxtConfig({
 })
 ```
 
-```ts [Production only]
+```ts [仅生产环境]
 export default defineNuxtConfig({
   $production: {
     scripts: {
@@ -46,19 +44,19 @@ export default defineNuxtConfig({
 })
 ```
 
-```ts [Environment Variables]
+```ts [环境变量]
 export default defineNuxtConfig({
   scripts: {
     registry: {
       rybbitAnalytics: true,
     }
   },
-  // you need to provide a runtime config to access the environment variables
+  // 您需要提供运行时配置以访问环境变量
   runtimeConfig: {
     public: {
       scripts: {
         rybbitAnalytics: {
-          // .env
+          // .env 文件中
           // NUXT_PUBLIC_SCRIPTS_RYBBIT_ANALYTICS_SITE_ID=<your-site-id>
           siteId: ''
         },
@@ -72,7 +70,7 @@ export default defineNuxtConfig({
 
 ## useScriptRybbitAnalytics
 
-The `useScriptRybbitAnalytics` composable lets you have fine-grain control over when and how Rybbit Analytics is loaded on your site.
+`useScriptRybbitAnalytics` 组合函数允许您精细控制何时以及如何在您的网站上加载 Rybbit Analytics。
 
 ```ts
 const rybbit = useScriptRybbitAnalytics({
@@ -80,11 +78,11 @@ const rybbit = useScriptRybbitAnalytics({
 })
 ```
 
-Please follow the [Registry Scripts](/docs/guides/registry-scripts) guide to learn more about advanced usage.
+请参考 [注册脚本](/docs/guides/registry-scripts) 指南，了解更多高级用法。
 
-### Self-hosted Rybbit Analytics
+### 自托管 Rybbit Analytics
 
-If you are using a self-hosted version of Rybbit Analytics, you can provide a custom script source:
+如果您使用的是自托管版本的 Rybbit Analytics，您可以提供自定义脚本源：
 
 ```ts
 useScriptRybbitAnalytics({
@@ -100,47 +98,47 @@ useScriptRybbitAnalytics({
 ```ts
 export interface RybbitAnalyticsApi {
   /**
-   * Tracks a page view
+   * 跟踪页面浏览
    */
   pageview: () => void
 
   /**
-   * Tracks a custom event
-   * @param name Name of the event
-   * @param properties Optional properties for the event
+   * 跟踪自定义事件
+   * @param name 事件名称
+   * @param properties 事件的可选属性
    */
   event: (name: string, properties?: Record<string, any>) => void
 
   /**
-   * Sets a custom user ID for tracking logged-in users
-   * @param userId The user ID to set (will be stored in localStorage)
+   * 为登录用户设置自定义用户 ID
+   * @param userId 要设置的用户 ID（会存储在 localStorage 中）
    */
   identify: (userId: string) => void
 
   /**
-   * Clears the stored user ID
+   * 清除存储的用户 ID
    */
   clearUserId: () => void
 
   /**
-   * Gets the currently set user ID
-   * @returns The current user ID or null if not set
+   * 获取当前设置的用户 ID
+   * @returns 当前用户 ID，未设置时返回 null
    */
   getUserId: () => string | null
   /**
-   * @deprecated use top level functions instead
+   * @deprecated 请改用顶层函数
    */
   rybbit: RybbitAnalyticsApi
 }
 ```
 
-### Config Schema
+### 配置模式
 
-You must provide the options when setting up the script for the first time.
+首次设置脚本时，必须提供选项。
 
 ```ts
 export const RybbitAnalyticsOptions = object({
-  siteId: union([string(), number()]), // required
+  siteId: union([string(), number()]), // 必须项
   autoTrackPageview: optional(boolean()),
   trackSpa: optional(boolean()),
   trackQuery: optional(boolean()),
@@ -155,24 +153,24 @@ export const RybbitAnalyticsOptions = object({
 })
 ```
 
-#### Configuration Options
+#### 配置选项说明
 
-- `siteId` (required): Your Rybbit Analytics site ID
-`autoTrackPageview`: Set to `false` to disable automatic tracking of the initial pageview when the script loads. You will need to manually call the pageview function to track pageviews. Default: `true`
-- `trackSpa`: Set to `false` to disable automatic pageview tracking for single page applications
-- `trackQuery`: Set to `false` to disable tracking of URL query strings
-- `trackOutbound`: Set to `false` to disable automatic tracking of outbound link clicks. Default: `true`
-- `trackErrors`: Set to `true` to enable automatic tracking of JavaScript errors and unhandled promise rejections. Only tracks errors from the same origin to avoid noise from third-party scripts. Default: `false`
-- `sessionReplay`: Set to `true` to enable session replay recording. Captures user interactions, mouse movements, and DOM changes for debugging and user experience analysis. Default: `false`
-- `webVitals`: Set to `true` to enable Web Vitals performance metrics collection (LCP, CLS, INP, FCP, TTFB). Web Vitals are disabled by default to reduce script size and network requests. Default: `false`
-- `skipPatterns`: Array of URL path patterns to ignore
-- `maskPatterns`: Array of URL path patterns to mask for privacy
-- `debounce`: Delay in milliseconds before tracking a pageview after URL changes
-- `apiKey`: API key for tracking from localhost during development. Bypasses origin validation for self-hosted Rybbit Analytics instances
+- `siteId`（必填）：您的 Rybbit Analytics 网站 ID
+- `autoTrackPageview`：设置为 `false` 以禁用脚本加载时自动跟踪初始页面浏览。您需要手动调用 pageview 函数来跟踪页面浏览。默认值：`true`
+- `trackSpa`：设置为 `false` 以禁用单页面应用的自动页面浏览跟踪
+- `trackQuery`：设置为 `false` 以禁用 URL 查询字符串的跟踪
+- `trackOutbound`：设置为 `false` 以禁用自动跟踪外链点击。默认值：`true`
+- `trackErrors`：设置为 `true` 以启用 JavaScript 错误和未处理 Promise 拒绝的自动跟踪。仅跟踪同源错误，避免第三方脚本噪声。默认值：`false`
+- `sessionReplay`：设置为 `true` 以启用会话重放录制。捕获用户交互、鼠标移动和 DOM 变更，用于调试和用户体验分析。默认值：`false`
+- `webVitals`：设置为 `true` 以启用 Web Vitals 性能指标收集（LCP，CLS，INP，FCP，TTFB）。Web Vitals 默认禁用，以减少脚本大小和网络请求。默认值：`false`
+- `skipPatterns`：忽略的 URL 路径模式数组
+- `maskPatterns`：用于隐私保护的 URL 路径屏蔽模式数组
+- `debounce`：在 URL 变化后延迟多少毫秒再跟踪页面浏览
+- `apiKey`：开发时用于从 localhost 跟踪的 API 密钥。绕过自托管 Rybbit Analytics 实例的来源校验
 
-## Example
+## 示例
 
-Using Rybbit Analytics only in production while tracking custom events.
+仅在生产环境使用 Rybbit Analytics 并跟踪自定义事件。
 
 ::code-group
 
@@ -180,12 +178,12 @@ Using Rybbit Analytics only in production while tracking custom events.
 <script setup lang="ts">
 const { proxy } = useScriptRybbitAnalytics()
 
-// Track a pageview manually
+// 手动跟踪页面浏览
 function trackPage() {
   proxy.pageview()
 }
 
-// Track a custom event
+// 跟踪自定义事件
 function trackEvent() {
   proxy.event('button_click', { buttonId: 'signup' })
 }
@@ -194,10 +192,10 @@ function trackEvent() {
 <template>
   <div>
     <button @click="trackPage">
-      Track Custom Page
+      跟踪自定义页面
     </button>
     <button @click="trackEvent">
-      Track Custom Event
+      跟踪自定义事件
     </button>
   </div>
 </template>

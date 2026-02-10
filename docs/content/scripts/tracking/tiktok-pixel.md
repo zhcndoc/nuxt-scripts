@@ -1,28 +1,26 @@
 ---
 title: TikTok Pixel
-description: Use TikTok Pixel in your Nuxt app.
+description: 在你的 Nuxt 应用中使用 TikTok Pixel。
 links:
-- label: Source
+- label: 源码
   icon: i-simple-icons-github
   to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/tiktok-pixel.ts
   size: xs
 ---
 
-[TikTok Pixel](https://ads.tiktok.com/help/article/tiktok-pixel) lets you measure, optimize and build audiences for your TikTok ad campaigns.
+[TikTok Pixel](https://ads.tiktok.com/help/article/tiktok-pixel) 让你能够衡量、优化并构建 TikTok 广告活动的受众。
 
-Nuxt Scripts provides a registry script composable `useScriptTikTokPixel` to easily integrate TikTok Pixel in your Nuxt app.
+Nuxt Scripts 提供了注册脚本组合函数 `useScriptTikTokPixel`，轻松地在你的 Nuxt 应用中集成 TikTok Pixel。
 
-### Nuxt Config Setup
+### Nuxt 配置设置
 
-The simplest way to load TikTok Pixel globally in your Nuxt App is to use Nuxt config. Alternatively you can directly
-use the [useScriptTikTokPixel](#usescripttiktokpixel) composable.
+在 Nuxt 应用中全局加载 TikTok Pixel 最简单的方式是使用 Nuxt 配置。你也可以直接使用 [useScriptTikTokPixel](#usescripttiktokpixel) 组合函数。
 
-If you don't plan to send custom events you can use the [Environment overrides](https://nuxt.com/docs/getting-started/configuration#environment-overrides) to
-disable the script in development.
+如果你不打算发送自定义事件，可以使用 [环境配置覆盖](https://nuxt.com/docs/getting-started/configuration#environment-overrides) 在开发环境中禁用该脚本。
 
 ::code-group
 
-```ts [Always enabled]
+```ts [始终启用]
 export default defineNuxtConfig({
   scripts: {
     registry: {
@@ -34,7 +32,7 @@ export default defineNuxtConfig({
 })
 ```
 
-```ts [Production only]
+```ts [仅生产环境]
 export default defineNuxtConfig({
   $production: {
     scripts: {
@@ -50,9 +48,9 @@ export default defineNuxtConfig({
 
 ::
 
-#### With Environment Variables
+#### 使用环境变量
 
-If you prefer to configure your id using environment variables.
+如果你更倾向于使用环境变量配置你的 id。
 
 ```ts [nuxt.config.ts]
 export default defineNuxtConfig({
@@ -61,12 +59,12 @@ export default defineNuxtConfig({
       tiktokPixel: true,
     }
   },
-  // you need to provide a runtime config to access the environment variables
+  // 需要提供运行时配置以访问环境变量
   runtimeConfig: {
     public: {
       scripts: {
         tiktokPixel: {
-          id: '', // NUXT_PUBLIC_SCRIPTS_TIKTOK_PIXEL_ID
+          id: '', // 对应 NUXT_PUBLIC_SCRIPTS_TIKTOK_PIXEL_ID
         },
       },
     },
@@ -80,23 +78,23 @@ NUXT_PUBLIC_SCRIPTS_TIKTOK_PIXEL_ID=<YOUR_ID>
 
 ## useScriptTikTokPixel
 
-The `useScriptTikTokPixel` composable lets you have fine-grain control over when and how TikTok Pixel is loaded on your site.
+`useScriptTikTokPixel` 组合函数让你能够细粒度地控制 TikTok Pixel 在你网站上的加载时机和方式。
 
 ```ts
 const { proxy } = useScriptTikTokPixel({
   id: 'YOUR_PIXEL_ID'
 })
 
-// Track an event
+// 跟踪事件
 proxy.ttq('track', 'ViewContent', {
   content_id: '123',
-  content_name: 'Product Name',
+  content_name: '产品名称',
   value: 99.99,
   currency: 'USD'
 })
 ```
 
-Please follow the [Registry Scripts](/docs/guides/registry-scripts) guide to learn more about advanced usage.
+请参考 [注册脚本](/docs/guides/registry-scripts) 指南了解更多高级用法。
 
 ### TikTokPixelApi
 
@@ -122,20 +120,20 @@ type StandardEvents =
   | 'CompleteRegistration' | 'Subscribe'
 ```
 
-### Config Schema
+### 配置 Schema
 
-You must provide the options when setting up the script for the first time.
+首次设置脚本时必须提供选项。
 
 ```ts
 export const TikTokPixelOptions = object({
   id: string(),
-  trackPageView: optional(boolean()), // default: true
+  trackPageView: optional(boolean()), // 默认: true
 })
 ```
 
-## Example
+## 示例
 
-Using TikTok Pixel to track a purchase event.
+使用 TikTok Pixel 跟踪购买事件。
 
 ::code-group
 
@@ -146,7 +144,7 @@ const { proxy } = useScriptTikTokPixel()
 function trackPurchase() {
   proxy.ttq('track', 'CompletePayment', {
     content_id: 'product-123',
-    content_name: 'Awesome Product',
+    content_name: '超棒的产品',
     value: 49.99,
     currency: 'USD'
   })
@@ -155,16 +153,16 @@ function trackPurchase() {
 
 <template>
   <button @click="trackPurchase">
-    Complete Purchase
+    完成购买
   </button>
 </template>
 ```
 
 ::
 
-## Identifying Users
+## 用户识别
 
-You can identify users for advanced matching:
+你可以识别用户进行高级匹配：
 
 ```ts
 const { proxy } = useScriptTikTokPixel()
@@ -175,9 +173,9 @@ proxy.ttq('identify', {
 })
 ```
 
-## Disabling Auto Page View
+## 禁用自动页面浏览跟踪
 
-By default, TikTok Pixel tracks page views automatically. To disable:
+默认情况下，TikTok Pixel 会自动追踪页面浏览。若要禁用：
 
 ```ts
 export default defineNuxtConfig({

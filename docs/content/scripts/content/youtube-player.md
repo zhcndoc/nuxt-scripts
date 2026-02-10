@@ -1,6 +1,6 @@
 ---
-title: YouTube Player
-description: Show performance-optimized YouTube videos in your Nuxt app.
+title: YouTube 播放器
+description: 在您的 Nuxt 应用中展示性能优化的 YouTube 视频。
 links:
   - label: useScriptYouTubePlayer
     icon: i-simple-icons-github
@@ -12,14 +12,13 @@ links:
     size: xs
 ---
 
-[YouTube](https://youtube.com/) is a video hosting platform that allows you to upload and share videos.
+[YouTube](https://youtube.com/) 是一个视频托管平台，允许您上传和分享视频。
 
-Nuxt Scripts provides a `useScriptYouTubePlayer` composable and a headless `ScriptYouTubePlayer` component to interact with the YouTube Player.
+Nuxt Scripts 提供了 `useScriptYouTubePlayer` 组合函数和无头（headless）的 `ScriptYouTubePlayer` 组件，用于与 YouTube 播放器进行交互。
 
-## Types
+## 类型
 
-To use YouTube with full TypeScript support, you will need
-to install the `@types/youtube` dependency.
+要使用带有完整 TypeScript 支持的 YouTube，您需要安装 `@types/youtube` 依赖。
 
 ```bash
 pnpm add -D @types/youtube
@@ -27,17 +26,17 @@ pnpm add -D @types/youtube
 
 ## ScriptYouTubePlayer
 
-The `ScriptYouTubePlayer` component is a wrapper around the `useScriptYouTubePlayer` composable. It provides a simple way to embed YouTube videos in your Nuxt app.
+`ScriptYouTubePlayer` 组件是基于 `useScriptYouTubePlayer` 组合函数的封装。它提供了一种简单的方法来在您的 Nuxt 应用中嵌入 YouTube 视频。
 
-It's optimized for performance by leveraging the [Element Event Triggers](/docs/guides/script-triggers#element-event-triggers), only loading the YouTube Player when the specific elements events happen.
+它通过利用 [元素事件触发器](/docs/guides/script-triggers#element-event-triggers) 进行性能优化，仅在特定元素发生事件时加载 YouTube 播放器。
 
-By default, it will load on the `mousedown` event.
+默认情况下，它会在 `mousedown` 事件时加载。
 
-### Demo
+### 演示
 
 ::code-group
 
-:youtube-demo{label="Output"}
+:youtube-demo{label="输出"}
 
 ```vue [Input]
 <script setup lang="ts">
@@ -64,9 +63,9 @@ function stateChange(event) {
       </ScriptYouTubePlayer>
     </div>
     <div class="text-center">
-      <UAlert v-if="!isLoaded" class="mb-5" size="sm" color="blue" variant="soft" title="Click to load" description="Clicking the video will load the Youtube iframe and start the video." />
+      <UAlert v-if="!isLoaded" class="mb-5" size="sm" color="blue" variant="soft" title="点击以加载" description="点击视频将加载 Youtube iframe 并开始播放视频。" />
       <UButton v-if="isLoaded && !isPlaying" @click="play">
-        Play Video
+        播放视频
       </UButton>
     </div>
   </div>
@@ -77,18 +76,18 @@ function stateChange(event) {
 
 ### Props
 
-The `ScriptYouTubePlayer` component accepts the following props:
+`ScriptYouTubePlayer` 组件接受以下 props：
 
-- `trigger`: The trigger event to load the YouTube Player. Default is `mousedown`. See [Element Event Triggers](/docs/guides/script-triggers#element-event-triggers) for more information.
-- `placeholderAttrs`: The attributes for the placeholder image. Default is `{ loading: 'lazy' }`.
-- `aboveTheFold`: Optimizes the placeholder image for above-the-fold content. Default is `false`.
-- `placeholderObjectFit`: The `object-fit` CSS property for the placeholder image. Default is `cover`. Useful for non-16:9 videos like YouTube Shorts.
+- `trigger`：加载 YouTube 播放器的触发事件。默认是 `mousedown`。欲了解更多信息，请参阅 [元素事件触发器](/docs/guides/script-triggers#element-event-triggers)。
+- `placeholderAttrs`：占位图片的属性。默认是 `{ loading: 'lazy' }`。
+- `aboveTheFold`：优化首屏内容的占位图片。默认是 `false`。
+- `placeholderObjectFit`：占位图片的 `object-fit` CSS 属性。默认是 `cover`。对非16:9视频（如 YouTube Shorts）很有用。
 
-All script options from the [YouTube IFrame Player API](https://developers.google.com/youtube/iframe_api_reference) are supported on the `playerVars` prop, please consult the [Supported paramters](https://developers.google.com/youtube/player_parameters#Parameters) for full documentation.
+`playerVars` prop 支持所有来自 [YouTube IFrame Player API](https://developers.google.com/youtube/iframe_api_reference) 的脚本选项，请参考 [支持的参数](https://developers.google.com/youtube/player_parameters#Parameters) 以获取完整文档。
 
 ```ts
 export interface YouTubeProps {
-  // YouTube Player
+  // YouTube 播放器
   videoId: string
   playerVars?: YT.PlayerVars
   width?: number
@@ -97,34 +96,31 @@ export interface YouTubeProps {
 }
 ```
 
-### Privacy
+### 隐私
 
-The `<YoutubePlayer>` component is privacy-friendly by default and sets the video host to `https://www.youtube-nocookie.com`. 
+`<YoutubePlayer>` 组件默认隐私友好，视频托管地址设置为 `https://www.youtube-nocookie.com`。
 
-To modify this behavior, you can set the `host` prop to `https://www.youtube.com`.
+若要修改此行为，可以将 `host` prop 设置为 `https://www.youtube.com`。
 
 ```vue
 <ScriptYouTubePlayer video-id="d_IFKP1Ofq0" :player-options="{ host: 'https://www.youtube.com' }" />
 ```
 
-### Placeholder
+### 占位符
 
-The YouTube Player placeholder image is 1280x720 webp that is lazy-loaded by default.
+YouTube 播放器的占位图片是 1280x720 大小的 webp，默认启用懒加载。
 
-To modify the placeholder size you can set the `thumbnailSize` prop, if you'd prefer
-to use a `jpg` you can pass the `webp` prop as `false`.
+若想修改占位符大小，可以设置 `thumbnailSize` prop；如果您更喜欢使用 jpg 格式，可以将 `webp` prop 设为 `false`。
 
 ```vue
 <ScriptYouTubePlayer video-id="d_IFKP1Ofq0" thumbnail-size="maxresdefault" />
 ```
 
-If you need fine control over the placeholder you can set `placeholderAttrs` prop or completely override it using
-the `#placeholder` slot.
+如果您需要对占位符进行精细控制，可以设置 `placeholderAttrs` prop，或使用 `#placeholder` 插槽完全覆盖。
 
-#### Eager Loading
+#### 提前加载
 
-You should change this behavior if your video is above the fold
-or consider using the `#placeholder` slot to customize the placeholder image.
+如果您的视频处于首屏位置，请调整此行为，或考虑使用 `#placeholder` 插槽自定义占位图片。
 
 ::code-group
 
@@ -135,20 +131,20 @@ or consider using the `#placeholder` slot to customize the placeholder image.
 ```vue [Placeholder Slot]
 <ScriptYouTubePlayer>
   <template #placeholder="{ placeholder }">
-    <img :src="placeholder" alt="Video Placeholder">
+    <img :src="placeholder" alt="视频占位符">
   </template>
 </ScriptYouTubePlayer>
 ```
 
 ::
 
-### Component API
+### 组件 API
 
-See the [Facade Component API](/docs/guides/facade-components#facade-components-api) for full props, events, and slots.
+请查看 [Facade 组件 API](/docs/guides/facade-components#facade-components-api) 获取完整的 props、事件和插槽说明。
 
-### Events
+### 事件
 
-The `ScriptYouTubePlayer` component emits all events from the YouTube Player SDK. Please consult the [Player Events](https://developers.google.com/youtube/iframe_api_reference#Events) for full documentation.
+`ScriptYouTubePlayer` 组件会发出所有来自 YouTube 播放器 SDK 的事件。完整文档请见 [播放器事件](https://developers.google.com/youtube/iframe_api_reference#Events)。
 
 ```ts
 const emits = defineEmits<{
@@ -161,19 +157,19 @@ const emits = defineEmits<{
 }>()
 ```
 
-### Slots
+### 插槽
 
-As the component is provided headless, there are a number of slots for you to customize the player however you like before it's loaded in.
+由于该组件是无头设计，提供了一些插槽让您能在加载视频之前自定义播放器的内容。
 
 **default**
 
-The default slot is used to display content that will always be visible.
+默认插槽用于显示始终可见的内容。
 
 ```vue
 <template>
   <ScriptYouTubePlayer video-id="d_IFKP1Ofq0">
     <div class="bg-blue-500 text-white p-5">
-      Video by Nuxt
+      Nuxt 视频
     </div>
   </ScriptYouTubePlayer>
 </template>
@@ -181,14 +177,14 @@ The default slot is used to display content that will always be visible.
 
 **awaitingLoad**
 
-The slot is used to display content while the video is loading.
+该插槽用于显示视频加载期间的内容。
 
 ```vue
 <template>
   <ScriptYouTubePlayer video-id="d_IFKP1Ofq0">
     <template #awaitingLoad>
       <div class="bg-blue-500 text-white p-5">
-        Click to play!
+        点击播放！
       </div>
     </template>
   </ScriptYouTubePlayer>
@@ -197,14 +193,14 @@ The slot is used to display content while the video is loading.
 
 **loading**
 
-The slot is used to display content while the video is loading.
+该插槽用于显示视频加载时的内容。
 
 ```vue
 <template>
   <ScriptYouTubePlayer video-id="d_IFKP1Ofq0">
     <template #loading>
       <div class="bg-blue-500 text-white p-5">
-        Loading...
+        加载中...
       </div>
     </template>
   </ScriptYouTubePlayer>
@@ -213,14 +209,13 @@ The slot is used to display content while the video is loading.
 
 **placeholder**
 
-The slot is used to display a placeholder image before the video is loaded. By default, this will show the
-youtube thumbnail for the video. You can display it however you like.
+该插槽用于在视频加载前显示占位图片。默认显示视频的 YouTube 缩略图。您可以自定义显示内容。
 
 ```vue
 <template>
   <ScriptYouTubePlayer video-id="d_IFKP1Ofq0">
     <template #placeholder="{ placeholder }">
-      <img :src="placeholder" alt="Video Placeholder">
+      <img :src="placeholder" alt="视频占位符">
     </template>
   </ScriptYouTubePlayer>
 </template>
@@ -228,13 +223,13 @@ youtube thumbnail for the video. You can display it however you like.
 
 ## useScriptYouTubePlayer
 
-The `useScriptYouTubePlayer` composable lets you have fine-grain control over the YouTube Player SDK. It provides a way to load the YouTube Player SDK and interact with it programmatically.
+`useScriptYouTubePlayer` 组合函数让您可以更细粒度地控制 YouTube 播放器 SDK。它提供了一种加载 YouTube 播放器 SDK 并以编程方式交互的方式。
 
 ```ts
 export function useScriptYouTubePlayer<T extends YouTubePlayerApi>(_options?: YouTubePlayerInput) {}
 ```
 
-Please follow the [Registry Scripts](/docs/guides/registry-scripts) guide to learn more about advanced usage.
+请参阅 [注册脚本](/docs/guides/registry-scripts) 指南，了解更多高级用法。
 
 ### YouTubePlayerApi
 
@@ -245,9 +240,9 @@ export interface YouTubePlayerApi {
 }
 ```
 
-## Example
+## 示例
 
-Loading the YouTube Player SDK and interacting with it programmatically.
+加载 YouTube 播放器 SDK 并以编程方式与之交互。
 
 ```vue
 <script setup lang="ts">
@@ -256,7 +251,7 @@ const { onLoaded } = useScriptYouTubePlayer()
 
 const player = ref(null)
 onLoaded(async ({ YT }) => {
-  // we need to wait for the internal YouTube APIs to be ready
+  // 我们需要等待内部 YouTube API 准备好
   const YouTube = await YT
   await new Promise<void>((resolve) => {
     if (typeof YT.Player === 'undefined')
@@ -264,7 +259,7 @@ onLoaded(async ({ YT }) => {
     else
       resolve()
   })
-  // load the API
+  // 加载 API
   player.value = new YT.Player(video.value, {
     videoId: 'd_IFKP1Ofq0'
   })
@@ -278,7 +273,7 @@ function play() {
   <div>
     <div ref="video" />
     <button @click="play">
-      Play
+      播放
     </button>
   </div>
 </template>

@@ -1,44 +1,42 @@
 ---
 title: Hotjar
-description: Use Hotjar in your Nuxt app.
+description: 在你的 Nuxt 应用中使用 Hotjar。
 links:
-- label: Source
+- label: 源码
   icon: i-simple-icons-github
   to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/hotjar.ts
   size: xs
 ---
 
-[Hotjar](https://www.hotjar.com/) is a screen recorder and heatmap tool that helps you understand how users interact with your website.
+[Hotjar](https://www.hotjar.com/) 是一款屏幕录制和热力图工具，帮助你了解用户如何与网站交互。
 
-The simplest way to load Hotjar globally in your Nuxt App is to use Nuxt config. Alternatively you can directly
-use the [useScriptHotjar](#useScriptHotjar) composable.
+在你的 Nuxt 应用中，全局加载 Hotjar 最简单的方式是使用 Nuxt 配置。或者你也可以直接使用 [useScriptHotjar](#useScriptHotjar) 组合式函数。
 
-## Loading Globally
+## 全局加载
 
-If you don't plan to send custom events you can use the [Environment overrides](https://nuxt.com/docs/getting-started/configuration#environment-overrides) to
-disable the script in development.
+如果你不打算发送自定义事件，可以使用 [环境覆盖](https://nuxt.com/docs/getting-started/configuration#environment-overrides) 来在开发环境禁用该脚本。
 
 ::code-group
 
-```ts [Always enabled]
+```ts [始终启用]
 export default defineNuxtConfig({
   scripts: {
     registry: {
       hotjar: {
-        id: 123456, // your id
+        id: 123456, // 你的 ID
       }
     }
   }
 })
 ```
 
-```ts [Production only]
+```ts [仅生产环境]
 export default defineNuxtConfig({
   $production: {
     scripts: {
       registry: {
         hotjar: {
-          id: 123456, // your id
+          id: 123456, // 你的 ID
         }
       }
     }
@@ -46,15 +44,14 @@ export default defineNuxtConfig({
 })
 ```
 
-
-```ts [Environment Variables]
+```ts [环境变量]
 export default defineNuxtConfig({
   scripts: {
     registry: {
       hotjar: true,
     }
   },
-  // you need to provide a runtime config to access the environment variables
+  // 你需要提供运行时配置以访问环境变量
   runtimeConfig: {
     public: {
       scripts: {
@@ -71,20 +68,20 @@ export default defineNuxtConfig({
 
 ## useScriptHotjar
 
-The `useScriptHotjar` composable lets you have fine-grain control over when and how Hotjar is loaded on your site.
+`useScriptHotjar` 组合式函数让你可以更细粒度地控制 Hotjar 在你的网站上何时以及如何加载。
 
 ```ts
 const { proxy } = useScriptHotjar({
   id: 123546,
 })
-// example
+// 示例
 proxy.hj('identify', 123456, {
   name: 'John Doe',
   email: 'john@doe.com'
 })
 ```
 
-Please follow the [Registry Scripts](/docs/guides/registry-scripts) guide to learn more about advanced usage.
+请参阅 [注册脚本指南](/docs/guides/registry-scripts) 了解更多高级用法。
 
 ### HotjarApi
 
@@ -100,9 +97,9 @@ export interface HotjarApi {
 }
 ```
 
-### Config Schema
+### 配置 Schema
 
-You must provide the options when setting up the script for the first time.
+首次设置脚本时必须提供选项。
 
 ```ts
 export const HotjarOptions = object({
@@ -111,9 +108,9 @@ export const HotjarOptions = object({
 })
 ```
 
-## Example
+## 示例
 
-Using Hotjar only in production while using `hj` to send a conversion event.
+仅在生产环境使用 Hotjar，并通过 `hj` 发送转化事件。
 
 ::code-group
 
@@ -121,8 +118,8 @@ Using Hotjar only in production while using `hj` to send a conversion event.
 <script setup lang="ts">
 const { proxy } = useScriptHotjar()
 
-// noop in development, ssr
-// just works in production, client
+// 在开发环境和 SSR 中无操作
+// 在生产环境客户端生效
 function sendConversion() {
   proxy.hj('event', 'conversion')
 }
@@ -131,11 +128,10 @@ function sendConversion() {
 <template>
   <div>
     <button @click="sendConversion">
-      Send Conversion
+      发送转化事件
     </button>
   </div>
 </template>
 ```
-
 
 ::

@@ -1,28 +1,26 @@
 ---
-title: Reddit Pixel
-description: Use Reddit Pixel in your Nuxt app.
+title: Reddit 像素
+description: 在你的 Nuxt 应用中使用 Reddit 像素。
 links:
-- label: Source
+- label: 源代码
   icon: i-simple-icons-github
   to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/reddit-pixel.ts
   size: xs
 ---
 
-[Reddit Pixel](https://advertising.reddithelp.com/en/categories/custom-audiences-and-conversion-tracking/reddit-pixel) helps you track conversions and build audiences for your Reddit advertising campaigns.
+[Reddit 像素](https://advertising.reddithelp.com/en/categories/custom-audiences-and-conversion-tracking/reddit-pixel) 帮助你跟踪转化并为你的 Reddit 广告活动构建受众。
 
-Nuxt Scripts provides a registry script composable `useScriptRedditPixel` to easily integrate Reddit Pixel in your Nuxt app.
+Nuxt Scripts 提供了一个注册脚本组合式函数 `useScriptRedditPixel`，可让你轻松地在 Nuxt 应用中集成 Reddit 像素。
 
-### Nuxt Config Setup
+### Nuxt 配置设置
 
-The simplest way to load Reddit Pixel globally in your Nuxt App is to use Nuxt config. Alternatively you can directly
-use the [useScriptRedditPixel](#useScriptRedditPixel) composable.
+在你的 Nuxt 应用中全局加载 Reddit 像素的最简单方式是使用 Nuxt 配置。或者，你也可以直接使用 [useScriptRedditPixel](#useScriptRedditPixel) 组合式函数。
 
-If you don't plan to send custom events you can use the [Environment overrides](https://nuxt.com/docs/getting-started/configuration#environment-overrides) to
-disable the script in development.
+如果你不打算发送自定义事件，可以使用 [环境变量覆盖](https://nuxt.com/docs/getting-started/configuration#environment-overrides) 来在开发环境中禁用该脚本。
 
 ::code-group
 
-```ts [Always enabled]
+```ts [始终启用]
 export default defineNuxtConfig({
   scripts: {
     registry: {
@@ -34,7 +32,7 @@ export default defineNuxtConfig({
 })
 ```
 
-```ts [Production only]
+```ts [仅生产环境]
 export default defineNuxtConfig({
   $production: {
     scripts: {
@@ -50,9 +48,9 @@ export default defineNuxtConfig({
 
 ::
 
-#### With Environment Variables
+#### 使用环境变量
 
-If you prefer to configure your id using environment variables.
+如果你更喜欢通过环境变量来配置你的 id。
 
 ```ts [nuxt.config.ts]
 export default defineNuxtConfig({
@@ -61,7 +59,7 @@ export default defineNuxtConfig({
       redditPixel: true,
     }
   },
-  // you need to provide a runtime config to access the environment variables
+  // 你需要提供运行时配置以访问环境变量
   runtimeConfig: {
     public: {
       scripts: {
@@ -80,17 +78,17 @@ NUXT_PUBLIC_SCRIPTS_REDDIT_PIXEL_ID=<YOUR_ID>
 
 ## useScriptRedditPixel
 
-The `useScriptRedditPixel` composable lets you have fine-grain control over when and how Reddit Pixel is loaded on your site.
+`useScriptRedditPixel` 组合式函数让你可以精细控制 Reddit 像素在你的站点上何时以及如何加载。
 
 ```ts
 const { proxy } = useScriptRedditPixel({
   id: 'YOUR_ID'
 })
-// example
+// 示例
 proxy.rdt('track', 'Lead')
 ```
 
-Please follow the [Registry Scripts](/docs/guides/registry-scripts) guide to learn more about advanced usage.
+请参阅 [注册脚本](/docs/guides/registry-scripts) 指南以了解更多高级用法。
 
 ### RedditPixelApi
 
@@ -106,9 +104,9 @@ type RdtFns
     & ((event: 'track', eventName: string) => void)
 ```
 
-### Config Schema
+### 配置模式
 
-You must provide the options when setting up the script for the first time.
+首次设置脚本时，你必须提供选项。
 
 ```ts
 export const RedditPixelOptions = object({
@@ -116,9 +114,9 @@ export const RedditPixelOptions = object({
 })
 ```
 
-## Example
+## 示例
 
-Using Reddit Pixel only in production while using `rdt` to send a tracking event.
+仅在生产环境使用 Reddit 像素，同时使用 `rdt` 发送跟踪事件。
 
 ::code-group
 
@@ -126,8 +124,8 @@ Using Reddit Pixel only in production while using `rdt` to send a tracking event
 <script setup lang="ts">
 const { proxy } = useScriptRedditPixel()
 
-// noop in development, ssr
-// just works in production, client
+// 在开发环境和 SSR 中无操作
+// 仅在生产环境客户端有效
 function trackConversion() {
   proxy.rdt('track', 'Lead')
 }
@@ -136,7 +134,7 @@ function trackConversion() {
 <template>
   <div>
     <button @click="trackConversion">
-      Track Conversion
+      跟踪转化
     </button>
   </div>
 </template>

@@ -24,10 +24,10 @@ const surround = surroundData.data
 const surroundIntroduction = [
   undefined,
   {
-    description: 'Learn how to create a Nuxt Scripts project or add it to your current Nuxt project.',
+    description: '了解如何创建一个 Nuxt Scripts 项目或将其添加到您当前的 Nuxt 项目中。',
     path: '/docs/getting-started/installation',
     stem: 'docs/1.getting-started/2.installation',
-    title: 'Installation',
+    title: '安装',
     _path: '/docs/getting-started/installation',
   },
 ]
@@ -52,23 +52,33 @@ defineOgImageComponent('Docs', {
 
     <UPageBody prose class="dark:text-gray-300 dark:prose-pre:!bg-gray-800/60">
       <ContentRenderer v-if="page.body" :value="page" />
+      <div
+        class="wwads-cn wwads-horizontal w-full my-4"
+        data-id="354"
+      />
 
-      <hr v-if="surround?.length || page.path === '/docs/getting-started'">
+      <!-- <hr v-if="surround?.length || page.path === '/docs/getting-started'"> -->
 
       <UContentSurround :surround="surround" />
       <UContentSurround v-if="page.path === '/docs/getting-started'" :surround="surroundIntroduction" />
     </UPageBody>
 
-    <!--    <template v-if="page.toc !== false" #right> -->
-    <!--      <UContentToc :title="toc?.title" :links="page.body?.toc?.links" class="bg-white dark:bg-gray-950"> -->
-    <!--        <template v-if="toc?.bottom" #bottom> -->
-    <!--          <div class="hidden lg:block space-y-6" :class="{ '!mt-6': page.body?.toc?.links?.length }"> -->
-    <!--            <UDivider v-if="page.body?.toc?.links?.length" type="dashed" /> -->
-    <!--            <Ads class="mb-5" /> -->
-    <!--            <UPageLinks :title="toc.bottom.title" :links="links" /> -->
-    <!--          </div> -->
-    <!--        </template> -->
-    <!--      </UContentToc> -->
-    <!--    </template> -->
+    <template v-if="page.toc !== false" #right>
+      <UContentToc :title="toc?.title" :links="page.body?.toc?.links" class="bg-white dark:bg-gray-950">
+        <template #top>
+          <div
+            class="wwads-cn wwads-vertical max-w-[200px] !mt-0 mb-4"
+            data-id="354"
+          />
+        </template>
+        <template v-if="toc?.bottom" #bottom>
+          <div class="hidden lg:block space-y-6" :class="{ '!mt-6': page.body?.toc?.links?.length }">
+            <UDivider v-if="page.body?.toc?.links?.length" type="dashed" />
+            <Ads class="mb-5" />
+            <UPageLinks :title="toc.bottom.title" :links="links" />
+          </div>
+        </template>
+      </UContentToc>
+    </template>
   </UPage>
 </template>

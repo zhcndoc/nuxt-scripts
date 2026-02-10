@@ -1,23 +1,22 @@
 ---
 title: Fathom Analytics
-description: Use Fathom Analytics in your Nuxt app.
+description: 在你的 Nuxt 应用中使用 Fathom Analytics。
 links:
-  - label: Source
+  - label: 源码
     icon: i-simple-icons-github
     to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/fathom-analytics.ts
     size: xs
 ---
 
-[Fathom Analytics](https://usefathom.com/) is a great privacy analytics solution for your Nuxt app. It doesn't gather personal data from your visitors, yet provides detailed insights into how your site is used.
+[Fathom Analytics](https://usefathom.com/) 是一款适用于你的 Nuxt 应用的出色隐私分析解决方案。它不会收集访客的个人数据，却能提供详细的站点使用情况洞察。
 
-## Loading Globally
+## 全局加载
 
-The simplest way to load Fathom Analytics globally in your Nuxt App is to use your Nuxt config, providing your site ID
-as a string.
+在你的 Nuxt 应用中全局加载 Fathom Analytics 最简单的方法是使用 Nuxt 配置，提供你的站点 ID 字符串。
 
 ::code-group
 
-```ts [Always enabled]
+```ts [始终启用]
 export default defineNuxtConfig({
   scripts: {
     registry: {
@@ -29,7 +28,7 @@ export default defineNuxtConfig({
 })
 ```
 
-```ts [Production only]
+```ts [仅生产环境]
 export default defineNuxtConfig({
   $production: {
     scripts: {
@@ -44,14 +43,14 @@ export default defineNuxtConfig({
 ```
 
 
-```ts [Environment Variables]
+```ts [环境变量]
 export default defineNuxtConfig({
   scripts: {
     registry: {
       fathomAnalytics: true,
     }
   },
-  // you need to provide a runtime config to access the environment variables
+  // 你需要提供运行时配置以访问环境变量
   runtimeConfig: {
     public: {
       scripts: {
@@ -68,53 +67,53 @@ export default defineNuxtConfig({
 
 ::
 
-## Composable `useScriptFathomAnalytics`
+## 组合函数 `useScriptFathomAnalytics`
 
-The `useScriptFathomAnalytics` composable lets you have fine-grain control over when and how Fathom Analytics is loaded on your site.
+`useScriptFathomAnalytics` 组合函数让你可以细粒度地控制 Fathom Analytics 在你站点上的加载时机和方式。
 
 ```ts
 useScriptFathomAnalytics(options)
 ```
 
-## Defaults
+## 默认值
 
-- **Trigger**: Script will load when Nuxt is hydrated.
+- **触发时机**：脚本将在 Nuxt 被水合（hydrated）时加载。
 
-## Options
+## 选项
 
 ```ts
 export const FathomAnalyticsOptions = object({
   /**
-   * The Fathom Analytics site ID.
+   * Fathom Analytics 的站点 ID。
    */
   site: string(),
   /**
-   * The Fathom Analytics tracking mode.
+   * Fathom Analytics 的跟踪模式。
    */
   spa: optional(union([literal('auto'), literal('history'), literal('hash')])),
   /**
-   * Automatically track page views.
+   * 是否自动跟踪页面浏览。
    */
   auto: optional(boolean()),
   /**
-   * Enable canonical URL tracking.
+   * 启用规范 URL 跟踪。
    */
   canonical: optional(boolean()),
   /**
-   * Honor Do Not Track requests.
+   * 遵守“请勿追踪”请求。
    */
   honorDnt: optional(boolean()),
 })
 ```
 
-Additionally like all registry scripts you can provide extra configuration:
+此外，和所有注册脚本一样，你可以提供额外配置：
 
-- `scriptInput` - HTML attributes to add to the script tag.
-- `scriptOptions` - See [Script Options]. Bundling is not supported, `bundle: true` will not do anything.
+- `scriptInput` - 要添加到 script 标签的 HTML 属性。
+- `scriptOptions` - 详见 [Script Options]。不支持打包，`bundle: true` 不会生效。
 
-## Return values
+## 返回值
 
-The Fathom Analytics composable injects a `window.fathom` object into the global scope.
+Fathom Analytics 组合函数会向全局范围注入一个 `window.fathom` 对象。
 
 ```ts
 export interface FathomAnalyticsApi {
@@ -131,19 +130,18 @@ export interface FathomAnalyticsApi {
 }
 ```
 
-You can access the `fathom` object as a proxy directly or await the `$script` promise to access the object. It's recommended
-to use the proxy for any void functions.
+你可以直接通过代理访问 `fathom` 对象，或者等待 `$script` Promise 以访问该对象。建议对于无返回值的函数使用代理。
 
 ::code-group
 
-```ts [Proxy]
+```ts [代理]
 const { proxy } = useScriptFathomAnalytics()
 function trackMyGoal() {
   proxy.trackGoal('MY_GOAL_ID', 100)
 }
 ```
 
-```ts [onLoaded]
+```ts [加载完成时]
 const { onLoaded } = useScriptFathomAnalytics()
 onLoaded(({ trackGoal }) => {
   trackGoal('MY_GOAL_ID', 100)
@@ -152,9 +150,9 @@ onLoaded(({ trackGoal }) => {
 
 ::
 
-## Example
+## 示例
 
-Loading Fathom Analytics through the `app.vue` when Nuxt is ready.
+通过 `app.vue` 在 Nuxt 准备好时加载 Fathom Analytics。
 
 ```vue [app.vue]
 <script setup>

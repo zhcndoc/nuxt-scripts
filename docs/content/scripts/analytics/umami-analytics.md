@@ -1,44 +1,42 @@
 ---
 title: Umami Analytics
-description: Use Umami Analytics in your Nuxt app.
+description: 在你的 Nuxt 应用中使用 Umami Analytics。
 links:
-  - label: Source
+  - label: 源代码
     icon: i-simple-icons-github
     to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/umami-analytics.ts
     size: xs
 ---
 
-[Umami](https://umami.is/) collects all the metrics you care about to help you make better decisions.
+[Umami](https://umami.is/) 收集你关心的所有指标，帮助你做出更好的决策。
 
-The simplest way to load Umami Analytics globally in your Nuxt App is to use Nuxt config. Alternatively you can directly
-use the [useScriptUmamiAnalytics](#useScriptUmamiAnalytics) composable.
+在你的 Nuxt 应用中全局加载 Umami Analytics 的最简单方式是使用 Nuxt 配置。或者你也可以直接使用 [useScriptUmamiAnalytics](#useScriptUmamiAnalytics) 组合式函数。
 
-## Loading Globally
+## 全局加载
 
-If you don't plan to send custom events you can use the [Environment overrides](https://nuxt.com/docs/getting-started/configuration#environment-overrides) to
-disable the script in development.
+如果你不打算发送自定义事件，可以使用[环境覆盖](https://nuxt.com/docs/getting-started/configuration#environment-overrides)来在开发环境禁用脚本。
 
 ::code-group
 
-```ts [Always enabled]
+```ts [始终启用]
 export default defineNuxtConfig({
   scripts: {
     registry: {
       umamiAnalytics: {
-        websiteId: 'YOUR_WEBSITE_ID'
+        websiteId: '你的_WEBSITE_ID'
       }
     }
   }
 })
 ```
 
-```ts [Production only]
+```ts [仅生产环境]
 export default defineNuxtConfig({
   $production: {
     scripts: {
       registry: {
         umamiAnalytics: {
-          websiteId: 'YOUR_WEBSITE_ID',
+          websiteId: '你的_WEBSITE_ID',
         }
       }
     }
@@ -46,20 +44,20 @@ export default defineNuxtConfig({
 })
 ```
 
-```ts [Environment Variables]
+```ts [环境变量]
 export default defineNuxtConfig({
   scripts: {
     registry: {
       umamiAnalytics: true,
     }
   },
-  // you need to provide a runtime config to access the environment variables
+  // 你需要提供运行时配置来访问环境变量
   runtimeConfig: {
     public: {
       scripts: {
         umamiAnalytics: {
-          // .env
-          // NUXT_PUBLIC_SCRIPTS_UMAMI_ANALYTICS_WEBSITE_ID=<your websiteId>
+          // .env 配置
+          // NUXT_PUBLIC_SCRIPTS_UMAMI_ANALYTICS_WEBSITE_ID=<你的 websiteId>
           websiteId: ''
         },
       },
@@ -72,20 +70,19 @@ export default defineNuxtConfig({
 
 ## useScriptUmamiAnalytics
 
-The `useScriptUmamiAnalytics` composable lets you have fine-grain control over when and how Umami Analytics is loaded on your site.
+`useScriptUmamiAnalytics` 组合式函数让你可以精细地控制 Umami Analytics 在你网站上的加载时机和方式。
 
 ```ts
 const umami = useScriptUmamiAnalytics({
-  websiteId: 'YOUR_WEBSITE_ID'
+  websiteId: '你的_WEBSITE_ID'
 })
 ```
 
-Please follow the [Registry Scripts](/docs/guides/registry-scripts) guide to learn more about advanced usage.
+请参阅 [注册脚本指南](/docs/guides/registry-scripts) 了解更多高级用法。
 
-### Self-hosted Umami
+### 自托管 Umami
 
-If you are using a self-hosted version of Umami, you will need to provide an explicit src for the script so that
-the API events are sent to the correct endpoint.
+如果你使用的是自托管版本的 Umami，则需要显式提供脚本的 `src`，确保 API 事件发送到正确的端点。
 
 ```ts
 useScriptUmamiAnalytics({
@@ -104,39 +101,39 @@ export interface UmamiAnalyticsApi {
 }
 ```
 
-### Config Schema
+### 配置模式
 
-You must provide the options when setting up the script for the first time.
+首次设置脚本时必须提供以下选项。
 
 ```ts
 export const UmamiAnalyticsOptions = object({
-  websiteId: string(), // required
+  websiteId: string(), // 必填
   /**
-   * By default, Umami will send data to wherever the script is located.
-   * You can override this to send data to another location.
+   * 默认情况下，Umami 会将数据发送到脚本所在的位置。
+   * 你可以通过此项重写数据发送到其他地址。
    */
   hostUrl: optional(string()),
   /**
-   * By default, Umami tracks all pageviews and events for you automatically.
-   * You can disable this behavior and track events yourself using the tracker functions.
+   * 默认情况下，Umami 会自动跟踪所有页面访问和事件。
+   * 你可以禁用此功能，手动使用跟踪器函数跟踪事件。
    * https://umami.is/docs/tracker-functions
    */
   autoTrack: optional(boolean()),
   /**
-   * If you want the tracker to only run on specific domains, you can add them to your tracker script.
-   * This is a comma delimited list of domain names.
-   * Helps if you are working in a staging/development environment.
+   * 如果你希望跟踪器只在特定域名下运行，可以将它们添加到跟踪器脚本中。
+   * 这是以逗号分隔的域名列表。
+   * 对于处于预发布或开发环境时非常有用。
    */
   domains: optional(array(string())),
   /**
-   * If you want the tracker to collect events under a specific tag.
-   * Events can be filtered in the dashboard by a specific tag.
+   * 如果你希望跟踪器在特定标签下收集事件。
+   * 仪表盘可以基于标签过滤事件。
    */
   tag: optional(string()),
   /**
-   * Function that will be called before data is sent to Umami.
-   * The function takes two parameters: type and payload.
-   * Return the payload to continue sending, or return a falsy value to cancel.
+   * 发送数据到 Umami 前调用的函数。
+   * 该函数接收两个参数：type 和 payload。
+   * 返回 payload 继续发送，返回假值则取消发送。
    */
   beforeSend: optional(union([
     custom<(type: string, payload: Record<string, any>) => Record<string, any> | null | false>(input => typeof input === 'function'),
@@ -145,69 +142,69 @@ export const UmamiAnalyticsOptions = object({
 })
 ```
 
-## Advanced Features
+## 高级功能
 
-### Session Identification
+### 会话识别
 
-Umami v2.18.0+ supports setting unique session IDs using the `identify` function. You can pass either a string (unique ID) or an object with session data:
+Umami v2.18.0 以上支持通过 `identify` 函数设置唯一的会话 ID。你可以传入字符串（唯一 ID）或包含会话数据的对象：
 
 ```ts
 const { proxy } = useScriptUmamiAnalytics({
-  websiteId: 'YOUR_WEBSITE_ID'
+  websiteId: '你的_WEBSITE_ID'
 })
 
-// Using a unique string ID
+// 使用唯一字符串 ID
 proxy.identify('user-12345')
 
-// Using session data object
+// 使用会话数据对象
 proxy.identify({
   userId: 'user-12345',
   plan: 'premium'
 })
 ```
 
-### Data Filtering with beforeSend
+### 使用 beforeSend 进行数据过滤
 
-The `beforeSend` option allows you to inspect, modify, or cancel data before it's sent to Umami. This is useful for implementing custom privacy controls or data filtering:
+`beforeSend` 选项允许你检查、修改或取消发送到 Umami 的数据。这对于实现自定义隐私控制或数据过滤非常有用：
 
 ```ts
 useScriptUmamiAnalytics({
-  websiteId: 'YOUR_WEBSITE_ID',
+  websiteId: '你的_WEBSITE_ID',
   beforeSend: (type, payload) => {
-    // Log what's being sent (for debugging)
-    console.log('Sending to Umami:', type, payload)
+    // 打印发送数据（用于调试）
+    console.log('发送到 Umami:', type, payload)
     
-    // Filter out sensitive data
+    // 过滤包含敏感数据的网址
     if (payload.url && payload.url.includes('private')) {
-      return false // Cancel send
+      return false // 取消发送
     }
     
-    // Modify payload before sending
+    // 修改发送数据
     return {
       ...payload,
-      referrer: '' // Remove referrer for privacy
+      referrer: '' // 隐藏来源页以保护隐私
     }
   }
 })
 ```
 
-You can also provide a string with the name of a globally defined function:
+你也可以提供全局定义函数的函数名字符串：
 
 ```ts
-// Define function globally
+// 全局定义函数
 window.myBeforeSendHandler = (type, payload) => {
   return checkPrivacyRules(payload) ? payload : false
 }
 
 useScriptUmamiAnalytics({
-  websiteId: 'YOUR_WEBSITE_ID',
+  websiteId: '你的_WEBSITE_ID',
   beforeSend: 'myBeforeSendHandler'
 })
 ```
 
-## Example
+## 示例
 
-Using Umami Analytics only in production while using `track` to send a conversion event.
+仅在生产环境使用 Umami Analytics，并通过 `track` 发送转化事件。
 
 ::code-group
 
@@ -215,8 +212,8 @@ Using Umami Analytics only in production while using `track` to send a conversio
 <script setup lang="ts">
 const { proxy } = useScriptUmamiAnalytics()
 
-// noop in development, ssr
-// just works in production, client
+// 开发环境和 SSR 下为 noop
+// 仅在生产环境客户端正常工作
 proxy.track('event', { name: 'conversion-step' })
 
 function sendConversion() {
@@ -227,7 +224,7 @@ function sendConversion() {
 <template>
   <div>
     <button @click="sendConversion">
-      Send Conversion
+      发送转化事件
     </button>
   </div>
 </template>

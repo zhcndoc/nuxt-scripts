@@ -1,26 +1,26 @@
 ---
 title: Google reCAPTCHA
-description: Use Google reCAPTCHA v3 in your Nuxt app.
+description: 在你的 Nuxt 应用中使用 Google reCAPTCHA v3。
 links:
-  - label: Source
+  - label: 源码
     icon: i-simple-icons-github
     to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/google-recaptcha.ts
     size: xs
 ---
 
-[Google reCAPTCHA](https://www.google.com/recaptcha/about/) protects your site from spam and abuse using advanced risk analysis.
+[Google reCAPTCHA](https://www.google.com/recaptcha/about/) 利用先进的风险分析技术保护你的网站免受垃圾信息和滥用。
 
-Nuxt Scripts provides a registry script composable `useScriptGoogleRecaptcha` to easily integrate reCAPTCHA v3 in your Nuxt app.
+Nuxt Scripts 提供了一个注册脚本组合式函数 `useScriptGoogleRecaptcha`，让你能轻松在 Nuxt 应用中集成 reCAPTCHA v3。
 
 ::callout
-This integration supports reCAPTCHA v3 (score-based, invisible) only. For v2 checkbox, use the standard reCAPTCHA integration.
+此集成仅支持 reCAPTCHA v3（基于得分的隐形验证）。若需使用 v2 复选框，请使用标准的 reCAPTCHA 集成方式。
 ::
 
-### Loading Globally
+### 全局加载
 
 ::code-group
 
-```ts [Always enabled]
+```ts [始终启用]
 export default defineNuxtConfig({
   scripts: {
     registry: {
@@ -32,7 +32,7 @@ export default defineNuxtConfig({
 })
 ```
 
-```ts [Production only]
+```ts [仅生产环境]
 export default defineNuxtConfig({
   $production: {
     scripts: {
@@ -46,7 +46,7 @@ export default defineNuxtConfig({
 })
 ```
 
-```ts [Environment Variables]
+```ts [环境变量]
 export default defineNuxtConfig({
   scripts: {
     registry: {
@@ -57,7 +57,7 @@ export default defineNuxtConfig({
     public: {
       scripts: {
         googleRecaptcha: {
-          // .env
+          // .env 文件中
           // NUXT_PUBLIC_SCRIPTS_GOOGLE_RECAPTCHA_SITE_KEY=<your-key>
           siteKey: '',
         },
@@ -71,21 +71,21 @@ export default defineNuxtConfig({
 
 ## useScriptGoogleRecaptcha
 
-The `useScriptGoogleRecaptcha` composable lets you have fine-grain control over when and how reCAPTCHA is loaded on your site.
+`useScriptGoogleRecaptcha` 组合式函数让你可以精细控制 reCAPTCHA 在你网站上的加载时机和方式。
 
 ```ts
 const { proxy } = useScriptGoogleRecaptcha({
   siteKey: 'YOUR_SITE_KEY'
 })
 
-// Execute reCAPTCHA and get token
+// 执行 reCAPTCHA 并获取令牌
 proxy.grecaptcha.ready(async () => {
   const token = await proxy.grecaptcha.execute('YOUR_SITE_KEY', { action: 'submit' })
-  // Send token to your server for verification
+  // 将令牌发送到你的服务器进行验证
 })
 ```
 
-Please follow the [Registry Scripts](/docs/guides/registry-scripts) guide to learn more about advanced usage.
+请参照[注册脚本](/docs/guides/registry-scripts)指南了解更多高级用法。
 
 ### GoogleRecaptchaApi
 
@@ -102,34 +102,34 @@ export interface GoogleRecaptchaApi {
 }
 ```
 
-### Config Schema
+### 配置模式
 
-You must provide the options when setting up the script for the first time.
+首次设置脚本时必须提供以下选项。
 
 ```ts
 export const GoogleRecaptchaOptions = object({
   /**
-   * Your reCAPTCHA site key from the Google reCAPTCHA admin console.
+   * 你的 reCAPTCHA 网站密钥，来自 Google reCAPTCHA 管理控制台。
    */
   siteKey: string(),
   /**
-   * Use reCAPTCHA Enterprise instead of standard reCAPTCHA.
+   * 使用 reCAPTCHA Enterprise 而非标准的 reCAPTCHA。
    */
   enterprise: optional(boolean()),
   /**
-   * Load from recaptcha.net instead of google.com (works in China).
+   * 通过 recaptcha.net 而非 google.com 加载（适用于中国）。
    */
   recaptchaNet: optional(boolean()),
   /**
-   * Language code for the reCAPTCHA widget.
+   * reCAPTCHA 小部件的语言代码。
    */
   hl: optional(string()),
 })
 ```
 
-## Example
+## 示例
 
-Using reCAPTCHA v3 to protect a form submission with server-side verification.
+使用 reCAPTCHA v3 保护表单提交，并做服务器端验证。
 
 ::code-group
 
@@ -146,10 +146,10 @@ async function onSubmit() {
   status.value = 'loading'
 
   onLoaded(async ({ grecaptcha }) => {
-    // Get reCAPTCHA token
+    // 获取 reCAPTCHA 令牌
     const token = await grecaptcha.execute('YOUR_SITE_KEY', { action: 'contact' })
 
-    // Send form data + token to your API for verification
+    // 将表单数据和令牌发送到 API 进行验证
     const result = await $fetch('/api/contact', {
       method: 'POST',
       body: {
@@ -167,14 +167,14 @@ async function onSubmit() {
 
 <template>
   <form @submit.prevent="onSubmit">
-    <input v-model="name" placeholder="Name" required />
-    <input v-model="email" type="email" placeholder="Email" required />
-    <textarea v-model="message" placeholder="Message" required />
+    <input v-model="name" placeholder="姓名" required />
+    <input v-model="email" type="email" placeholder="邮箱" required />
+    <textarea v-model="message" placeholder="消息" required />
     <button type="submit" :disabled="status === 'loading'">
-      {{ status === 'loading' ? 'Sending...' : 'Submit' }}
+      {{ status === 'loading' ? '发送中...' : '提交' }}
     </button>
-    <p v-if="status === 'success'">Message sent!</p>
-    <p v-if="status === 'error'">Failed to send. Please try again.</p>
+    <p v-if="status === 'success'">消息已发送！</p>
+    <p v-if="status === 'error'">发送失败。请重试。</p>
   </form>
 </template>
 ```
@@ -183,7 +183,7 @@ async function onSubmit() {
 export default defineEventHandler(async (event) => {
   const { token, name, email, message } = await readBody(event)
 
-  // Verify reCAPTCHA token
+  // 验证 reCAPTCHA 令牌
   const secretKey = process.env.RECAPTCHA_SECRET_KEY
   const verification = await $fetch('https://www.google.com/recaptcha/api/siteverify', {
     method: 'POST',
@@ -196,12 +196,12 @@ export default defineEventHandler(async (event) => {
   if (!verification.success || verification.score < 0.5) {
     throw createError({
       statusCode: 400,
-      message: 'reCAPTCHA verification failed',
+      message: 'reCAPTCHA 验证失败',
     })
   }
 
-  // Process the contact form (send email, save to DB, etc.)
-  console.log('Contact form submitted:', { name, email, message, score: verification.score })
+  // 处理联系表单（发送邮件、存入数据库等）
+  console.log('联系表单提交信息:', { name, email, message, score: verification.score })
 
   return { success: true }
 })
@@ -209,9 +209,9 @@ export default defineEventHandler(async (event) => {
 
 ::
 
-## Enterprise
+## 企业版
 
-For reCAPTCHA Enterprise, set the `enterprise` option to `true`:
+使用 reCAPTCHA Enterprise 时，将 `enterprise` 选项设置为 `true`：
 
 ```ts
 export default defineNuxtConfig({
@@ -226,9 +226,9 @@ export default defineNuxtConfig({
 })
 ```
 
-## China Support
+## 中国支持
 
-For sites that need to work in China, use `recaptchaNet: true` to load from `recaptcha.net` instead of `google.com`:
+需要支持中国大陆的网站，使用 `recaptchaNet: true`，从 `recaptcha.net` 而非 `google.com` 加载：
 
 ```ts
 export default defineNuxtConfig({
@@ -243,9 +243,9 @@ export default defineNuxtConfig({
 })
 ```
 
-## Server-Side Verification
+## 服务器端验证
 
-reCAPTCHA tokens must be verified on your server. Create an API endpoint to validate the token:
+reCAPTCHA 令牌必须在服务器端进行验证。请创建一个 API 接口来校验令牌：
 
 ::code-group
 
@@ -265,7 +265,7 @@ export default defineEventHandler(async (event) => {
   if (!response.success || response.score < 0.5) {
     throw createError({
       statusCode: 400,
-      message: 'reCAPTCHA verification failed',
+      message: 'reCAPTCHA 验证失败',
     })
   }
 
@@ -273,7 +273,7 @@ export default defineEventHandler(async (event) => {
 })
 ```
 
-```ts [Enterprise - server/api/verify-recaptcha.post.ts]
+```ts [企业版 - server/api/verify-recaptcha.post.ts]
 export default defineEventHandler(async (event) => {
   const { token } = await readBody(event)
   const projectId = process.env.RECAPTCHA_PROJECT_ID
@@ -293,7 +293,7 @@ export default defineEventHandler(async (event) => {
   if (!response.tokenProperties?.valid || response.riskAnalysis?.score < 0.5) {
     throw createError({
       statusCode: 400,
-      message: 'reCAPTCHA verification failed',
+      message: 'reCAPTCHA 验证失败',
     })
   }
 
@@ -304,35 +304,35 @@ export default defineEventHandler(async (event) => {
 ::
 
 ::callout{type="warning"}
-Never expose your secret key on the client. Always verify tokens server-side.
+切勿在客户端暴露你的密钥。请务必在服务器端验证令牌。
 ::
 
-## Hiding the Badge
+## 隐藏徽章
 
-reCAPTCHA v3 displays a badge in the corner of your site. You can hide it with CSS, but you must include attribution in your form:
+reCAPTCHA v3 会在网站角落显示徽章。你可以通过 CSS 将其隐藏，但必须在你的表单中包含归属声明：
 
 ```css
 .grecaptcha-badge { visibility: hidden; }
 ```
 
 ```html
-<p>This site is protected by reCAPTCHA and the Google
-  <a href="https://policies.google.com/privacy">Privacy Policy</a> and
-  <a href="https://policies.google.com/terms">Terms of Service</a> apply.
+<p>本网站受 reCAPTCHA 保护，且受 Google 的
+  <a href="https://policies.google.com/privacy">隐私政策</a> 和
+  <a href="https://policies.google.com/terms">服务条款</a> 约束。
 </p>
 ```
 
-## Test Keys
+## 测试密钥
 
-Google provides test keys for development that always pass verification. Use these for local testing:
+Google 提供了始终通过验证的测试密钥，适用于开发环境本地测试：
 
-| Key Type | Value |
+| 密钥类型 | 值 |
 |----------|-------|
-| Site Key | `6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI` |
-| Secret Key | `6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe` |
+| 网站密钥 | `6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI` |
+| 密钥秘钥 | `6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe` |
 
 ::callout{type="info"}
-Test keys will always return `success: true` with a score of `0.9`. See [Google's FAQ](https://developers.google.com/recaptcha/docs/faq#id-like-to-run-automated-tests-with-recaptcha.-what-should-i-do) for more details.
+测试密钥总是返回 `success: true` 且得分为 `0.9`。详情参见 [Google 常见问题](https://developers.google.com/recaptcha/docs/faq#id-like-to-run-automated-tests-with-recaptcha.-what-should-i-do)。
 ::
 
 ```ts [nuxt.config.ts]

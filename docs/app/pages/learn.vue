@@ -1,7 +1,7 @@
 <script setup lang="ts">
 useSeoMeta({
-  title: 'Learn Nuxt Scripts',
-  description: 'Follow along with the Nuxt Scripts intro videos for a fun and interactive way to learn how to use Nuxt Scripts.',
+  title: '学习 Nuxt Scripts',
+  description: '通过 Nuxt Scripts 的介绍视频，以有趣和互动的方式学习如何使用 Nuxt Scripts。',
 })
 
 defineOgImageComponent('Home')
@@ -13,7 +13,7 @@ defineOgImageComponent('Home')
       <div class="text-center">
         <UIcon name="i-ph-book-bookmark-duotone" class="h-[50px] w-[50px] text-primary" />
         <h2 class="text-xl xl:text-4xl font-bold mb-12 text-center">
-          Watch the intro videos from the pros.
+          观看专业人士的介绍视频
         </h2>
         <div class="lg:flex justify-between gap-10 items-center">
           <ScriptYouTubePlayer video-id="sjMqUUvH9AE" class="rounded-xl overflow-hidden group">
@@ -36,16 +36,16 @@ defineOgImageComponent('Home')
 
     <UPageSection :ui="{ wrapper: 'pt-0 py-6 sm:py-14' }">
       <UPageCTA
-        description="Learn all of the fundamentals of Nuxt Scripts in the fun interactive confetti tutorial."
+        description="通过有趣的互动彩带教程学习 Nuxt Scripts 的所有基础知识。"
         card
       >
         <template #title>
-          Try out our JS Confetti Tutorial
+          尝试我们的 JS 彩带教程
         </template>
         <template #links>
           <div ref="confettiEl">
             <UButton size="xl" variant="solid" icon="i-ph-sparkle-duotone" color="primary" to="/docs/getting-started/confetti-tutorial">
-              Get started
+              开始学习
             </UButton>
           </div>
         </template>

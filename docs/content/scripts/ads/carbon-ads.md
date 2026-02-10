@@ -1,6 +1,6 @@
 ---
-title: Carbon Ads
-description: Show carbon ads in your Nuxt app using a Vue component.
+title: Carbon Ads 碳广告
+description: 在您的 Nuxt 应用中使用 Vue 组件展示碳广告。
 links:
   - label: "<ScriptCarbonAds>"
     icon: i-simple-icons-github
@@ -8,17 +8,15 @@ links:
     size: xs
 ---
 
-[Carbon Ads](https://www.carbonads.net/) is an ad service that provides a performance friendly way to show ads on your site.
+[Carbon Ads](https://www.carbonads.net/) 是一种广告服务，提供对网站展示广告的性能友好型方案。
 
-Nuxt Scripts provides a headless `ScriptCarbonAds` component to embed Carbon Ads in your Nuxt app.
+Nuxt Scripts 提供了一个无头（headless）`ScriptCarbonAds` 组件，用于在您的 Nuxt 应用中嵌入碳广告。
 
 ## ScriptCarbonAds
 
-The `ScriptCarbonAds` component works differently to other Nuxt Scripts component and does not rely on `useScript`, instead it simply
-inserts a script tag into the div of the component on mount.
+`ScriptCarbonAds` 组件的工作方式与其他 Nuxt Scripts 组件不同，它不依赖于 `useScript`，而是在组件挂载时简单地将一个 script 标签插入组件的 div 中。
 
-By default, the component uses CarbonAds best practices which is to load immediately on mount. You can make use of [Element Event Triggers](/docs/guides/script-triggers#element-event-triggers) if you
-want to load the ads on a specific event.
+默认情况下，组件使用 CarbonAds 的最佳实践，即在挂载时立即加载。如果您希望在特定事件触发时加载广告，可以使用[元素事件触发器](/docs/guides/script-triggers#element-event-triggers)。
 
 ```vue
 <template>
@@ -30,9 +28,9 @@ want to load the ads on a specific event.
 </template>
 ```
 
-### Handling Ad-blockers
+### 处理广告拦截器
 
-You can use these hooks to add a fallback when CarbonAds is blocked.
+当 CarbonAds 被拦截时，您可以使用这些插槽来添加备用内容。
 
 ```vue
 <template>
@@ -42,17 +40,16 @@ You can use these hooks to add a fallback when CarbonAds is blocked.
     format="..."
   >
     <template #error>
-      <!-- Fallback ad -->
-      Please support us by disabling your ad blocker.
+      <!-- 备用广告 -->
+      请关闭广告拦截器支持我们。
     </template>
   </ScriptCarbonAds>
 </template>
 ```
 
-### Adding UI
+### 添加用户界面样式
 
-The component renders as headless, meaning there is no inherit styles. If you'd like to customize the look of the ad, you can
-use this example from nuxt.com.
+该组件无头渲染，意味着没有内置样式。如果您想自定义广告外观，可以使用来自 nuxt.com 的示例。
 
 ```vue
 <template>
@@ -65,7 +62,7 @@ use this example from nuxt.com.
 </template>
 
 <style lang="postcss">
-/* Credits to nuxt.com */
+/* 感谢 nuxt.com */
 .dark .Carbon {
   min-height: 220px;
   .carbon-text {
@@ -159,18 +156,16 @@ use this example from nuxt.com.
 </style>
 ```
 
+### 组件 API
 
-### Component API
+完整的 props、事件和插槽请参阅[门面组件 API](/docs/guides/facade-components#facade-components-api)。
 
-See the [Facade Component API](/docs/guides/facade-components#facade-components-api) for full props, events, and slots.
-
-Note: The Carbon Ads script _does not_ extend the `useScript` composable. Accessing the script will return the `HTMLScriptElement`.
+注意：Carbon Ads 脚本**不**扩展 `useScript` 组合函数。访问该脚本会返回 `HTMLScriptElement`。
 
 ### Props
 
-The `ScriptCarbonAds` component accepts the following props:
+`ScriptCarbonAds` 组件接受以下属性：
 
-- `serve`: The serve URL provided by Carbon Ads.
-- `placement`: The placement ID provided by Carbon Ads.
-- `format`: Format provided by Carbon Ads.
-
+- `serve`：Carbon Ads 提供的服务 URL。
+- `placement`：Carbon Ads 提供的广告位 ID。
+- `format`：Carbon Ads 提供的格式。

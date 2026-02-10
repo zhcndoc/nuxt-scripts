@@ -1,24 +1,24 @@
 ---
 title: Databuddy Analytics
-description: Use Databuddy Analytics in your Nuxt app.
+description: 在你的 Nuxt 应用中使用 Databuddy Analytics。
 links:
-  - label: Source
+  - label: 源代码
     icon: i-simple-icons-github
     to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/databuddy-analytics.ts
     size: xs
 ---
 
-[Databuddy](https://www.databuddy.cc/) is a privacy-first analytics platform focused on performance and minimal data collection.
+[Databuddy](https://www.databuddy.cc/) 是一个隐私优先的分析平台，专注于性能和最小的数据收集。
 
-Use the registry to easily inject the Databuddy CDN script with sensible defaults, or call the composable for fine-grain control.
+使用 registry 可以轻松注入带有合理默认值的 Databuddy CDN 脚本，或者调用组合函数以实现细粒度控制。
 
-## Loading Globally
+## 全局加载
 
-The simplest way to enable Databuddy globally is via `nuxt.config` (or module config). You can use environment overrides to only enable in production.
+启用 Databuddy 全局的最简单方法是通过 `nuxt.config`（或模块配置）。你可以使用环境变量覆盖，仅在生产环境中启用。
 
 ::code-group
 
-```ts [Always enabled]
+```ts [始终启用]
 export default defineNuxtConfig({
   scripts: {
     registry: {
@@ -30,7 +30,7 @@ export default defineNuxtConfig({
 })
 ```
 
-```ts [Production only]
+```ts [仅生产环境]
 export default defineNuxtConfig({
   $production: {
     scripts: {
@@ -44,7 +44,7 @@ export default defineNuxtConfig({
 })
 ```
 
-```ts [Environment Variables]
+```ts [环境变量]
 export default defineNuxtConfig({
   scripts: {
     registry: {
@@ -69,7 +69,7 @@ export default defineNuxtConfig({
 
 ## useScriptDatabuddyAnalytics
 
-The `useScriptDatabuddyAnalytics` composable gives you control over when and how Databuddy is loaded.
+`useScriptDatabuddyAnalytics` 组合函数让你控制何时以及如何加载 Databuddy。
 
 ```ts
 const db = useScriptDatabuddyAnalytics({
@@ -80,11 +80,11 @@ const db = useScriptDatabuddyAnalytics({
 })
 ```
 
-The composable returns the script proxy (when available). You can interact with the global API via `db` or `window.db` / `window.databuddy`.
+该组合函数返回脚本代理（如果可用）。你可以通过 `db` 或者 `window.db` / `window.databuddy` 与全局 API 交互。
 
-### CDN / Self-hosted
+### CDN / 自托管
 
-By default the registry injects `https://cdn.databuddy.cc/databuddy.js`. If you host the script yourself, pass `scriptUrl` in options to override the `src`.
+默认情况下，registry 会注入 `https://cdn.databuddy.cc/databuddy.js`。如果你自行托管脚本，可以通过选项传入 `scriptUrl` 来覆盖 `src`。
 
 ```ts
 useScriptDatabuddyAnalytics({
@@ -106,9 +106,9 @@ export interface DatabuddyAnalyticsApi {
 }
 ```
 
-### Config Schema
+### 配置模式
 
-You must provide a `clientId` when configuring the registry for the first time. The registry supports a large set of Databuddy options which are passed to the script via `data-` attributes.
+首次配置 registry 时，必须提供 `clientId`。registry 支持大量传递给脚本的 Databuddy 选项，这些选项通过 `data-` 属性传递。
 
 ```ts
 export const DatabuddyAnalyticsOptions = object({
@@ -148,9 +148,9 @@ export const DatabuddyAnalyticsOptions = object({
 })
 ```
 
-## Example
+## 示例
 
-Track a custom event using the composable proxy (noop in SSR/development):
+使用组合函数代理跟踪自定义事件（在 SSR / 开发环境中为无操作）：
 
 ::code-group
 
@@ -164,6 +164,6 @@ function sendEvent() {
 </script>
 
 <template>
-  <button @click="sendEvent">Send Event</button>
+  <button @click="sendEvent">发送事件</button>
 </template>
 ```

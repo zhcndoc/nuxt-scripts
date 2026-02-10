@@ -1,27 +1,25 @@
 ---
 title: NPM
-description: Load IIFE scripts from NPM in your Nuxt app.
+description: 在你的 Nuxt 应用中从 NPM 加载 IIFE 脚本。
 links:
-  - label: Source
+  - label: 源码
     icon: i-simple-icons-github
     to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/npm.ts
     size: xs
 ---
 
-## Background
+## 背景
 
-When working with NPM files, you'd typically include them as a node_module dependency in the `package.json` file. However,
-optimizing the script loading of these scripts can be difficult, requiring a dynamic import of the module from a separate chunk and
-loading it only when needed. It also slows down your build as the module needs to be transpiled.
+使用 NPM 文件时，通常会将它们作为 `package.json` 文件中的 node_module 依赖包含进来。然而，
+优化这些脚本的加载较为困难，需要从单独的代码块动态导入模块，
+并且仅在需要时加载。它还会拖慢构建速度，因为模块需要被转译。
 
-The `useScriptNpm` registry script abstracts this process, allowing you to load scripts that have been exported as immediately invokable functions,
-with a single line of code .
+`useScriptNpm` 注册脚本抽象了这一过程，使你可以通过一行代码加载那些已经导出为立即调用函数（IIFE）的脚本。
 
-In many instances it will still make more sense to include the script as a dependency in the `package.json` file, but for scripts that are not used often or
-are not critical to the application, this can be a great alternative.
+在许多情况下，将脚本作为 `package.json` 文件中的依赖可能更合理，但对于不常用或对应用不关键的脚本，
+这可以是一个很好的替代方案。
 
-To begin with we can think of using this script as an alternative to the `useHead` composable. You can see an example of the abstraction
-layers in the following code sample.
+一开始，我们可以将使用此脚本视为 `useHead` 组合式函数的替代方案。以下代码示例展示了该抽象层次。
 
 ::code-group
 
@@ -49,13 +47,13 @@ useHead({
 
 ## useScriptNpm
 
-The `useScriptNpm` composable lets you have fine-grain control over when and how NPM scripts are loaded on your site.
+`useScriptNpm` 组合式函数让你可以精细地控制你的网站上 NPM 脚本何时以及如何加载。
 
 ```ts
 function useScriptNpm<T extends Record<string | symbol, any>>(_options: NpmInput) {}
 ```
 
-Please follow the [Registry Scripts](/docs/guides/registry-scripts) guide to learn more about advanced usage.
+请参考 [注册脚本指南](/docs/guides/registry-scripts) 了解更多进阶用法。
 
 ### NpmOptions
 
@@ -68,9 +66,9 @@ export const NpmOptions = object({
 })
 ```
 
-### Return
+### 返回值
 
-To get types for the script you're loading, you'll need to augment the types of the `useScriptNpm` function.
+要获取所加载脚本的类型，你需要扩展 `useScriptNpm` 函数的类型定义。
 
 ```ts
 interface SomeApi {
@@ -81,6 +79,6 @@ useScriptNpm<SomeApi>({
 })
 ```
 
-## Example
+## 示例
 
-See the [Tutorial: Load js-confetti](/docs/getting-started/confetti-tutorial) for further examples.
+更多示例请参见 [教程：加载 js-confetti](/docs/getting-started/confetti-tutorial)。

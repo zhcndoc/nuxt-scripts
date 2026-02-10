@@ -1,28 +1,26 @@
 ---
 title: Segment
-description: Use Segment in your Nuxt app.
+description: 在你的 Nuxt 应用中使用 Segment。
 links:
-- label: Source
+- label: 源代码
   icon: i-simple-icons-github
   to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/segment.ts
   size: xs
 ---
 
-[Segment](https://segment.com/) lets you collect, clean, and control your customer data. Segment helps you to understand your customers and personalize their experience.
+[Segment](https://segment.com/) 让你能够收集、清理和控制客户数据。Segment 帮助你了解客户并个性化他们的体验。
 
-Nuxt Scripts provides a registry script composable `useScriptSegment` to easily integrate Segment in your Nuxt app.
+Nuxt Scripts 提供了一个注册脚本组合式函数 `useScriptSegment`，可以轻松地在你的 Nuxt 应用中集成 Segment。
 
-### Nuxt Config Setup
+### Nuxt 配置设置
 
-The simplest way to load Segment globally in your Nuxt App is to use Nuxt config. Alternatively you can directly
-use the [useScriptSegment](#useScriptSegment) composable.
+在 Nuxt 应用中全局加载 Segment 最简便的方法是使用 Nuxt 配置。或者你也可以直接使用 [useScriptSegment](#useScriptSegment) 组合式函数。
 
-If you don't plan to send custom events you can use the [Environment overrides](https://nuxt.com/docs/getting-started/configuration#environment-overrides) to
-disable the script in development.
+如果你不打算发送自定义事件，可以使用[环境变量覆盖](https://nuxt.com/docs/getting-started/configuration#environment-overrides)来在开发环境中禁用该脚本。
 
 ::code-group
 
-```ts [Always enabled]
+```ts [始终启用]
 export default defineNuxtConfig({
   scripts: {
     registry: {
@@ -34,7 +32,7 @@ export default defineNuxtConfig({
 })
 ```
 
-```ts [Production only]
+```ts [仅生产环境]
 export default defineNuxtConfig({
   $production: {
     scripts: {
@@ -50,9 +48,9 @@ export default defineNuxtConfig({
 
 ::
 
-#### With Environment Variables
+#### 使用环境变量
 
-If you prefer to configure your id using environment variables.
+如果你更倾向于使用环境变量配置你的 ID。
 
 ```ts [nuxt.config.ts]
 export default defineNuxtConfig({
@@ -61,7 +59,7 @@ export default defineNuxtConfig({
       segment: true,
     }
   },
-  // you need to provide a runtime config to access the environment variables
+  // 你需要提供运行时配置来访问环境变量
   runtimeConfig: {
     public: {
       scripts: {
@@ -80,19 +78,19 @@ NUXT_PUBLIC_SCRIPTS_SEGMENT_WRITE_KEY=<YOUR_WRITE_KEY>
 
 ## useScriptSegment
 
-The `useScriptSegment` composable lets you have fine-grain control over when and how Segment is loaded on your site.
+`useScriptSegment` 组合式函数让你可以精细控制 Segment 在你的网站上何时以及如何加载。
 
 ```ts
 const { proxy } = useScriptSegment({
   id: 'YOUR_ID'
 })
-// example
+// 示例
 proxy.track('event', {
   foo: 'bar'
 })
 ```
 
-Please follow the [Registry Scripts](/docs/guides/registry-scripts) guide to learn more about advanced usage.
+请参阅 [注册脚本](/docs/guides/registry-scripts) 指南，了解更多高级用法。
 
 ### SegmentApi
 
@@ -107,9 +105,9 @@ interface SegmentApi {
 }
 ```
 
-### Config Schema
+### 配置模式
 
-You must provide the options when setting up the script for the first time.
+在首次设置脚本时，必须提供选项。
 
 ```ts
 export const SegmentOptions = object({
@@ -118,9 +116,9 @@ export const SegmentOptions = object({
 })
 ```
 
-## Example
+## 示例
 
-Using Segment only in production while using `analytics` to send a conversion event.
+仅在生产环境中使用 Segment，同时使用 `analytics` 发送转化事件。
 
 ::code-group
 
@@ -128,8 +126,8 @@ Using Segment only in production while using `analytics` to send a conversion ev
 <script setup lang="ts">
 const { proxy } = useScriptSegment()
 
-// noop in development, ssr
-// just works in production, client
+// 在开发环境和 SSR 时无操作
+// 仅在生产环境客户端生效
 function sendConversion() {
   proxy.track('conversion', {
     value: 1,
@@ -141,7 +139,7 @@ function sendConversion() {
 <template>
   <div>
     <button @click="sendConversion">
-      Send Conversion
+      发送转化事件
     </button>
   </div>
 </template>

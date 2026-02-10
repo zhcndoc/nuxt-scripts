@@ -1,0 +1,6 @@
+{
+  "app_dir": "/",
+  "build_command": "pnpm run build && cd docs && NITRO_PRESET=node_server pnpm run generate",
+  "install_command": "pnpm install",
+  "output_dir": "docs/.output/public"
+}

@@ -1,28 +1,26 @@
 ---
 title: X Pixel
-description: Use X Pixel in your Nuxt app.
+description: 在你的 Nuxt 应用中使用 X Pixel。
 links:
-- label: Source
+- label: 源码
   icon: i-simple-icons-github
   to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/x-pixel.ts
   size: xs
 ---
 
-[X Pixel](https://x.com/) lets you collect, clean, and control your customer data. X helps you to understand your customers and personalize their experience.
+[X Pixel](https://x.com/) 让你能够收集、清理并控制你的客户数据。X 帮助你了解客户并个性化他们的体验。
 
-Nuxt Scripts provides a registry script composable `useScriptXPixel` to easily integrate X Pixel in your Nuxt app.
+Nuxt Scripts 提供了一个注册脚本组合式函数 `useScriptXPixel`，以便在你的 Nuxt 应用中轻松集成 X Pixel。
 
-### Nuxt Config Setup
+### Nuxt 配置设置
 
-The simplest way to load Meta Pixel globally in your Nuxt App is to use Nuxt config. Alternatively you can directly
-use the [useScriptXPixel](#useScriptXPixel) composable.
+在你的 Nuxt 应用中全局加载 Meta Pixel 的最简单方式是使用 Nuxt 配置。或者，你也可以直接使用 [useScriptXPixel](#useScriptXPixel) 组合式函数。
 
-If you don't plan to send custom events you can use the [Environment overrides](https://nuxt.com/docs/getting-started/configuration#environment-overrides) to
-disable the script in development.
+如果你不打算发送自定义事件，可以使用 [环境覆盖](https://nuxt.com/docs/getting-started/configuration#environment-overrides) 在开发环境中禁用该脚本。
 
 ::code-group
 
-```ts [Always enabled]
+```ts [始终启用]
 export default defineNuxtConfig({
   scripts: {
     registry: {
@@ -34,7 +32,7 @@ export default defineNuxtConfig({
 })
 ```
 
-```ts [Production only]
+```ts [仅生产环境]
 export default defineNuxtConfig({
   $production: {
     scripts: {
@@ -50,9 +48,9 @@ export default defineNuxtConfig({
 
 ::
 
-#### With Environment Variables
+#### 使用环境变量
 
-If you prefer to configure your id using environment variables.
+如果你更倾向于使用环境变量来配置你的 id。
 
 ```ts [nuxt.config.ts]
 export default defineNuxtConfig({
@@ -61,7 +59,7 @@ export default defineNuxtConfig({
       xPixel: true,
     }
   },
-  // you need to provide a runtime config to access the environment variables
+  // 你需要提供运行时配置以访问环境变量
   runtimeConfig: {
     public: {
       scripts: {
@@ -80,19 +78,19 @@ NUXT_PUBLIC_SCRIPTS_X_PIXEL_ID=<YOUR_ID>
 
 ## useScriptXPixel
 
-The `useScriptXPixel` composable lets you have fine-grain control over when and how X Pixel is loaded on your site.
+`useScriptXPixel` 组合式函数让你可以精细控制 X Pixel 在你的网站上的加载时机和方式。
 
 ```ts
 const { proxy } = useScriptXPixel({
   id: 'YOUR_ID'
 })
-// example
+// 示例
 proxy.twq('event', '<EventId>', {
   value: 1,
 })
 ```
 
-Please follow the [Registry Scripts](/docs/guides/registry-scripts) guide to learn more about advanced usage.
+请参阅[注册脚本](/docs/guides/registry-scripts)指南以了解更多高级用法。
 
 ### XPixelApi
 
@@ -126,9 +124,9 @@ interface EventObjectProperties {
 }
 ```
 
-### Config Schema
+### 配置模式
 
-You must provide the options when setting up the script for the first time.
+首次设置该脚本时必须提供选项。
 
 ```ts
 export const XPixelOptions = object({
@@ -137,9 +135,9 @@ export const XPixelOptions = object({
 })
 ```
 
-## Example
+## 示例
 
-Using X Pixel only in production while using `twq` to send a conversion event.
+仅在生产环境中使用 X Pixel，同时使用 `twq` 发送转化事件。
 
 ::code-group
 
@@ -147,8 +145,8 @@ Using X Pixel only in production while using `twq` to send a conversion event.
 <script setup lang="ts">
 const { proxy } = useScriptXPixel()
 
-// noop in development, ssr
-// just works in production, client
+// 在开发环境和 SSR 中无操作
+// 仅在生产环境客户端生效
 function sendConversion() {
   proxy.twq('event', 'Purchase', {
     value: 1,
@@ -160,7 +158,7 @@ function sendConversion() {
 <template>
   <div>
     <button @click="sendConversion">
-      Send Conversion
+      发送转化
     </button>
   </div>
 </template>

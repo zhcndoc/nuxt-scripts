@@ -1,28 +1,26 @@
 ---
 title: Meta Pixel
-description: Use Meta Pixel in your Nuxt app.
+description: 在你的 Nuxt 应用中使用 Meta Pixel。
 links:
-- label: Source
+- label: 源码
   icon: i-simple-icons-github
   to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/meta-pixel.ts
   size: xs
 ---
 
-[Meta Pixel](https://www.facebook.com/business/tools/meta-pixel) lets you measure, optimise and build audiences for your Facebook ad campaigns.
+[Meta Pixel](https://www.facebook.com/business/tools/meta-pixel) 让你能够衡量、优化并为你的 Facebook 广告活动构建受众。
 
-Nuxt Scripts provides a registry script composable `useScriptMetaPixel` to easily integrate Meta Pixel in your Nuxt app.
+Nuxt Scripts 提供了一个注册脚本组合式函数 `useScriptMetaPixel`，方便你在 Nuxt 应用中集成 Meta Pixel。
 
-### Nuxt Config Setup
+### Nuxt 配置设置
 
-The simplest way to load Meta Pixel globally in your Nuxt App is to use Nuxt config. Alternatively you can directly
-use the [useScriptMetaPixel](#useScriptMetaPixel) composable.
+在你的 Nuxt 应用中全局加载 Meta Pixel 最简单的方式是通过 Nuxt 配置。或者你也可以直接使用 [useScriptMetaPixel](#useScriptMetaPixel) 组合式函数。
 
-If you don't plan to send custom events you can use the [Environment overrides](https://nuxt.com/docs/getting-started/configuration#environment-overrides) to
-disable the script in development.
+如果你不打算发送自定义事件，可以利用[环境重写](https://nuxt.com/docs/getting-started/configuration#environment-overrides)来在开发环境禁用该脚本。
 
 ::code-group
 
-```ts [Always enabled]
+```ts [始终启用]
 export default defineNuxtConfig({
   scripts: {
     registry: {
@@ -34,7 +32,7 @@ export default defineNuxtConfig({
 })
 ```
 
-```ts [Production only]
+```ts [仅生产环境]
 export default defineNuxtConfig({
   $production: {
     scripts: {
@@ -50,9 +48,9 @@ export default defineNuxtConfig({
 
 ::
 
-#### With Environment Variables
+#### 使用环境变量
 
-If you prefer to configure your id using environment variables.
+如果你更喜欢通过环境变量配置你的 id。
 
 ```ts [nuxt.config.ts]
 export default defineNuxtConfig({
@@ -61,7 +59,7 @@ export default defineNuxtConfig({
       metaPixel: true,
     }
   },
-  // you need to provide a runtime config to access the environment variables
+  // 你需要提供一个运行时配置以访问环境变量
   runtimeConfig: {
     public: {
       scripts: {
@@ -80,20 +78,20 @@ NUXT_PUBLIC_SCRIPTS_META_PIXEL_ID=<YOUR_ID>
 
 ## useScriptMetaPixel
 
-The `useScriptMetaPixel` composable lets you have fine-grain control over when and how Meta Pixel is loaded on your site.
+`useScriptMetaPixel` 组合式函数让你精细控制 Meta Pixel 在你网站上的加载时机和方式。
 
 ```ts
 const { proxy } = useScriptMetaPixel({
   id: 'YOUR_ID'
 })
-// example
+// 示例
 proxy.fbq('track', 'ViewContent', {
   content_name: 'Nuxt Pixel',
   content_category: 'Nuxt',
 })
 ```
 
-Please follow the [Registry Scripts](/docs/guides/registry-scripts) guide to learn more about advanced usage.
+请参考[注册脚本](/docs/guides/registry-scripts)指南了解更多高级用法。
 
 ### MetaPixelApi
 
@@ -136,9 +134,9 @@ interface EventObjectProperties {
 type ConsentAction = 'grant' | 'revoke'
 ```
 
-### Config Schema
+### 配置结构
 
-You must provide the options when setting up the script for the first time.
+你必须在首次设置脚本时提供选项。
 
 ```ts
 export const MetaPixelOptions = object({
@@ -147,9 +145,9 @@ export const MetaPixelOptions = object({
 })
 ```
 
-## Example
+## 示例
 
-Using Meta Pixel only in production while using `fbq` to send a conversion event.
+在生产环境中使用 Meta Pixel，并通过 `fbq` 发送转化事件。
 
 ::code-group
 
@@ -157,8 +155,8 @@ Using Meta Pixel only in production while using `fbq` to send a conversion event
 <script setup lang="ts">
 const { proxy } = useScriptMetaPixel()
 
-// noop in development, ssr
-// just works in production, client
+// 在开发和服务端渲染阶段无操作
+// 在生产客户端正常工作
 function sendConversion() {
   proxy.fbq('trackCustom', 'conversion', {
     value: 1,
@@ -170,7 +168,7 @@ function sendConversion() {
 <template>
   <div>
     <button @click="sendConversion">
-      Send Conversion
+      发送转化
     </button>
   </div>
 </template>

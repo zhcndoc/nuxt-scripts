@@ -1,30 +1,30 @@
 ---
 title: PostHog
-description: Use PostHog in your Nuxt app.
+description: 在你的 Nuxt 应用中使用 PostHog。
 links:
-- label: Source
+- label: 源码
   icon: i-simple-icons-github
   to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/posthog.ts
   size: xs
 ---
 
-[PostHog](https://posthog.com) is an open-source product analytics platform that provides analytics, session replay, feature flags, A/B testing, and more.
+[PostHog](https://posthog.com) 是一个开源的产品分析平台，提供分析、会话回放、功能标记、A/B 测试等功能。
 
-Nuxt Scripts provides a registry script composable `useScriptPostHog` to easily integrate PostHog in your Nuxt app.
+Nuxt Scripts 提供了一个注册脚本组合函数 `useScriptPostHog`，可以轻松地在你的 Nuxt 应用中集成 PostHog。
 
-## Installation
+## 安装
 
-You must install the `posthog-js` dependency:
+你需要安装 `posthog-js` 依赖：
 
 ```bash
 pnpm add posthog-js
 ```
 
-### Nuxt Config Setup
+### Nuxt 配置设置
 
 ::code-group
 
-```ts [Always enabled]
+```ts [始终启用]
 export default defineNuxtConfig({
   scripts: {
     registry: {
@@ -36,7 +36,7 @@ export default defineNuxtConfig({
 })
 ```
 
-```ts [Production only]
+```ts [仅生产环境]
 export default defineNuxtConfig({
   $production: {
     scripts: {
@@ -52,7 +52,7 @@ export default defineNuxtConfig({
 
 ::
 
-#### With Environment Variables
+#### 使用环境变量
 
 ```ts [nuxt.config.ts]
 export default defineNuxtConfig({
@@ -80,13 +80,13 @@ const { proxy } = useScriptPostHog({
   apiKey: 'YOUR_API_KEY'
 })
 
-// Capture an event
+// 捕获事件
 proxy.posthog.capture('button_clicked', {
   button_name: 'signup'
 })
 ```
 
-Please follow the [Registry Scripts](/docs/guides/registry-scripts) guide to learn more about advanced usage.
+请参阅 [注册脚本](/docs/guides/registry-scripts) 指南，了解更多高级用法。
 
 ### PostHogApi
 
@@ -98,7 +98,7 @@ export interface PostHogApi {
 }
 ```
 
-### Config Schema
+### 配置模式
 
 ```ts
 export const PostHogOptions = object({
@@ -108,13 +108,13 @@ export const PostHogOptions = object({
   capturePageview: optional(boolean()),
   capturePageleave: optional(boolean()),
   disableSessionRecording: optional(boolean()),
-  config: optional(record(string(), any())), // Full PostHogConfig passthrough
+  config: optional(record(string(), any())), // 完整的 PostHogConfig 透传
 })
 ```
 
-## Example
+## 示例
 
-Using PostHog to track a signup event.
+使用 PostHog 跟踪注册事件。
 
 ::code-group
 
@@ -134,16 +134,16 @@ function onSignup(email: string) {
 <template>
   <form @submit.prevent="onSignup(email)">
     <input v-model="email" type="email" />
-    <button type="submit">Sign Up</button>
+    <button type="submit">注册</button>
   </form>
 </template>
 ```
 
 ::
 
-## EU Hosting
+## 欧盟托管
 
-To use PostHog's EU cloud:
+使用 PostHog 的欧盟云：
 
 ```ts
 export default defineNuxtConfig({
@@ -158,25 +158,25 @@ export default defineNuxtConfig({
 })
 ```
 
-## Feature Flags
+## 功能标记
 
-Feature flag methods return values, so you need to wait for PostHog to load first:
+功能标记方法会返回值，因此需要先等待 PostHog 加载完成：
 
 ```ts
 const { onLoaded } = useScriptPostHog()
 
 onLoaded(({ posthog }) => {
-  // Check a feature flag
+  // 检查功能标记
   if (posthog.isFeatureEnabled('new-dashboard')) {
-    // Show new dashboard
+    // 显示新仪表盘
   }
 
-  // Get flag payload
+  // 获取标记负载
   const payload = posthog.getFeatureFlagPayload('experiment-config')
 })
 ```
 
-## Disabling Session Recording
+## 禁用会话录制
 
 ```ts
 export default defineNuxtConfig({

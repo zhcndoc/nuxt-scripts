@@ -5,8 +5,8 @@ import { useScriptsRegistry } from '~/composables/useScriptsRegistry'
 const breakpoints = useBreakpoints(breakpointsTailwind)
 
 useSeoMeta({
-  title: 'Third-Party Scripts Meets Nuxt DX',
-  description: 'Better performance, privacy, security and DX for third-party scripts.',
+  title: '第三方脚本与 Nuxt DX 相遇',
+  description: '以更高的性能、更好的隐私和安全性以及更好的开发体验加载第三方脚本。',
 })
 
 defineOgImageComponent('Home')
@@ -88,13 +88,13 @@ onMounted(() => {
 
 const links = [
   {
-    label: 'Get started',
+    label: '开始使用',
     trailingIcon: 'i-heroicons-arrow-right-20-solid',
     to: '/docs/getting-started',
     size: 'lg',
   },
   {
-    label: 'Star on GitHub',
+    label: '在 GitHub 上查看',
     icon: 'i-simple-icons-github',
     size: 'lg',
     color: 'gray',
@@ -106,23 +106,23 @@ const links = [
 
 const features = [
   {
-    name: 'Better Web Vitals',
-    description: 'Load scripts when they\'re needed with best practices non-blocking the rendering of your Nuxt app by default.',
+    name: '更好的 Web Vitals',
+    description: '在需要时加载脚本，遵循最佳实践，默认情况下不会阻塞 Nuxt 渲染。',
     icon: 'i-ph-rocket-launch-duotone',
   },
   {
-    name: 'Privacy for your users',
-    description: 'Avoid leaking user data to third-party scripts that don\'t need it. Ensure your scripts are GDPR compliant.',
+    name: '用户隐私保护',
+    description: '避免将数据泄露给第三方脚本，确保您的脚本符合 GDPR 规定。',
     icon: 'i-ph-user-circle-dashed-duotone',
   },
   {
-    name: 'Developer Experience First',
-    description: 'Type-safe and SSR friendly composables that just work wherever you need them.',
+    name: '开发者体验优先',
+    description: '类型安全且支持 SSR 的组合函数，无论在何处使用都能正常工作。',
     icon: 'i-ph-code-simple-duotone',
   },
   {
-    name: 'Secure third-parties',
-    description: 'Protect your app from third-party scripts that could be made compromised.',
+    name: '安全的第三方脚本',
+    description: '保护您的应用免受可能被破坏的第三方脚本的影响。',
     icon: 'i-ph-lock-open-duotone',
   },
 ]
@@ -232,13 +232,12 @@ const contributors = useRuntimeConfig().public.contributors
     >
       <template #title>
         <div class="leading-tight">
-          <span class="text-primary text-6xl">Third-Party Scripts </span><br> Meets Nuxt DX
+          <span class="text-primary text-6xl">Nuxt Scripts</span><br>与 Nuxt DX 结合
         </div>
       </template>
 
       <template #description>
-        Nuxt Scripts lets you load third-party scripts with better performance, privacy, security and DX. It includes
-        many popular third-parties out of the box.
+        以更高的性能、更好的隐私、更强的安全性和更优的开发体验加载第三方脚本，它内置支持许多流行的第三方服务。
       </template>
 
       <div class="relative hidden xl:block">
@@ -268,11 +267,10 @@ const contributors = useRuntimeConfig().public.contributors
         <div class="max-w-lg">
           <UIcon name="i-ph-magic-wand-duotone" class="h-[100px] w-[100px] text-primary" />
           <h2 class="text-xl xl:text-4xl font-bold mb-4">
-            A powerful API with <span class="italic">just enough</span> magic
+            一个功能强大的 API，带有恰到好处的魔力
           </h2>
           <p class="text-gray-500 dark:text-gray-400 mb-3">
-            Nuxt Scripts provides an abstraction layer on top of third-party scripts, providing SSR support and type-safety and
-            while still giving you full low-level control over how a script is loaded.
+            Nuxt Scripts 在第三方脚本之上提供了一个抽象层，支持 SSR 和类型安全，同时仍然让你能够完全低层次地控制脚本的加载方式。
           </p>
         </div>
         <UCard>
@@ -291,17 +289,17 @@ const contributors = useRuntimeConfig().public.contributors
       <div class="max-w-lg">
         <UIcon name="i-ph-speedometer-duotone" class="h-[100px] w-[100px] text-primary" />
         <h2 class="text-xl xl:text-4xl font-bold flex items-center gap-4 mb-4">
-          <span>Speed up with Facade Components</span>
+          <span>通过外观组件加速</span>
         </h2>
         <p class="text-gray-500 dark:text-gray-400 mb-3">
-          Nuxt Scripts provides several <NuxtLink to="https://developer.chrome.com/docs/lighthouse/performance/third-party-facades" class="underline" target="_blank">
-            Facade Components
-          </NuxtLink> out of the box.
+          Nuxt Scripts 开箱即提供了多个<NuxtLink to="https://developer.chrome.com/docs/lighthouse/performance/third-party-facades" target="_blank">
+            外观组件
+          </NuxtLink>。
         </p>
         <p class="text-gray-500 dark:text-gray-400 mb-3 text-pretty">
-          Facade components are  fake UI elements that get replaced once a third-party script loads, they can significantly improve your performance while still providing a great user experience, however they do have <NuxtLink to="/docs/guides/facade-components" class="underline">
-            trade-offs
-          </NuxtLink>.
+          外观组件是假 UI 元素，在第三方脚本加载后会被替换，它们可以显著提升性能，同时仍然提供良好的用户体验，不过它们也有一些<NuxtLink to="/docs/guides/facade-components">
+            权衡
+          </NuxtLink>。
         </p>
       </div>
       <div class="w-full ">
@@ -342,13 +340,13 @@ const contributors = useRuntimeConfig().public.contributors
         </div>
         <UFieldGroup class="mb-4 flex" :orientation="btnGroupOrientation">
           <UButton :variant="webVital === 'fcp' ? 'solid' : 'soft'" :active="webVital === 'fcp'" @click="webVital = 'fcp'">
-            First Contentful Paint
+            内容绘制
           </UButton>
           <UButton :variant="webVital === 'tbt' ? 'solid' : 'soft'" :active="webVital === 'tbt'" @click="webVital = 'tbt'">
-            Total Blocking Time
+            阻塞时间
           </UButton>
           <UButton :variant="webVital === 'si' ? 'solid' : 'soft'" :active="webVital === 'si'" @click="webVital = 'si'">
-            Speed Index
+            速度指数
           </UButton>
         </UFieldGroup>
         <p class="text-gray-500 dark:text-gray-400">
@@ -362,15 +360,13 @@ const contributors = useRuntimeConfig().public.contributors
         <div class="max-w-lg">
           <UIcon name="i-ph-cookie-duotone" class="h-[100px] w-[100px] text-primary" />
           <h2 class="text-xl xl:text-4xl font-bold mb-4">
-            Cookie consent that's good enough to eat
+            足够美味的 Cookie 同意书
           </h2>
           <p class="text-gray-500 dark:text-gray-400 mb-3">
-            Nuxt Scripts aims to improve end-user privacy by providing a <NuxtLink to="/docs/guides/consent" class="underline">
-              simple API for managing cookie consent
-            </NuxtLink>.
+            Nuxt Scripts 旨在通过提供一个<NuxtLink to="/docs/guides/consent">用于管理 Cookie 同意的简单 API</NuxtLink> 来提升终端用户的隐私保护。
           </p>
           <p class="text-gray-500 dark:text-gray-400 mb-3">
-            All scripts can be loaded conditionally based on user consent, set it up however you need.
+            所有脚本都可以根据用户同意有条件地加载，您可以根据需要进行设置。
           </p>
         </div>
         <UCard>
@@ -391,13 +387,13 @@ const contributors = useRuntimeConfig().public.contributors
           <div class="max-w-lg">
             <UIcon name="i-ph-handshake-duotone" class="h-[100px] w-[100px] text-primary" />
             <h2 class="text-xl xl:text-4xl font-bold flex items-center gap-4 mb-4">
-              <span>A faster web collaboration</span>
+              <span>更快的网络协作</span>
             </h2>
             <p class="text-gray-500 dark:text-gray-400 mb-4">
-              Nuxt Scripts was designed and built by the Nuxt core team in collaboration with the <a href="https://developer.chrome.com/aurora" target="_blank" class="underline">Chrome Aurora</a> team at Google.
+              Nuxt Scripts 由 Nuxt 核心团队与 Google 的 <a href="https://developer.chrome.com/aurora" target="_blank">Chrome Aurora</a> 团队合作设计和开发。
             </p>
             <p class="text-gray-500 dark:text-gray-400 mb-1">
-              Nuxt Scripts is being actively maintained by the Nuxt core team and amazing community contributors, we welcome all contributions.
+              Nuxt Scripts 正由 Nuxt 核心团队和出色的社区贡献者积极维护，我们欢迎所有贡献。
             </p>
           </div>
         </div>
@@ -409,7 +405,7 @@ const contributors = useRuntimeConfig().public.contributors
                 {{ contributors.length }}
               </div>
               <div class="text-sm opacity-80">
-                Contributors
+                贡献者
               </div>
             </div>
             <div class="mb-7 gap-2 mx-auto text-center grid grid-cols-4 sm:grid-cols-7">
@@ -424,7 +420,7 @@ const contributors = useRuntimeConfig().public.contributors
       <div class="text-center">
         <UIcon name="i-ph-book-bookmark-duotone" class="h-[50px] w-[50px] text-primary" />
         <h2 class="text-xl xl:text-4xl font-bold mb-12 text-center">
-          Watch the intro videos from the pros.
+          观看专业人士的介绍视频
         </h2>
         <div class="lg:flex justify-between gap-10 items-center">
           <ScriptYouTubePlayer video-id="sjMqUUvH9AE" class="rounded-xl overflow-hidden group">
@@ -450,20 +446,20 @@ const contributors = useRuntimeConfig().public.contributors
         <div class="max-w-lg">
           <UIcon name="i-ph-share-network-duotone" class="h-[100px] w-[100px] text-primary" />
           <h2 class="text-xl xl:text-4xl font-bold mb-4">
-            Privacy-first Social Embeds
+            以隐私为先的社交嵌入
           </h2>
           <p class="text-gray-500 dark:text-gray-400 mb-3">
-            Embed X (Twitter) and Instagram posts without loading third-party scripts. All content is fetched server-side and proxied through your domain.
+            在不加载第三方脚本的情况下嵌入 X（Twitter）和 Instagram 帖子。所有内容均在服务器端获取，并通过您的域进行代理。
           </p>
           <p class="text-gray-500 dark:text-gray-400 mb-3">
-            Zero client-side API calls, no cookies, no tracking. Your users' privacy is protected while still displaying rich social content.
+            零客户端 API 调用，无 Cookie，无跟踪。在显示丰富社交内容的同时保护您的用户隐私。
           </p>
           <div class="flex gap-3 mt-6">
             <UButton to="/scripts/content/x-embed" variant="soft">
-              X Embed Docs
+              X 嵌入文档
             </UButton>
             <UButton to="/scripts/content/instagram-embed" variant="soft">
-              Instagram Embed Docs
+              Instagram 嵌入文档
             </UButton>
           </div>
         </div>
@@ -517,16 +513,16 @@ const contributors = useRuntimeConfig().public.contributors
 
     <UPageSection :ui="{ wrapper: 'pt-0 py-6 sm:py-14' }">
       <UPageCTA
-        description="Learn all of the fundamentals of Nuxt Scripts in the fun interactive confetti tutorial."
+        description="在有趣的交互式彩带教程中学习 Nuxt Scripts 的所有基础知识。"
         card
       >
         <template #title>
-          Try out our JS Confetti Tutorial
+          试试我们的 JS 彩带教程
         </template>
         <template #links>
           <div ref="confettiEl">
             <UButton size="xl" variant="solid" icon="i-ph-sparkle-duotone" color="primary" to="/docs/getting-started/confetti-tutorial">
-              Get started
+              开始使用
             </UButton>
           </div>
         </template>

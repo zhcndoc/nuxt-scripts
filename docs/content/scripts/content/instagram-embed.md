@@ -1,6 +1,6 @@
 ---
-title: Instagram Embed
-description: Server-side rendered Instagram embeds with zero client-side API calls.
+title: Instagram 嵌入
+description: 服务器端渲染的 Instagram 嵌入，无需客户端 API 调用。
 links:
   - label: ScriptInstagramEmbed
     icon: i-simple-icons-github
@@ -8,23 +8,23 @@ links:
     size: xs
 ---
 
-[Instagram](https://instagram.com) is a photo and video sharing social media platform.
+[Instagram](https://instagram.com) 是一个照片和视频分享的社交媒体平台。
 
-Nuxt Scripts provides a `ScriptInstagramEmbed` component that fetches Instagram embed HTML server-side and proxies all assets through your server - no client-side API calls to Instagram.
+Nuxt Scripts 提供了一个 `ScriptInstagramEmbed` 组件，它在服务器端获取 Instagram 的嵌入 HTML，并通过你的服务器代理所有资源 —— 无需客户端调用 Instagram API。
 
 ## ScriptInstagramEmbed
 
-The `ScriptInstagramEmbed` component:
-- Fetches the official Instagram embed HTML server-side
-- Rewrites all image and asset URLs to proxy through your server
-- Removes Instagram's embed.js script (not needed)
-- Caches responses for 10 minutes
+`ScriptInstagramEmbed` 组件特点：
+- 服务器端获取官方 Instagram 嵌入 HTML
+- 重写所有图片和资源 URL，通过你的服务器代理
+- 移除 Instagram 的 embed.js 脚本（不需要）
+- 缓存响应 10 分钟
 
-### Demo
+### 示例
 
 ::code-group
 
-```vue [Basic Usage]
+```vue [基础用法]
 <template>
   <ScriptInstagramEmbed
     post-url="https://www.instagram.com/p/C3Sk6d2MTjI/"
@@ -33,7 +33,7 @@ The `ScriptInstagramEmbed` component:
 </template>
 ```
 
-```vue [With Custom Loading/Error States]
+```vue [自定义加载/错误状态]
 <template>
   <ScriptInstagramEmbed
     post-url="https://www.instagram.com/p/C3Sk6d2MTjI/"
@@ -41,26 +41,26 @@ The `ScriptInstagramEmbed` component:
   >
     <template #loading>
       <div class="animate-pulse bg-gray-100 rounded-lg p-4 aspect-square max-w-md">
-        Loading Instagram post...
+        正在加载 Instagram 帖子...
       </div>
     </template>
 
     <template #error>
       <div class="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md">
-        Failed to load Instagram post
+        加载 Instagram 帖子失败
       </div>
     </template>
   </ScriptInstagramEmbed>
 </template>
 ```
 
-```vue [Custom Rendering]
+```vue [自定义渲染]
 <template>
   <ScriptInstagramEmbed post-url="https://www.instagram.com/p/C3Sk6d2MTjI/">
     <template #default="{ html, shortcode, postUrl }">
       <div class="instagram-wrapper">
         <a :href="postUrl" target="_blank" class="text-sm text-gray-500 mb-2 block">
-          View on Instagram ({{ shortcode }})
+          在 Instagram 查看 ({{ shortcode }})
         </a>
         <!-- eslint-disable-next-line vue/no-v-html -->
         <div v-html="html" />
@@ -74,60 +74,60 @@ The `ScriptInstagramEmbed` component:
 
 ### Props
 
-The `ScriptInstagramEmbed` component accepts the following props:
+`ScriptInstagramEmbed` 组件接受以下属性：
 
-| Prop | Type | Default | Description |
+| 属性 | 类型 | 默认值 | 说明 |
 |------|------|---------|-------------|
-| `postUrl` | `string` | Required | The Instagram post URL (e.g., `https://www.instagram.com/p/ABC123/`) |
-| `captions` | `boolean` | `true` | Whether to include captions in the embed |
-| `apiEndpoint` | `string` | `/api/_scripts/instagram-embed` | Custom API endpoint for fetching embed HTML |
-| `rootAttrs` | `HTMLAttributes` | `{}` | Root element attributes |
+| `postUrl` | `string` | 必填 | Instagram 帖子链接 (例如 `https://www.instagram.com/p/ABC123/`) |
+| `captions` | `boolean` | `true` | 是否在嵌入中包含字幕 |
+| `apiEndpoint` | `string` | `/api/_scripts/instagram-embed` | 用于获取嵌入 HTML 的自定义 API 端点 |
+| `rootAttrs` | `HTMLAttributes` | `{}` | 根元素属性 |
 
-### Slot Props
+### 插槽 Props
 
-The default slot receives:
+默认插槽接收：
 
 ```ts
 interface SlotProps {
-  html: string      // The processed embed HTML
-  shortcode: string // The post shortcode (e.g., "C3Sk6d2MTjI")
-  postUrl: string   // The original post URL
+  html: string      // 处理后的嵌入 HTML
+  shortcode: string // 帖子短码 (例如 "C3Sk6d2MTjI")
+  postUrl: string   // 原始帖子链接
 }
 ```
 
-### Named Slots
+### 命名插槽
 
-| Slot | Description |
+| 插槽 | 说明 |
 |------|-------------|
-| `default` | Main content, receives `{ html, shortcode, postUrl }`. By default renders the HTML. |
-| `loading` | Shown while fetching embed HTML |
-| `error` | Shown if embed fetch fails, receives `{ error }` |
+| `default` | 主要内容，接收 `{ html, shortcode, postUrl }`。默认渲染 HTML。 |
+| `loading` | 获取嵌入 HTML 时显示 |
+| `error` | 嵌入获取失败时显示，接收 `{ error }` |
 
-## Supported URL Formats
+## 支持的 URL 格式
 
-- Posts: `https://www.instagram.com/p/ABC123/`
+- 帖子: `https://www.instagram.com/p/ABC123/`
 - Reels: `https://www.instagram.com/reel/ABC123/`
 - TV: `https://www.instagram.com/tv/ABC123/`
 
-## How It Works
+## 工作原理
 
-1. **Server-side fetch**: The Instagram embed HTML is fetched from `{postUrl}/embed/`
-2. **Asset proxying**: All images from `scontent.cdninstagram.com` and assets from `static.cdninstagram.com` are rewritten to proxy through your server
-3. **Script removal**: Instagram's `embed.js` is removed (not needed for static rendering)
-4. **Caching**: Responses are cached for 10 minutes at the server level
+1. **服务器端抓取**：从 `{postUrl}/embed/` 获取 Instagram 嵌入 HTML
+2. **资源代理**：将来自 `scontent.cdninstagram.com` 的所有图片和来自 `static.cdninstagram.com` 的资源重写为通过你的服务器代理
+3. **脚本移除**：移除 Instagram 的 `embed.js` （静态渲染不需要）
+4. **缓存**：服务器级别缓存响应 10 分钟
 
-This approach is inspired by [Cloudflare Zaraz's embed implementation](https://blog.cloudflare.com/zaraz-supports-server-side-rendering-of-embeds/).
+该方案启发自 [Cloudflare Zaraz 的嵌入实现](https://blog.cloudflare.com/zaraz-supports-server-side-rendering-of-embeds/)。
 
-## Privacy Benefits
+## 隐私优势
 
-- No third-party JavaScript loaded
-- No cookies set by Instagram/Meta
-- No direct browser-to-Instagram communication
-- User IP addresses not shared with Instagram
-- All content served from your domain
+- 不加载第三方 JavaScript
+- Instagram/Meta 不设置任何 Cookies
+- 浏览器不会直接与 Instagram 通信
+- 不会向 Instagram 共享用户 IP 地址
+- 所有内容均由你的域名提供
 
-## Limitations
+## 限制
 
-- Only supports single-image posts (galleries show first image only)
-- Videos display as static poster images
-- Some interactive features are not available (likes, comments)
+- 仅支持单图帖子（图集只显示第一张图片）
+- 视频以静态封面图展示
+- 一些交互功能不可用（点赞、评论）

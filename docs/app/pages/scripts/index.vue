@@ -3,44 +3,44 @@ import { useScriptsRegistry } from '~/composables/useScriptsRegistry'
 
 const categories = {
   ads: {
-    label: 'Ads',
-    description: 'Monetize your website with ads.',
+    label: '广告',
+    description: '通过广告实现网站的货币化。',
   },
   analytics: {
-    label: 'Analytics',
-    description: 'Track your users and their behavior on your website.',
+    label: '分析',
+    description: '跟踪用户及其在网站上的行为。',
   },
   tracking: {
-    label: 'Tracking',
-    description: 'More advanced tracking and analytics of users.',
+    label: '跟踪',
+    description: '更高级的用户跟踪和分析。',
   },
   marketing: {
-    label: 'Marketing',
-    description: 'Interact with your users with tools like live chat, surveys, and more.',
+    label: '营销',
+    description: '使用实时聊天、调查等工具与用户互动。',
   },
   payments: {
-    label: 'Payments',
-    description: 'Access payments on your website.',
+    label: '支付',
+    description: '在您的网站上访问支付功能。',
   },
   content: {
-    label: 'Content',
-    description: 'Display videos, maps and other content on your website.',
+    label: '内容',
+    description: '在您的网站上显示视频、地图和其他内容。',
   },
   support: {
-    label: 'Support',
-    description: 'Live chat, help desks and other support tools.',
+    label: '支持',
+    description: '实时聊天、帮助台和其他支持工具。',
   },
   utility: {
-    label: 'Tools',
-    description: 'Miscellaneous tools to help you build your website.',
+    label: '工具',
+    description: '帮助您构建网站的各种工具。',
   },
 }
 
 defineOgImageComponent('Home')
 
 useSeoMeta({
-  title: 'Script Registry',
-  description: 'The registry is a collection of third-party scripts with out-of-the-box composable and component integrations for Nuxt Scripts.',
+  title: '脚本注册表',
+  description: '该注册表是一个包含第三方脚本的集合，为 Nuxt Scripts 提供开箱即用的可组合和组件集成。',
 })
 
 // group by category
@@ -60,12 +60,12 @@ const scriptsCategories = (await useScriptsRegistry()).reduce((acc, script) => {
   <div>
     <UContainer>
       <UPage>
-        <UPageHeader title="Script Registry" description="The registry is a collection of third-party scripts with out-of-the-box composable and component integrations for Nuxt Scripts." />
+        <UPageHeader title="脚本注册表" description="该注册表是一个包含第三方脚本的集合，为 Nuxt Scripts 提供开箱即用的可组合和组件集成。" />
         <UPageBody>
           <p class="mb-5">
-            To learn more about these scripts, please read the <NuxtLink to="/docs/guides/registry-scripts" class="underline text-primary">
-              Registry Scripts
-            </NuxtLink> documentation.
+            要了解有关这些脚本的更多信息，请阅读 <NuxtLink to="/docs/guides/registry-scripts" class="underline text-primary">
+              注册表脚本
+            </NuxtLink> 文档。
           </p>
           <div class="space-y-10">
             <div v-for="(scripts, category) in scriptsCategories" :key="category">
@@ -97,7 +97,7 @@ const scriptsCategories = (await useScriptsRegistry()).reduce((acc, script) => {
             </div>
           </div>
           <div class="mt-10">
-            <p>Looking for a missing integration?</p>
+            <p>寻找缺失的集成？</p>
             <div class="mt-2">
               <UButton
                 to="https://github.com/nuxt/scripts/discussions/177"
@@ -106,7 +106,7 @@ const scriptsCategories = (await useScriptsRegistry()).reduce((acc, script) => {
                 color="white"
                 size="lg"
               >
-                Suggest a new script
+                建议一个新脚本
               </UButton>
             </div>
           </div>

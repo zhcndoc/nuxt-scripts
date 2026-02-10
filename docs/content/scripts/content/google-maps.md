@@ -1,6 +1,6 @@
 ---
-title: Google Maps
-description: Show performance-optimized Google Maps in your Nuxt app.
+title: 谷歌地图
+description: 在你的 Nuxt 应用中展示性能优化的谷歌地图。
 links:
   - label: useScriptGoogleMaps
     icon: i-simple-icons-github
@@ -12,14 +12,13 @@ links:
     size: xs
 ---
 
-[Google Maps](https://maps.google.com/) allows you to embed maps in your website and customize them with your content.
+[谷歌地图](https://maps.google.com/) 允许你将地图嵌入你的网站并用自己的内容进行自定义。
 
-Nuxt Scripts provides a `useScriptGoogleMaps` composable and a headless `ScriptGoogleMaps` component to interact with the Google Maps.
+Nuxt Scripts 提供了一个 `useScriptGoogleMaps` 组合式函数和一个无 UI 的 `ScriptGoogleMaps` 组件，用于与谷歌地图交互。
 
-## Types
+## 类型
 
-To use Google Maps with full TypeScript support, you will need
-to install the `@types/google.maps` dependency.
+要使用带有完整 TypeScript 支持的谷歌地图，你需要安装 `@types/google.maps` 依赖。
 
 ```bash
 pnpm add -D @types/google.maps
@@ -27,41 +26,40 @@ pnpm add -D @types/google.maps
 
 ## ScriptGoogleMaps
 
-The `ScriptGoogleMaps` component is a wrapper around the `useScriptGoogleMaps` composable. It provides a simple way to embed Google Maps in your Nuxt app.
+`ScriptGoogleMaps` 组件是对 `useScriptGoogleMaps` 组合式函数的封装。它提供了一种简单方式在你的 Nuxt 应用中嵌入谷歌地图。
 
-It's optimized for performance by leveraging the [Element Event Triggers](/docs/guides/script-triggers#element-event-triggers), only loading the Google Maps when specific elements events happen.
+它通过利用[元素事件触发器](/docs/guides/script-triggers#element-event-triggers)进行了性能优化，仅在特定元素事件发生时加载谷歌地图。
 
-Before Google Maps is loaded, it shows a placeholder using [Maps Static API](https://developers.google.com/maps/documentation/maps-static).
+在谷歌地图加载之前，它会使用[静态地图 API](https://developers.google.com/maps/documentation/maps-static)显示一个占位图。
 
-By default, it will load on the `mouseover` and `mouseclick` events.
+默认情况下，地图会在 `mouseover` 和 `mouseclick` 事件触发时加载。
 
-### Billing & Permissions
+### 计费与权限
 
 ::callout
-You'll need an API key with permissions to access the [Maps JavaScript API](https://developers.google.com/maps/documentation/javascript/cloud-setup).
+你需要一个拥有访问[地图 JavaScript API](https://developers.google.com/maps/documentation/javascript/cloud-setup)权限的 API 密钥。
 
-Optionally, you can provide permissions to the [Static Maps API](https://developers.google.com/maps/documentation/maps-static/cloud-setup) (required when lazy loading and using the placeholder map) and [Places API](https://developers.google.com/maps/documentation/places/web-service/cloud-setup) (required when searching using a query, i.e "New York").
+可选地，你可以提供对[静态地图 API](https://developers.google.com/maps/documentation/maps-static/cloud-setup)（使用懒加载和占位地图时必需）和[地点 API](https://developers.google.com/maps/documentation/places/web-service/cloud-setup)（使用查询搜索时，例如“纽约”）的权限。
 ::
 
-Showing an interactive JS map requires the Maps JavaScript API, which is a paid service. If a user interacts with the map, the following costs will be incurred:
-- $7 per 1000 loads for the Maps JavaScript API (default for using Google Maps)
-- $2 per 1000 loads for the Static Maps API - Only used when you don't provide a `placeholder` slot.
-- $5 per 1000 loads for the Geocoding API - Only used when you don't provide a `google.maps.LatLng` object instead of a query string for the `center` prop
+显示交互式 JS 地图需要地图 JavaScript API，它是一个付费服务。如果用户与地图交互，将产生以下费用：
+- 地图 JavaScript API：每 1000 次加载 7 美元（默认使用谷歌地图）
+- 静态地图 API：每 1000 次加载 2 美元——仅当你没有提供 `placeholder` 插槽时使用
+- 地理编码 API：每 1000 次加载 5 美元——仅当你没有为 `center` 属性提供 `google.maps.LatLng` 对象而是使用查询字符串时使用
 
-However, if the user never engages with the map, only the Static Maps API usage ($2 per 1000 loads) will be charged, assuming you're using it.
+但是，如果用户从未与地图互动，且你使用了静态地图 API，则只会产生静态地图 API 的费用（每 1000 次加载 2 美元）。
 
-Billing will be optimized in a [future update](https://github.com/nuxt/scripts/issues/83).
+计费将在[未来更新](https://github.com/nuxt/scripts/issues/83)中优化。
 
-You should consider using the [Iframe Embed](https://developers.google.com/maps/documentation/embed/get-started) instead if you want to avoid these costs
-and are okay with a less interactive map.
+如果你想避免这些费用，并且能接受功能较弱的地图，可以考虑改用[iframe 嵌入](https://developers.google.com/maps/documentation/embed/get-started)。
 
-### Demo
+### 演示
 
 ::code-group
 
-:google-maps-demo{label="Output"}
+:google-maps-demo{label="输出"}
 
-```vue [Input]
+```vue [输入]
 <script setup lang="ts">
 import { ref } from 'vue'
 
@@ -78,9 +76,9 @@ const markers = ref([])
 
 let increment = 1
 function addMarker() {
-  // push to markers, we want to add a marker from the center but randomize the position by a bit
+  // 向 markers 中添加标记，我们希望从中心位置添加但随机稍微偏移
   const _center = center.value || query.value
-  // lat and lng may be a function
+  // lat 和 lng 可能是函数
   const _lat = typeof _center.lat === 'function' ? _center.lat() : _center.lat
   const _lng = typeof _center.lng === 'function' ? _center.lng() : _center.lng
   const lat = (1000 * _lat + increment) / 1000
@@ -117,17 +115,17 @@ function handleReady({ map }) {
     />
   </div>
   <div class="text-center">
-    <UAlert v-if="!isLoaded" class="mb-5" size="sm" color="blue" variant="soft" title="Static Image: Hover to load interactive" description="Hovering the map will trigger the Google Maps script to load and init the map." />
-    <UAlert v-if="isLoaded" class="mb-5" size="sm" color="blue" variant="soft" title="Interactive Map">
+    <UAlert v-if="!isLoaded" class="mb-5" size="sm" color="blue" variant="soft" title="静态图像：移动鼠标加载交互地图" description="鼠标悬停地图时将触发谷歌地图脚本加载并初始化地图。" />
+    <UAlert v-if="isLoaded" class="mb-5" size="sm" color="blue" variant="soft" title="交互式地图">
       <template #description>
-      Center: {{ center }}
+      中心：{{ center }}
       </template>
     </UAlert>
     <UButton @click="addMarker" type="button" class="">
-      Add Marker
+      添加标记
     </UButton>
     <UButton v-if="markers.length" @click="removeMarkers" type="button" color="gray" variant="ghost" class="">
-      Remove Markers
+      移除标记
     </UButton>
   </div>
 </div>
@@ -136,51 +134,49 @@ function handleReady({ map }) {
 
 ::
 
-### Props
+### 属性
 
-The `ScriptGoogleMaps` component accepts the following props.
+`ScriptGoogleMaps` 组件支持以下属性。
 
-You must provide a `center` prop for the map to load correctly, alternatively you should provide `mapOptions` and configure 
-the `center` option there.
+你必须提供 `center` 属性以正确加载地图，或者提供 `mapOptions` 并在其中配置 `center` 选项。
 
-**Map**
+**地图**
 
-- `center`: Where to center the map. You can provide a string with the location or use a `{ lat: 0, lng: 0 }` object.
-- `apiKey`: The Google Maps API key. Must have access to the Static Maps API as well. You can optionally provide this as runtime config using the `public.scripts.googleMaps.apiKey` key.
-- `centerMarker`: Whether to display a marker at the center position. Default is `true`.
-- `mapOptions`: Options for the map. See [MapOptions](https://developers.google.com/maps/documentation/javascript/reference/map#MapOptions).
+- `center`：地图中心所在的位置。你可以提供一个位置字符串或 `{ lat: 0, lng: 0 }` 对象。
+- `apiKey`：谷歌地图 API 密钥，必须也有访问静态地图 API 的权限。你也可以通过运行时配置 `public.scripts.googleMaps.apiKey` 提供。
+- `centerMarker`：是否在中心位置显示标记。默认值为 `true`。
+- `mapOptions`：地图选项。详见 [MapOptions](https://developers.google.com/maps/documentation/javascript/reference/map#MapOptions)。
 
-**Placeholder**
+**占位符**
 
-You can customize the placeholder image using the following props, alternatively, you can use the `#placeholder` slot to customize the placeholder image.
+你可以通过以下属性自定义占位图，或者使用 `#placeholder` 插槽自定义占位图。
 
-- `placeholderOptions`: Customize the placeholder image attributes. See [Static Maps API](https://developers.google.com/maps/documentation/maps-static/start).
-- `placeholderAttrs`: Customize the placeholder image attributes.
+- `placeholderOptions`：自定义占位图的属性。详见 [静态地图 API](https://developers.google.com/maps/documentation/maps-static/start)。
+- `placeholderAttrs`：自定义占位图的 HTML 属性。
 
-**Sizing**
+**尺寸**
 
-If you want to render a map larger than 640x640 you should provide your own placeholder as the [Static Maps API](https://developers.google.com/maps/documentation/maps-static/start)
-does not support rendering maps larger than this.
+如果你想渲染大于 640x640 的地图，应自行提供占位图，因为[静态地图 API](https://developers.google.com/maps/documentation/maps-static/start)不支持渲染超过这个尺寸的地图。
 
-- `width`: The width of the map. Default is `640`.
-- `height`: The height of the map. Default is `400`.
+- `width`：地图宽度，默认 `640`。
+- `height`：地图高度，默认 `400`。
 
-**Optimizations**
+**优化**
 
-- `trigger`: The trigger event to load the Google Maps. Default is `mouseover`. See [Element Event Triggers](/docs/guides/script-triggers#element-event-triggers) for more information.
-- `aboveTheFold`: Optimizes the placeholder image for above-the-fold content. Default is `false`.
+- `trigger`：加载谷歌地图的触发事件，默认是 `mouseover`。更多信息见[元素事件触发器](/docs/guides/script-triggers#element-event-triggers)。
+- `aboveTheFold`：针对首屏内容优化占位图，默认 `false`。
 
-**Markers**
+**标记**
 
-You can add markers to the static and interactive map by providing an array of `MarkerOptions`. See [MarkerOptions](https://developers.google.com/maps/documentation/javascript/reference/marker#MarkerOptions).
+你可以通过提供标记数组添加标记，数组内元素类型为 `MarkerOptions`。详见[MarkerOptions](https://developers.google.com/maps/documentation/javascript/reference/marker#MarkerOptions)。
 
-- `markers`: An array of markers to display on the map.
+- `markers`：用于地图上显示的标记数组。
 
-See the [markers](https://github.com/nuxt/scripts/blob/main/playground/pages/third-parties/google-maps/markers.vue) example for more information.
+详细信息请参考 [markers 示例](https://github.com/nuxt/scripts/blob/main/playground/pages/third-parties/google-maps/markers.vue)。
 
-#### With Environment Variables
+#### 使用环境变量
 
-If you prefer to configure your API key using environment variables.
+如果你希望通过环境变量配置 API 密钥。
 
 ```ts [nuxt.config.ts]
 export default defineNuxtConfig({
@@ -189,7 +185,7 @@ export default defineNuxtConfig({
       googleMaps: true,
     }
   },
-  // you need to provide a runtime config to access the environment variables
+  // 需要提供运行时配置以访问环境变量
   runtimeConfig: {
     public: {
       scripts: {
@@ -203,15 +199,14 @@ export default defineNuxtConfig({
 ```
 
 ```text [.env]
-NUXT_PUBLIC_SCRIPTS_GOOGLE_MAPS_API_KEY=<YOUR_API_KEY>
+NUXT_PUBLIC_SCRIPTS_GOOGLE_MAPS_API_KEY=<你的API密钥>
 ```
 
-### Guides
+### 指南
 
-#### Eager Loading Placeholder
+#### 预加载占位图
 
-The Google Maps placeholder image is lazy-loaded by default. You should change this behavior if your map is above the fold
-or consider using the `#placeholder` slot to customize the placeholder image.
+谷歌地图的占位图默认采用懒加载。如果你的地图位于首屏位置，建议修改此行为或使用 `#placeholder` 插槽自定义占位图。
 
 ::code-group
 
@@ -222,17 +217,16 @@ or consider using the `#placeholder` slot to customize the placeholder image.
 ```vue [Placeholder Slot]
 <ScriptGoogleMaps>
   <template #placeholder="{ placeholder }">
-    <img :src="placeholder" alt="Map Placeholder">
+    <img :src="placeholder" alt="地图占位图">
   </template>
 </ScriptGoogleMaps>
 ```
 
 ::
 
-#### Advanced Marker Control
+#### 高级标记控制
 
-If you need more control over the markers on the map, you can use the exposed `createAdvancedMapMarker` function which 
-will return the marker instance.
+如果你需要对地图标记有更高级的控制，可以使用暴露的 `createAdvancedMapMarker` 方法，它会返回标记实例。
 
 ```vue
 <script lang="ts" setup>
@@ -248,10 +242,9 @@ onMounted(() => {
 </template>
 ```
 
+#### 高级地图控制
 
-#### Advanced Map Control
-
-The component exposes all internal APIs, so you can customize your map as needed.
+该组件暴露了所有内部 API，你可以根据需要进行地图定制。
 
 ```vue
 <script lang="ts" setup>
@@ -259,14 +252,14 @@ const googleMapsRef = ref()
 onMounted(async () => {
   const api = googleMapsRef.value
   
-  // Access internal APIs
+  // 访问内部 API
   const googleMaps = api.googleMaps.value // google.maps api
-  const mapInstance = api.map.value // google.maps.Map instance
+  const mapInstance = api.map.value // google.maps.Map 实例
   
-  // Convert a query to lat/lng
+  // 将查询转换为经纬度
   const query = await api.resolveQueryToLatLang('Space Needle, Seattle, WA') // { lat: 0, lng: 0 }
   
-  // Import a Google Maps library
+  // 导入谷歌地图库
   const geometry = await api.importLibrary('geometry')
   const distance = new googleMaps.geometry.spherical.computeDistanceBetween(
     new googleMaps.LatLng(0, 0),
@@ -279,9 +272,9 @@ onMounted(async () => {
 </template>
 ```
 
-#### Loading immediately
+#### 立即加载
 
-If you want to load the Google Maps immediately, you can use the `trigger` prop.
+如果你想立即加载谷歌地图，可以使用 `trigger` 属性。
 
 ```vue
 <template>
@@ -290,11 +283,11 @@ If you want to load the Google Maps immediately, you can use the `trigger` prop.
 </template>
 ```
 
-#### Map Styling
+#### 地图样式
 
-You can style the map by using the `mapOptions.styles` prop. You can find pre-made styles on [Snazzy Maps](https://snazzymaps.com/).
+你可以通过 `mapOptions.styles` 属性为地图设置样式。你可以在[Snazzy Maps](https://snazzymaps.com/)上找到预制样式。
 
-This will automatically work for both the static map placeholder and the interactive map.
+这会同时应用于静态地图占位图和交互式地图。
 
 ```vue
 <script setup lang="ts">
@@ -307,13 +300,13 @@ const mapOptions = {
 </template>
 ```
 
-### Component API
+### 组件 API
 
-See the [Facade Component API](/docs/guides/facade-components#facade-components-api) for full props, events, and slots.
+完整的 Props、事件和插槽详情，参见[Facade 组件 API](/docs/guides/facade-components#facade-components-api)。
 
-### Events
+### 事件
 
-The `ScriptGoogleMaps` component emits a single `ready` event when the Google Maps is loaded.
+`ScriptGoogleMaps` 组件在谷歌地图加载完成时触发单个 `ready` 事件。
 
 ```ts
 const emits = defineEmits<{
@@ -321,13 +314,13 @@ const emits = defineEmits<{
 }>()
 ```
 
-To subscribe to Google Map events, you can use the `ready` event.
+你可以通过监听 `ready` 事件来订阅谷歌地图事件。
 
 ```vue
 <script setup lang="ts">
 function handleReady({ map }) {
   map.addListener('center_changed', () => {
-    console.log('Center changed', map.getCenter())
+    console.log('中心已改变', map.getCenter())
   })
 }
 </script>
@@ -337,20 +330,20 @@ function handleReady({ map }) {
 </template>
 ```
 
-### Slots
+### 插槽
 
-The component provides minimal UI by default, only enough to be functional and accessible. There are a number of slots for you to customize the maps however you like.
+组件默认只提供最小化的 UI，仅保证功能和无障碍性。你可以通过多个插槽自由定制地图显示。
 
 **default**
 
-The default slot is used to display content that will always be visible.
+默认插槽用于显示始终可见的内容。
 
 ```vue
 <template>
   <ScriptGoogleMaps>
     <div class="absolute top-0 left-0 right-0 p-5 bg-white text-black">
       <h1 class="text-xl font-bold">
-        My Custom Map
+        我的自定义地图
       </h1>
     </div>
   </ScriptGoogleMaps>
@@ -359,14 +352,14 @@ The default slot is used to display content that will always be visible.
 
 **awaitingLoad**
 
-The slot is used to display content while the Google Maps is loading.
+该插槽用于谷歌地图加载过程中的显示内容。
 
 ```vue
 <template>
   <ScriptGoogleMaps>
     <template #awaitingLoad>
       <div class="bg-blue-500 text-white p-5">
-        Click to load the map!
+        点击加载地图！
       </div>
     </template>
   </ScriptGoogleMaps>
@@ -375,17 +368,16 @@ The slot is used to display content while the Google Maps is loading.
 
 **loading**
 
-The slot is used to display content while the Google Maps is loading.
+该插槽用于谷歌地图加载时的显示内容。
 
-Note: This shows a `ScriptLoadingIndicator` by default for accessibility and UX, by providing a slot you will
-override this component. Make sure you provide a loading indicator.
+注意：默认会显示一个 `ScriptLoadingIndicator` 以提升无障碍性和用户体验，若自定义此插槽会覆盖该默认组件，请确保提供加载指示器。
 
 ```vue
 <template>
   <ScriptGoogleMaps>
     <template #loading>
       <div class="bg-blue-500 text-white p-5">
-        Loading...
+        加载中...
       </div>
     </template>
   </ScriptGoogleMaps>
@@ -394,9 +386,9 @@ override this component. Make sure you provide a loading indicator.
 
 **placeholder**
 
-The slot is used to display a placeholder image before the Google Maps is loaded. By default, this will show the Google Maps Static API image for the map. 
+该插槽用于谷歌地图加载前显示占位图。默认情况下，显示谷歌地图静态 API 的图片。
 
-By providing your own placeholder slot you will disable the default placeholder image from being used and will not be charged for the Static Maps API usage.
+若你提供了自定义占位图槽，将禁用默认占位图，且不会产生静态地图 API 的费用。
 
 ```vue
 <template>
@@ -408,38 +400,38 @@ By providing your own placeholder slot you will disable the default placeholder 
 </template>
 ```
 
-## Google Maps SFC Components
+## 谷歌地图单文件组件（SFC）
 
-Nuxt Scripts provides individual Single File Components (SFCs) for different Google Maps elements. These components allow you to declaratively compose complex maps using Vue's template syntax.
+Nuxt Scripts 提供了多个独立的单文件组件（SFC），用于不同的谷歌地图元素。这些组件允许你通过 Vue 模板语法声明式地组合复杂地图。
 
-### Installation
+### 安装
 
-To use marker clustering functionality, you'll need to install the required peer dependency:
+要使用标记聚合（marker clustering）功能，你需要安装对应的同级依赖包：
 
 ```bash
 npm install @googlemaps/markerclusterer
-# or
+# 或者
 yarn add @googlemaps/markerclusterer
-# or
+# 或者
 pnpm add @googlemaps/markerclusterer
 ```
 
-### Available Components
+### 可用组件
 
-All Google Maps SFC components must be used within a `<ScriptGoogleMaps>` component:
+所有谷歌地图 SFC 组件必须嵌套在 `<ScriptGoogleMaps>` 组件内使用：
 
-- `<ScriptGoogleMapsMarker>` - Classic markers with icon support
-- `<ScriptGoogleMapsAdvancedMarkerElement>` - Modern advanced markers with HTML content
-- `<ScriptGoogleMapsPinElement>` - Customizable pin markers (use within AdvancedMarkerElement)
-- `<ScriptGoogleMapsInfoWindow>` - Information windows that appear on click
-- `<ScriptGoogleMapsMarkerClusterer>` - Groups nearby markers into clusters
-- `<ScriptGoogleMapsCircle>` - Circular overlays
-- `<ScriptGoogleMapsPolygon>` - Polygon shapes
-- `<ScriptGoogleMapsPolyline>` - Line paths
-- `<ScriptGoogleMapsRectangle>` - Rectangular overlays
-- `<ScriptGoogleMapsHeatmapLayer>` - Heatmap visualization
+- `<ScriptGoogleMapsMarker>` - 经典标记，支持图标
+- `<ScriptGoogleMapsAdvancedMarkerElement>` - 现代高级标记，支持 HTML 内容
+- `<ScriptGoogleMapsPinElement>` - 可定制的针型标记（用于高级标记中）
+- `<ScriptGoogleMapsInfoWindow>` - 点击时显示的信息窗口
+- `<ScriptGoogleMapsMarkerClusterer>` - 将附近标记聚合成群组
+- `<ScriptGoogleMapsCircle>` - 圆形覆盖层
+- `<ScriptGoogleMapsPolygon>` - 多边形形状
+- `<ScriptGoogleMapsPolyline>` - 线条路径
+- `<ScriptGoogleMapsRectangle>` - 矩形覆盖层
+- `<ScriptGoogleMapsHeatmapLayer>` - 热力图可视化层
 
-### Basic Usage
+### 基本用法
 
 ```vue
 <template>
@@ -448,20 +440,20 @@ All Google Maps SFC components must be used within a `<ScriptGoogleMaps>` compon
     :zoom="8"
     api-key="your-api-key"
   >
-    <!-- Add markers -->
+    <!-- 添加标记 -->
     <ScriptGoogleMapsMarker
       :options="{ position: { lat: -34.397, lng: 150.644 } }"
     >
-      <!-- Info window appears on marker click -->
+      <!-- 点击标记显示信息窗口 -->
       <ScriptGoogleMapsInfoWindow>
         <div>
-          <h3>Sydney, Australia</h3>
-          <p>A great city!</p>
+          <h3>澳大利亚，悉尼</h3>
+          <p>一座伟大的城市！</p>
         </div>
       </ScriptGoogleMapsInfoWindow>
     </ScriptGoogleMapsMarker>
 
-    <!-- Advanced marker with custom pin -->
+    <!-- 高级标记，带自定义针 -->
     <ScriptGoogleMapsAdvancedMarkerElement
       :options="{ position: { lat: -34.407, lng: 150.654 } }"
     >
@@ -470,7 +462,7 @@ All Google Maps SFC components must be used within a `<ScriptGoogleMaps>` compon
       />
     </ScriptGoogleMapsAdvancedMarkerElement>
 
-    <!-- Circle overlay -->
+    <!-- 圆形覆盖层 -->
     <ScriptGoogleMapsCircle
       :options="{
         center: { lat: -34.397, lng: 150.644 },
@@ -483,9 +475,9 @@ All Google Maps SFC components must be used within a `<ScriptGoogleMaps>` compon
 </template>
 ```
 
-### Component Composition Patterns
+### 组件组合示例
 
-**Marker Clustering**
+**标记聚合**
 
 ```vue
 <template>
@@ -505,14 +497,14 @@ All Google Maps SFC components must be used within a `<ScriptGoogleMaps>` compon
 </template>
 ```
 
-**Heatmap with Data Points**
+**热力图与数据点**
 
 ```vue
 <script setup>
 const heatmapData = ref([])
 
 onMounted(() => {
-  // Populate heatmap data with google.maps.LatLng objects
+  // 用 google.maps.LatLng 对象填充热力图数据
 })
 </script>
 
@@ -525,121 +517,121 @@ onMounted(() => {
 </template>
 ```
 
-**See the [SFC Playground Example](https://nuxt-scripts-playground.stackblitz.io/third-parties/google-maps/sfcs) for a comprehensive demonstration.**
+**完整示例请参阅[SFC Playground 示例](https://nuxt-scripts-playground.stackblitz.io/third-parties/google-maps/sfcs)。**
 
-### Component Details
+### 组件详情
 
 #### ScriptGoogleMapsMarker
 
-Classic Google Maps marker with icon support.
+经典谷歌地图标记，支持图标。
 
-**Props:**
-- `options` - `google.maps.MarkerOptions` (excluding `map`)
+**属性:**
+- `options` - `google.maps.MarkerOptions`（不包括 `map`）
 
-**Events:**
-- Standard marker events: `click`, `mousedown`, `mouseover`, etc.
+**事件:**
+- 标准标记事件：`click`、`mousedown`、`mouseover` 等。
 
 #### ScriptGoogleMapsAdvancedMarkerElement
 
-Modern advanced markers that support HTML content and better customization.
+现代高级标记，支持 HTML 内容和更好的自定义。
 
-**Props:**
-- `options` - `google.maps.marker.AdvancedMarkerElementOptions` (excluding `map`)
+**属性:**
+- `options` - `google.maps.marker.AdvancedMarkerElementOptions`（不包括 `map`）
 
-**Events:**
-- Standard marker events: `click`, `drag`, `position_changed`, etc.
+**事件:**
+- 标准标记事件：`click`、`drag`、`position_changed` 等。
 
 #### ScriptGoogleMapsInfoWindow
 
-Information windows that display content when triggered.
+显示内容的窗口。
 
-**Props:**
+**属性:**
 - `options` - `google.maps.InfoWindowOptions`
 
-**Behavior:**
-- Automatically opens on parent marker click
-- Can be used standalone with explicit position
-- Supports custom HTML content via default slot
+**行为:**
+- 会在父级标记点击时自动打开
+- 也可作为独立组件使用，并显式定义位置
+- 支持通过默认插槽传入自定义 HTML 内容
 
 #### ScriptGoogleMapsMarkerClusterer
 
-Groups nearby markers into clusters for better performance and UX.
+将相近标记聚合，提升性能和用户体验。
 
-**Props:**
-- `options` - `MarkerClustererOptions` (excluding `map`)
+**属性:**
+- `options` - `MarkerClustererOptions`（不包括 `map`）
 
-**Dependencies:**
-- Requires `@googlemaps/markerclusterer` peer dependency
+**依赖:**
+- 需要安装 `@googlemaps/markerclusterer` 同级依赖
 
-#### Other Components
+#### 其他组件
 
-- **ScriptGoogleMapsPinElement**: Use within AdvancedMarkerElement for customizable pins
-- **ScriptGoogleMapsCircle**: Circular overlays with radius and styling
-- **ScriptGoogleMapsPolygon/Polyline**: Shape and line overlays
-- **ScriptGoogleMapsRectangle**: Rectangular overlays
-- **ScriptGoogleMapsHeatmapLayer**: Data visualization with heatmaps
+- **ScriptGoogleMapsPinElement**：用于高级标记的可定制针
+- **ScriptGoogleMapsCircle**：带半径和样式的圆形覆盖层
+- **ScriptGoogleMapsPolygon/Polyline**：形状和线条覆盖层
+- **ScriptGoogleMapsRectangle**：矩形覆盖层
+- **ScriptGoogleMapsHeatmapLayer**：数据可视化热力图
 
-All components support:
-- Reactive `options` prop that updates the underlying Google Maps object
-- Automatic cleanup on component unmount
-- TypeScript support with Google Maps types
+所有组件支持：
+- 响应式 `options` 属性，自动更新谷歌地图对象
+- 组件卸载时自动清理
+- TypeScript 类型支持
 
-### Best Practices
+### 最佳实践
 
-#### Performance Considerations
+#### 性能建议
 
-**Use MarkerClusterer for Many Markers**
+**大量标记时使用 MarkerClusterer**
 ```vue
-<!-- ✅ Good: Use clusterer for >10 markers -->
+<!-- ✅ 推荐：超过 10 个标记使用聚合器 -->
 <ScriptGoogleMapsMarkerClusterer>
   <ScriptGoogleMapsMarker v-for="marker in manyMarkers" />
 </ScriptGoogleMapsMarkerClusterer>
 
-<!-- ❌ Avoid: Many individual markers -->
+<!-- ❌ 避免：大量独立标记 -->
 <ScriptGoogleMapsMarker v-for="marker in manyMarkers" />
 ```
 
-**Prefer AdvancedMarkerElement for Modern Apps**
+**现代应用推荐使用 AdvancedMarkerElement**
 ```vue
-<!-- ✅ Recommended: Better performance and styling -->
+<!-- ✅ 推荐：性能与样式更佳 -->
 <ScriptGoogleMapsAdvancedMarkerElement :options="options">
   <ScriptGoogleMapsPinElement :options="{ background: '#FF0000' }" />
 </ScriptGoogleMapsAdvancedMarkerElement>
 
-<!-- ⚠️ Legacy: Use only when advanced markers aren't supported -->
+<!-- ⚠️ 旧版：仅在不支持高级标记时使用 -->
 <ScriptGoogleMapsMarker :options="options" />
 ```
 
-#### Component Hierarchy
+#### 组件层级关系
 
-Components must follow this nesting structure:
+组件应遵循如下嵌套结构：
 
 ```
-ScriptGoogleMaps (root)
-├── ScriptGoogleMapsMarkerClusterer (optional)
+ScriptGoogleMaps (根组件)
+├── ScriptGoogleMapsMarkerClusterer (可选)
 │   └── ScriptGoogleMapsMarker/AdvancedMarkerElement
-│       └── ScriptGoogleMapsInfoWindow (optional)
+│       └── ScriptGoogleMapsInfoWindow (可选)
 ├── ScriptGoogleMapsAdvancedMarkerElement
-│   ├── ScriptGoogleMapsPinElement (optional)
-│   └── ScriptGoogleMapsInfoWindow (optional)
-└── Other overlays (Circle, Polygon, etc.)
+│   ├── ScriptGoogleMapsPinElement (可选)
+│   └── ScriptGoogleMapsInfoWindow (可选)
+└── 其他覆盖层（Circle、Polygon 等）
 ```
 
-#### Reactive Data Patterns
+#### 响应式数据示例
 
-**Reactive Marker Updates**
+**响应式标记更新**
 ```vue
 <script setup>
 const markers = ref([
-  { id: 1, position: { lat: -34.397, lng: 150.644 }, title: 'Sydney' }
+  { id: 1, position: { lat: -34.397, lng: 150.644 }, title: '悉尼' }
 ])
 
-// Markers automatically update when data changes
+// 数据变更时标记自动更新
 function addMarker() {
   markers.value.push({
     id: Date.now(),
     position: getRandomPosition(),
-    title: 'New Location'
+    title: '新地点'
   })
 }
 </script>
@@ -655,9 +647,9 @@ function addMarker() {
 </template>
 ```
 
-#### Error Handling
+#### 错误处理
 
-Always provide error fallbacks and loading states:
+始终提供错误回退和加载状态：
 
 ```vue
 <script setup>
@@ -671,24 +663,24 @@ const mapError = ref(false)
   >
     <template #error>
       <div class="p-4 bg-red-100">
-        Failed to load Google Maps
+        谷歌地图加载失败
       </div>
     </template>
 
-    <!-- Your components -->
+    <!-- 你的组件 -->
   </ScriptGoogleMaps>
 </template>
 ```
 
 ## useScriptGoogleMaps
 
-The `useScriptGoogleMaps` composable lets you have fine-grain control over the Google Maps SDK. It provides a way to load the Google Maps SDK and interact with it programmatically.
+`useScriptGoogleMaps` 组合式函数让你可以灵活控制谷歌地图 SDK。它提供了一种方式来加载谷歌地图 SDK 并以编程方式与之交互。
 
 ```ts
 export function useScriptGoogleMaps<T extends GoogleMapsApi>(_options?: GoogleMapsInput) {}
 ```
 
-Please follow the [Registry Scripts](/docs/guides/registry-scripts) guide to learn more about advanced usage.
+请参阅[Registry 脚本](/docs/guides/registry-scripts)指南了解更高级用法。
 
 ### GoogleMapsApi
 
@@ -699,9 +691,9 @@ export interface GoogleMapsApi {
 }
 ```
 
-## Example
+## 示例
 
-Loading the Google Maps SDK and interacting with it programmatically.
+加载谷歌地图 SDK 并以编程方式操作它。
 
 ```vue
 <script setup lang="ts">
@@ -712,12 +704,12 @@ const { onLoaded } = useScriptGoogleMaps({
 const map = ref()
 onMounted(() => {
   onLoaded(async (instance) => {
-    const maps = await instance.maps as any as typeof google.maps // upstream google type issue
+    const maps = await instance.maps as any as typeof google.maps // 上游的 google 类型问题
     new maps.Map(map.value, {
       center: { lat: -34.397, lng: 150.644 },
       zoom: 8
     })
-    // Do something with the map
+    // 可执行进一步操控
   })
 })
 </script>

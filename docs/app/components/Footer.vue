@@ -21,12 +21,12 @@ const topGuides = inject<Ref<NavItem[]>>('topGuides')
                 <ul class="space-y-6">
                   <li>
                     <NuxtLink to="/docs/getting-started">
-                      What is Nuxt Scripts?
+                      介绍 Nuxt Scripts
                     </NuxtLink>
                   </li>
                   <li>
                     <NuxtLink to="/docs/getting-started/installation">
-                      Install Nuxt Scripts
+                      安装 Nuxt Scripts
                     </NuxtLink>
                   </li>
                 </ul>
@@ -34,7 +34,7 @@ const topGuides = inject<Ref<NavItem[]>>('topGuides')
             </div>
             <div>
               <h3 class="font-bold mb-5">
-                Top Guides
+                顶级指南
               </h3>
               <nav>
                 <ul class="grid grid-cols-2 gap-6">
@@ -50,10 +50,10 @@ const topGuides = inject<Ref<NavItem[]>>('topGuides')
               <div class="bg-gray-50 dark:bg-gray-900 flex rounded-xl shadow p-5">
                 <div>
                   <div class="mb-2">
-                    Hey <Icon name="noto:waving-hand" /> My name is <a href="https://harlanzw.com" target="_blank" class="underline">Harlan</a> and I'm the lead developer and maintainer of Nuxt Scripts.
+                    Hey <Icon name="noto:waving-hand" /> 我的名字是 <a href="https://harlanzw.com" target="_blank" class="underline">Harlan</a>，我是 Nuxt Scripts 的主要开发者和维护者。
                   </div>
                   <div>
-                    Like the module? Let me know!
+                    喜欢这个模块吗？告诉我吧！
                   </div>
                 </div>
                 <div class="gap-3">
@@ -75,7 +75,9 @@ const topGuides = inject<Ref<NavItem[]>>('topGuides')
       <div class="border-t border-gray-200 dark:border-gray-800">
         <UContainer>
           <div class="py-10">
-            Copyright © {{ new Date().getFullYear() }} Nuxt Team - <a href="https://github.com/nuxt/scripts/blob/main/LICENSE">MIT License</a>
+            <a target="_blank" href="https://www.zhcndoc.com">简中文档</a>
+            <span>｜</span>
+            <a target="_blank" href="https://beian.miit.gov.cn" rel="nofollow">沪ICP备2024070610号-3</a>
           </div>
         </UContainer>
       </div>

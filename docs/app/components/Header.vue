@@ -7,15 +7,15 @@ const { header } = useAppConfig()
 const route = useRoute()
 const links = [
   {
-    label: 'Guides',
+    label: '指南',
     to: '/docs/getting-started',
   },
   {
-    label: 'Script Registry',
+    label: '脚本',
     to: '/scripts',
   },
   {
-    label: 'Learn',
+    label: '学习',
     to: '/learn',
   },
 ]

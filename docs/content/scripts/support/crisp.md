@@ -1,6 +1,6 @@
 ---
 title: Crisp
-description: Show performance-optimized Crisp in your Nuxt app.
+description: 在你的 Nuxt 应用中展示性能优化的 Crisp。
 links:
   - label: useScriptCrisp
     icon: i-simple-icons-github
@@ -12,23 +12,23 @@ links:
     size: xs
 ---
 
-[Crisp](https://crisp.chat/) is a customer messaging platform that lets you communicate with your customers through chat, email, and more.
+[Crisp](https://crisp.chat/) 是一个客户消息平台，让你通过聊天、邮件等方式与客户沟通。
 
-Nuxt Scripts provides a [useScriptCrisp](#usescriptcrisp) composable and a headless Facade Component [ScriptCrisp](#scriptcrisp) component to interact with crisp.
+Nuxt Scripts 提供了一个组合式函数 [useScriptCrisp](#usescriptcrisp) 和一个无头外观组件 [ScriptCrisp](#scriptcrisp) 来与 Crisp 交互。
 
 ## ScriptCrisp
 
-The `ScriptCrisp` component is headless Facade Component wrapping the [useScriptCrisp](#usescriptcrisp) composable, providing a simple, performance optimized way to load Crisp in your Nuxt app.
+`ScriptCrisp` 组件是一个无头外观组件，封装了 [useScriptCrisp](#usescriptcrisp) 组合式函数，提供了一种简单且性能优化的方式，在你的 Nuxt 应用中加载 Crisp。
 
-It's optimized for performance by leveraging the [Element Event Triggers](/docs/guides/script-triggers#element-event-triggers), only loading crisp when specific elements events happen.
+它通过利用[元素事件触发器](/docs/guides/script-triggers#element-event-triggers)实现性能优化，只在特定元素事件发生时加载 Crisp。
 
-By default, it will load on the `click` DOM event.
+默认情况下，它会在 `click` DOM 事件时加载。
 
-### Demo
+### 演示
 
 ::code-group
 
-:crisp-demo{label="Output"}
+:crisp-demo{label="输出"}
 
 ```vue [Input]
 <script setup lang="ts">
@@ -48,8 +48,8 @@ const isLoaded = ref(false)
     </ScriptCrisp>
   </div>
   <div class="text-center">
-    <UAlert v-if="!isLoaded" class="mb-5" size="sm" color="blue" variant="soft" title="Click to load" description="Clicking the button to the right will load crisp script" />
-    <UAlert v-else color="green" variant="soft" title="Crisp is loaded" description="The Crisp Facade component is no longer being displayed." />
+    <UAlert v-if="!isLoaded" class="mb-5" size="sm" color="blue" variant="soft" title="点击加载" description="点击右侧按钮将加载 crisp 脚本" />
+    <UAlert v-else color="green" variant="soft" title="Crisp 已加载" description="Crisp 外观组件不再显示。" />
   </div>
 </div>
 </template>
@@ -61,7 +61,7 @@ const isLoaded = ref(false)
   border-radius: 54px;
   cursor: pointer;
   background-color: #1972F5;
-  position: relative; /* change to fixed */
+  position: relative; /* 改为 fixed */
   bottom: 20px;
   right: 24px;
   z-index: 100000;
@@ -76,7 +76,7 @@ const isLoaded = ref(false)
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
-  background-image: url(data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjMwIiB3aWR0aD0iMzUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiPjxkZWZzPjxmaWx0ZXIgaWQ9ImEiIGhlaWdodD0iMTM4LjclIiB3aWR0aD0iMTMxLjQlIiB4PSItMTUuNyUiIHk9Ii0xNS4xJSI+PGZlTW9ycGhvbG9neSBpbj0iU291cmNlQWxwaGEiIG9wZXJhdG9yPSJkaWxhdGUiIHJhZGl1cz0iMSIgcmVzdWx0PSJzaGFkb3dTcHJlYWRPdXRlcjEiLz48ZmVPZmZzZXQgZHk9IjEiIGluPSJzaGFkb3dTcHJlYWRPdXRlcjEiIHJlc3VsdD0ic2hhZG93T2Zmc2V0T3V0ZXIxIi8+PGZlR2F1c3NpYW5CbHVyIGluPSJzaGFkb3dPZmZzZXRPdXRlcjEiIHJlc3VsdD0ic2hhZG93Qmx1ck91dGVyMSIgc3RkRGV2aWF0aW9uPSIxIi8+PGZlQ29tcG9zaXRlIGluPSJzaGFkb3dCbHVyT3V0ZXIxIiBpbjI9IlNvdXJjZUFscGhhIiBvcGVyYXRvcj0ib3V0IiByZXN1bHQ9InNoYWRvd0JsdXJPdXRlcjEiLz48ZmVDb2xvck1hdHJpeCBpbj0ic2hhZG93Qmx1ck91dGVyMSIgdmFsdWVzPSIwIDAgMCAwIDAgMCAwIDAgMCAwIDAgMCAwIDAgMCAwIDAgMCAwLjA3IDAiLz48L2ZpbHRlcj48cGF0aCBpZD0iYiIgZD0iTTE0LjIzIDIwLjQ2bC05LjY1IDEuMUwzIDUuMTIgMzAuMDcgMmwxLjU4IDE2LjQ2LTkuMzcgMS4wNy0zLjUgNS43Mi00LjU1LTQuOHoiLz48L2RlZnM+PGcgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIj48dXNlIGZpbGw9IiMwMDAiIGZpbHRlcj0idXJsKCNhKSIgeGxpbms6aHJlZj0iI2IiLz48dXNlIGZpbGw9IiNmZmYiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIyIiB4bGluazpocmVmPSIjYiIvPjwvZz48L3N2Zz4=)!important
+  background-image: url(data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjMwIiB3aWR0aD0iMzUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiPjxkZWZzPjxmaWx0ZXIgaWQ9ImEiIGhlaWdodD0iMTM4LjclIiB3aWR0aD0iMTMxLjQiIHg9Ii0xNS43JSIgeT0iLTE1LjElIj48ZmVNb3JwaG9sb2d5IGluPSJTb3VyY2VBbHBoYSIgb3BlcmF0b3I9ImRpbGF0ZSIgcmFkaXVzPSIxIiByZXN1bHQ9InNoYWRvd1NwcmVhZE91dGVyMSIvPjxmZU9mZnNldCBkeT0iMSIgaW49InNoYWRvd1NwcmVhZE91dGVyMSIgcmVzdWx0PSJzaGFkb3dPZmZzZXRPdXRlcjEiLz48ZmVHYXVzc2lhbkJsdXIgaW49InNoYWRvd09mZnNldE91dGVyMSIgcmVzdWx0PSJzaGFkb3dCbHVyT3V0ZXIxIiBzdGREZXZpYXRpb249IjEiLz48ZmVDb21wb3NpdGUgaW49InNoYWRvd0JsdXJPdXRlcjEiIGluMj0iU291cmNlQWxwaGEiIG9wZXJhdG9yPSJvdXQiIHJlc3VsdD0ic2hhZG93Qmx1ck91dGVyMSIvPjxmZUNvbG9yTWF0cml4IGluPSJzaGFkb3dCbHVyT3V0ZXIxIiB2YWx1ZXM9IjAgMCAwIDAgMCAwIDAgMCAwIDAgMCAwIDAgMCAwIDAgMCAwLjA3IDAiLz48L2ZpbHRlcj48cGF0aCBpZD0iYiIgZD0iTTE0LjIzIDIwLjQ2bC05LjY1IDEuMUwzIDUuMTIgMzAuMDcgMmwxLjU4IDE2LjQ2LTkuMzcgMS4wNy0zLjUgNS43Mi00LjU1LTQuOHoiLz48L2RlZnM+PGcgZmlsbD0ibm9uZSIgZmlsbC1ydWxlPSJldmVub2RkIj48dXNlIGZpbGw9IiMwMDAiIGZpbHRlcj0idXJsKCNhKSIgeGxpbms6aHJlZj0iI2IiLz48dXNlIGZpbGw9IiNmZmYiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIyIiB4bGluazpocmVmPSIjYiIvPjwvZz48L3N2Zz4=)!important
 }
 @media (max-height: 600px) {
   .crisp {
@@ -89,24 +89,24 @@ const isLoaded = ref(false)
 
 ::
 
-### Component API
+### 组件 API
 
-See the [Facade Component API](/docs/guides/facade-components#facade-components-api) for full props, events, and slots.
+完整的属性、事件和插槽信息，请参见[外观组件 API](/docs/guides/facade-components#facade-components-api)。
 
 ### Props
 
-- `trigger`: The trigger event to load crisp. Default is `click`. See [Element Event Triggers](/docs/guides/script-triggers#element-event-triggers) for more information.
-- `id`: Crisp ID.
-- `runtimeConfig`: Extra configuration options. Used to configure the locale. Same as CRISP_RUNTIME_CONFIG.
-- `tokenId`: Associated a session, equivalent to using CRISP_TOKEN_ID variable. Same as CRISP_TOKEN_ID.
-- `cookieDomain`: Restrict the domain that crisp cookie is set on. Same as CRISP_COOKIE_DOMAIN.
-- `cookieExpiry`: The cookie expiry in seconds. Same as CRISP_COOKIE_EXPIRATION.
+- `trigger`：加载 crisp 的触发事件。默认是 `click`。详见[元素事件触发器](/docs/guides/script-triggers#element-event-triggers)。
+- `id`：Crisp ID。
+- `runtimeConfig`：额外配置选项。用于配置语言环境。等同于 CRISP_RUNTIME_CONFIG。
+- `tokenId`：关联会话，相当于使用 CRISP_TOKEN_ID 变量。等同于 CRISP_TOKEN_ID。
+- `cookieDomain`：限制 crisp cookie 设置的域。等同于 CRISP_COOKIE_DOMAIN。
+- `cookieExpiry`：cookie 过期时间（秒）。等同于 CRISP_COOKIE_EXPIRATION。
 
-See the [Config Schema](#config-schema) for full details.
+完整细节请参见[配置架构](#config-schema)。
 
-#### With Environment Variables
+#### 使用环境变量配置
 
-If you prefer to configure your id using environment variables.
+如果你希望通过环境变量配置 id。
 
 ```ts [nuxt.config.ts]
 export default defineNuxtConfig({
@@ -115,12 +115,12 @@ export default defineNuxtConfig({
       crisp: true,
     }
   },
-  // you need to provide a runtime config to access the environment variables
+  // 需要提供运行时配置以访问环境变量
   runtimeConfig: {
     public: {
       scripts: {
         crisp: {
-          id: '', // NUXT_PUBLIC_SCRIPTS_CRISP_ID
+          id: '', // 对应 NUXT_PUBLIC_SCRIPTS_CRISP_ID
         },
       },
     },
@@ -132,9 +132,9 @@ export default defineNuxtConfig({
 NUXT_PUBLIC_SCRIPTS_CRISP_ID=<YOUR_ID>
 ```
 
-### Events
+### 事件
 
-The `ScriptCrisp` component emits a single `ready` event when crisp is loaded.
+`ScriptCrisp` 组件在 crisp 加载完成时触发一个 `ready` 事件。
 
 ```ts
 const emits = defineEmits<{
@@ -145,7 +145,7 @@ const emits = defineEmits<{
 ```vue
 <script setup lang="ts">
 function onReady(crisp) {
-  console.log('Crisp is ready', crisp)
+  console.log('Crisp 已准备好', crisp)
 }
 </script>
 
@@ -154,18 +154,18 @@ function onReady(crisp) {
 </template>
 ```
 
-### Slots
+### 插槽
 
 **awaitingLoad**
 
-The slot is used to display content while crisp is loading.
+该插槽用于在 crisp 加载时显示内容。
 
 ```vue
 <template>
   <ScriptCrisp>
     <template #awaitingLoad>
     <div style="width: 54px; height: 54px; border-radius: 54px; cursor: pointer; background-color: #1972F5;">
-      chat!
+      聊天!
     </div>
     </template>
   </ScriptCrisp>
@@ -174,16 +174,16 @@ The slot is used to display content while crisp is loading.
 
 **loading**
 
-The slot is used to display content while crisp is loading.
+该插槽用于在 crisp 正在加载时显示内容。
 
-Tip: You should use the `ScriptLoadingIndicator` by default for accessibility and UX.
+提示：出于无障碍和用户体验考虑，通常建议使用 `ScriptLoadingIndicator`。
 
 ```vue
 <template>
   <ScriptCrisp>
     <template #loading>
       <div class="bg-blue-500 text-white p-5">
-        Loading...
+        正在加载...
       </div>
     </template>
   </ScriptCrisp>
@@ -192,45 +192,45 @@ Tip: You should use the `ScriptLoadingIndicator` by default for accessibility an
 
 ## useScriptCrisp
 
-The `useScriptCrisp` composable lets you have fine-grain control over Crisp SDK. It provides a way to load crisp SDK and interact with it programmatically.
+`useScriptCrisp` 组合式函数让你可以细粒度控制 Crisp SDK。它提供了程序加载 Crisp SDK 并进行交互的方式。
 
 ```ts
 export function useScriptCrisp<T extends CrispApi>(_options?: CrispInput) {}
 ```
 
-Please follow the [Registry Scripts](/docs/guides/registry-scripts) guide to learn more about advanced usage.
+请参阅[注册脚本](/docs/guides/registry-scripts)指南了解更多高级用法。
 
-### Config Schema
+### 配置架构
 
 ```ts
 export const CrispOptions = object({
   /**
-   * Crisp ID.
+   * Crisp ID。
    */
   id: string(),
   /**
-   * Extra configuration options. Used to configure the locale.
-   * Same as CRISP_RUNTIME_CONFIG.
+   * 额外配置选项。用于配置语言环境。
+   * 同 CRISP_RUNTIME_CONFIG。
    * @see https://docs.crisp.chat/guides/chatbox-sdks/web-sdk/language-customization/
    */
   runtimeConfig: optional(object({
     locale: optional(string()),
   })),
   /**
-   * Associated a session, equivalent to using CRISP_TOKEN_ID variable.
-   * Same as CRISP_TOKEN_ID.
+   * 关联会话，相当于使用 CRISP_TOKEN_ID 变量。
+   * 同 CRISP_TOKEN_ID。
    * @see https://docs.crisp.chat/guides/chatbox-sdks/web-sdk/session-continuity/
    */
   tokenId: optional(string()),
   /**
-   * Restrict the domain that crisp cookie is set on.
-   * Same as CRISP_COOKIE_DOMAIN.
+   * 限制 crisp cookie 设置的域。
+   * 同 CRISP_COOKIE_DOMAIN。
    * @see https://docs.crisp.chat/guides/chatbox-sdks/web-sdk/cookie-policies/
    */
   cookieDomain: optional(string()),
   /**
-   * The cookie expiry in seconds.
-   * Same as CRISP_COOKIE_EXPIRATION.
+   * cookie 过期时间（秒）。
+   * 同 CRISP_COOKIE_EXPIRATION。
    * @see https://docs.crisp.chat/guides/chatbox-sdks/web-sdk/cookie-policies/#change-cookie-expiration-date
    */
   cookieExpiry: optional(number()),
@@ -254,11 +254,11 @@ export interface CrispApi {
 }
 ```
 
-For more information, please refer to the [Crisp API documentation](https://docs.crisp.chat/guides/chatbox-sdks/web-sdk/dollar-crisp/).
+更多信息，请参阅 [Crisp API 文档](https://docs.crisp.chat/guides/chatbox-sdks/web-sdk/dollar-crisp/)。
 
-## Example
+## 示例
 
-Loading the Crisp SDK and interacting with it programmatically.
+加载 Crisp SDK 并通过编程方式进行交互。
 
 ```vue
 <script setup lang="ts">

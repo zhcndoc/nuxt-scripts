@@ -1,6 +1,6 @@
 ---
-title: Vimeo Player
-description: Show performance-optimized Vimeo videos in your Nuxt app.
+title: Vimeo 播放器
+description: 在你的 Nuxt 应用中展示性能优化的 Vimeo 视频。
 links:
   - label: useScriptVimeoPlayer
     icon: i-simple-icons-github
@@ -12,14 +12,13 @@ links:
     size: xs
 ---
 
-[Vimeo](https://vimeo.com/) is a video hosting platform that allows you to upload and share videos.
+[Vimeo](https://vimeo.com/) 是一个视频托管平台，允许你上传和分享视频。
 
-Nuxt Scripts provides a `useScriptVimeoPlayer` composable and a headless `ScriptVimeoPlayer` a component to interact with the Vimeo Player.
+Nuxt Scripts 提供了一个 `useScriptVimeoPlayer` 组合式函数和一个无 UI 的 `ScriptVimeoPlayer` 组件，用于与 Vimeo 播放器交互。
 
-## Types
+## 类型
 
-To use Video Player with full TypeScript support, you will need
-to install the `@types/vimeo__player` dependency.
+若想使用具备完整 TypeScript 支持的视频播放器，你需要安装 `@types/vimeo__player` 依赖。
 
 ```bash
 pnpm add -D @types/vimeo__player
@@ -27,17 +26,17 @@ pnpm add -D @types/vimeo__player
 
 ## ScriptVimeoPlayer
 
-The `ScriptVimeoPlayer` component is a wrapper around the `useScriptVimeoPlayer` composable. It provides a simple way to embed Vimeo videos in your Nuxt app.
+`ScriptVimeoPlayer` 组件是 `useScriptVimeoPlayer` 组合式函数的封装。它提供了一种简便方式在你的 Nuxt 应用中嵌入 Vimeo 视频。
 
-It's optimized for performance by leveraging the [Element Event Triggers](/docs/guides/script-triggers#element-event-triggers), only loading the Vimeo Player when the specific elements events happen.
+通过利用 [元素事件触发](/docs/guides/script-triggers#element-event-triggers)，仅在特定元素事件发生时加载 Vimeo 播放器，从而优化性能。
 
-By default, it will load on the `mousedown` event.
+默认情况下，它会在 `mousedown` 事件时加载。
 
-### Demo
+### 演示
 
 ::code-group
 
-:vimeo-demo{label="Output"}
+:vimeo-demo{label="输出"}
 
 ```vue [Input]
 <script setup lang="ts">
@@ -61,9 +60,9 @@ async function play() {
       </ScriptVimeoPlayer>
     </div>
     <div class="text-center">
-      <UAlert v-if="!isLoaded" class="mb-5" size="sm" color="blue" variant="soft" title="Clicks the video!" description="Clicking the video will load the Vimeo iframe and start the video." />
+      <UAlert v-if="!isLoaded" class="mb-5" size="sm" color="blue" variant="soft" title="点击视频！" description="点击视频会加载 Vimeo iframe 并开始播放视频。" />
       <UButton v-if="isLoaded && !isPlaying" @click="play">
-        Play Video
+        播放视频
       </UButton>
     </div>
   </div>
@@ -72,18 +71,17 @@ async function play() {
 
 ::
 
-### Props
+### 属性（Props）
 
-The `ScriptVimeoPlayer` component accepts the following props:
+`ScriptVimeoPlayer` 组件接收以下属性：
 
-- `trigger`: The trigger event to load the Vimeo Player. Default is `mousedown`. See [Element Event Triggers](/docs/guides/script-triggers#element-event-triggers) for more information.
-- `aboveTheFold`: Optimizes the placeholder image for above-the-fold content. Default is `false`.
-- `rootAttrs`: Override the root attributes that are automatically set.
-- `placeholderAttrs`: The attributes for the placeholder image. Default is `{ loading: 'lazy' }`.
-- `id`: Shorthand for `vimeoOptions.id`.
-- `url`: Shorthand for `vimeoOptions.url`.
-- `vimeoOptions`: All options from the Player SDK are supported, please consult the [Embed Options](https://developer.vimeo.com/player/sdk/embed)
-for full documentation.
+- `trigger`：触发加载 Vimeo 播放器的事件，默认是 `mousedown`。更多信息请参见 [元素事件触发](/docs/guides/script-triggers#element-event-triggers)。
+- `aboveTheFold`：优化折叠上方内容的占位图像，默认是 `false`。
+- `rootAttrs`：覆盖自动设置的根节点属性。
+- `placeholderAttrs`：占位图像的属性，默认是 `{ loading: 'lazy' }`。
+- `id`：`vimeoOptions.id` 的简写。
+- `url`：`vimeoOptions.url` 的简写。
+- `vimeoOptions`：支持 Player SDK 的所有选项，完整文档请参考 [嵌入选项](https://developer.vimeo.com/player/sdk/embed)。
 
 ```ts
 interface VimeoPlayerProps {
@@ -116,10 +114,9 @@ interface VimeoPlayerProps {
 }
 ```
 
-#### Eager Loading Placeholder
+#### 预加载（Eager Loading）占位图
 
-The Vimeo Video placeholder image is lazy-loaded by default. You should change this behavior if your video is above the fold
-or consider using the `#placeholder` slot to customize the placeholder image.
+Vimeo 视频的占位图默认是懒加载的。如果你的视频是折叠上方内容，建议修改此行为，或者使用 `#placeholder` 插槽自定义占位图。
 
 ::code-group
 
@@ -130,20 +127,20 @@ or consider using the `#placeholder` slot to customize the placeholder image.
 ```vue [Placeholder Slot]
 <ScriptVimeoPlayer>
   <template #placeholder="{ placeholder }">
-    <img :src="placeholder" alt="Video Placeholder">
+    <img :src="placeholder" alt="视频占位图">
   </template>
 </ScriptVimeoPlayer>
 ```
 
 ::
 
-### Component API
+### 组件 API
 
-See the [Facade Component API](/docs/guides/facade-components#facade-components-api) for full props, events, and slots.
+完整的属性、事件和插槽信息请参阅 [Facade 组件 API](/docs/guides/facade-components#facade-components-api)。
 
-### Events
+### 事件
 
-The `ScriptVimeoPlayer` component emits all events from the Vimeo Player SDK. Please consult the [Player Events](https://developer.vimeo.com/player/sdk/reference#about-player-events) for full documentation.
+`ScriptVimeoPlayer` 组件会触发 Vimeo 播放器 SDK 的所有事件。完整文档请查看 [播放器事件](https://developer.vimeo.com/player/sdk/reference#about-player-events)。
 
 ```ts
 const emits = defineEmits<{
@@ -175,19 +172,19 @@ const emits = defineEmits<{
 }>()
 ```
 
-### Slots
+### 插槽（Slots）
 
-As the component is provided headless, there are a number of slots for you to customize the player however you like before it's loaded in.
+由于该组件为无 UI 组件，你可以通过多个插槽自定义播放器的加载前展示。
 
 **default**
 
-The default slot is used to display content that will always be visible.
+默认插槽用来显示始终可见的内容。
 
 ```vue
 <template>
   <ScriptVimeoPlayer :id="331567154">
     <div class="bg-blue-500 text-white p-5">
-      Video by NuxtJS
+      视频提供者：NuxtJS
     </div>
   </ScriptVimeoPlayer>
 </template>
@@ -195,14 +192,14 @@ The default slot is used to display content that will always be visible.
 
 **awaitingLoad**
 
-The slot is used to display content while the video is loading.
+该插槽用于视频加载时显示内容。
 
 ```vue
 <template>
   <ScriptVimeoPlayer :id="331567154">
     <template #awaitingLoad>
       <div class="bg-blue-500 text-white p-5">
-        Click to play!
+        点击播放！
       </div>
     </template>
   </ScriptVimeoPlayer>
@@ -211,14 +208,14 @@ The slot is used to display content while the video is loading.
 
 **loading**
 
-The slot is used to display content while the video is loading.
+该插槽用于视频加载过程中显示的内容。
 
 ```vue
 <template>
   <ScriptVimeoPlayer :id="331567154">
     <template #loading>
       <div class="bg-blue-500 text-white p-5">
-        Loading...
+        加载中...
       </div>
     </template>
   </ScriptVimeoPlayer>
@@ -227,14 +224,13 @@ The slot is used to display content while the video is loading.
 
 **placeholder**
 
-The slot is used to display a placeholder image before the video is loaded. By default, this will show the
-vimeo thumbnail for the video. You can display it however you like.
+该插槽用于视频加载前显示的占位图。默认情况下，它会展示 Vimeo 视频的缩略图。你可以根据需求自定义显示。
 
 ```vue
 <template>
   <ScriptVimeoPlayer :id="331567154">
     <template #placeholder="{ placeholder }">
-      <img :src="placeholder" alt="Video Placeholder">
+      <img :src="placeholder" alt="视频占位图">
     </template>
   </ScriptVimeoPlayer>
 </template>
@@ -242,13 +238,13 @@ vimeo thumbnail for the video. You can display it however you like.
 
 ## useScriptVimeoPlayer
 
-The `useScriptVimeoPlayer` composable lets you have fine-grain control over the Vimeo Player SDK. It provides a way to load the Vimeo Player SDK and interact with it programmatically.
+`useScriptVimeoPlayer` 组合式函数让你可以更细粒度地控制 Vimeo 播放器 SDK。它提供了加载 Vimeo 播放器 SDK 并以编程方式交互的方式。
 
 ```ts
 export function useScriptVimeoPlayer<T extends VimeoPlayerApi>(_options?: VimeoPlayerInput) {}
 ```
 
-Please follow the [Registry Scripts](/docs/guides/registry-scripts) guide to learn more about advanced usage.
+请参考 [Registry Scripts](/docs/guides/registry-scripts) 指南以获取更多高级用法。
 
 ### VimeoPlayerApi
 
@@ -260,9 +256,9 @@ export interface VimeoPlayerApi {
 }
 ```
 
-## Example
+## 示例
 
-Loading the Vimeo Player SDK and interacting with it programmatically.
+加载 Vimeo 播放器 SDK 并以编程方式进行交互。
 
 ```vue
 <script setup lang="ts">
@@ -281,7 +277,7 @@ onLoaded(({ Vimeo }) => {
   <div>
     <div ref="video" />
     <button @click="player.play()">
-      Play
+      播放
     </button>
   </div>
 </template>

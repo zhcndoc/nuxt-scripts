@@ -1,47 +1,46 @@
 ---
-title: Matomo Analytics
-description: Use Matomo Analytics in your Nuxt app.
+title: Matomo 分析
+description: 在你的 Nuxt 应用中使用 Matomo 分析。
 links:
-  - label: Source
+  - label: 源码
     icon: i-simple-icons-github
     to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/matomo-analytics.ts
     size: xs
 ---
 
-[Matomo Analytics](https://matomo.org/) is a great analytics solution for Nuxt Apps.
+[Matomo 分析](https://matomo.org/) 是一个适合 Nuxt 应用的优秀分析解决方案。
 
-It provides detailed insights into how your website is performing, how users are interacting with your content, and how they are navigating through your site.
+它可以提供关于你的网站表现、用户如何与你的内容互动以及他们如何在你的网站中导航的详细洞察。
 
-The simplest way to load Matomo Analytics globally in your Nuxt App is to use Nuxt config. Alternatively you can directly
-use the [useScriptMatomoAnalytics](#useScriptMatomoAnalytics) composable.
+在你的 Nuxt 应用中，全局加载 Matomo 分析最简单的方法是使用 Nuxt 配置。或者你也可以直接使用 [useScriptMatomoAnalytics](#useScriptMatomoAnalytics) 组合式函数。
 
-## Loading Globally
+## 全局加载
 
-The following config assumes you're using Matomo Cloud with the default `siteId` of `1`. Page views are **automatically tracked** on navigation by default.
+下面的配置假设你正在使用默认 `siteId` 为 `1` 的 Matomo 云版本。页面浏览量默认会在导航时**自动跟踪**。
 
-If you're self-hosting, you'll need to provide the `matomoUrl` instead. If you have other sites you want to track, you can add them using `siteId`.
+如果你自托管，你需要提供 `matomoUrl`。如果你还有其他需要跟踪的网站，可以通过 `siteId` 添加。
 
 ::code-group
 
-```ts [Always enabled]
+```ts [始终启用]
 export default defineNuxtConfig({
   scripts: {
     registry: {
       matomoAnalytics: {
-        cloudId: 'YOUR_CLOUD_ID', // e.g. nuxt.matomo.cloud
+        cloudId: 'YOUR_CLOUD_ID', // 例如 nuxt.matomo.cloud
       }
     }
   }
 })
 ```
 
-```ts [Production only]
+```ts [仅生产环境]
 export default defineNuxtConfig({
   $production: {
     scripts: {
       registry: {
         matomoAnalytics: {
-          cloudId: 'YOUR_CLOUD_ID', // e.g. nuxt.matomo.cloud
+          cloudId: 'YOUR_CLOUD_ID', // 例如 nuxt.matomo.cloud
         }
       }
     }
@@ -49,14 +48,14 @@ export default defineNuxtConfig({
 })
 ```
 
-```ts [Environment Variables]
+```ts [环境变量]
 export default defineNuxtConfig({
   scripts: {
     registry: {
       matomoAnalytics: true,
     }
   },
-  // you need to provide a runtime config to access the environment variables
+  // 你需要提供运行时配置以访问环境变量
   runtimeConfig: {
     public: {
       scripts: {
@@ -75,83 +74,82 @@ export default defineNuxtConfig({
 
 ## useScriptMatomoAnalytics
 
-The `useScriptMatomoAnalytics` composable lets you have fine-grain control over when and how Matomo Analytics is loaded on your site.
-
+`useScriptMatomoAnalytics` 组合式函数让你可以精细控制 Matomo 分析在你的网站何时以及如何加载。
 
 ```ts
 const matomoAnalytics = useScriptMatomoAnalytics({
-  cloudId: 'YOUR_CLOUD_ID', // e.g. nuxt.matomo.cloud
+  cloudId: 'YOUR_CLOUD_ID', // 例如 nuxt.matomo.cloud
 })
 ```
 
-By default, a `siteId` of `1` is used and page tracking is **automatically enabled** via the `watch` option.
+默认情况下，使用 `siteId` 为 `1`，且通过 `watch` 选项**自动启用**页面跟踪。
 
 ```ts
 const matomoAnalytics = useScriptMatomoAnalytics({
-  cloudId: 'YOUR_CLOUD_ID', // e.g. nuxt.matomo.cloud
+  cloudId: 'YOUR_CLOUD_ID', // 例如 nuxt.matomo.cloud
   siteId: 2,
-  // watch: true, // enabled by default - automatic page tracking!
+  // watch: true, // 默认启用 - 自动页面跟踪！
 })
 ```
 
-If you'd like more control over the tracking, for example to set a custom dimension, you can send events using the `proxy` object.
+如果你想更灵活地控制跟踪，例如设置自定义维度，可以用 `proxy` 对象发送事件。
 
 ```ts
 const { proxy } = useScriptMatomoAnalytics({
-  cloudId: 'YOUR_CLOUD_ID', // e.g. nuxt.matomo.cloud
+  cloudId: 'YOUR_CLOUD_ID', // 例如 nuxt.matomo.cloud
 })
 
-// set custom dimension
+// 设置自定义维度
 proxy._paq.push(['setCustomDimension', 1, 'value'])
-// send page event
+// 发送页面事件
 proxy._paq.push(['trackPageView'])
 ```
 
-Please see the [Config Schema](#config-schema) for all available options.
+请参阅 [配置 Schema](#config-schema) 获取所有可用选项。
 
-## Custom Page Tracking
+## 自定义页面跟踪
 
-By default, all pages are tracked automatically, to disable the automatic tracking you can provide `watch: false`.
+默认情况下，所有页面都会自动跟踪，若你想禁用自动跟踪，可设置 `watch: false`。
 
 ```ts
 import { useScriptEventPage } from '#nuxt-scripts'
 
 const { proxy } = useScriptMatomoAnalytics({
   cloudId: 'YOUR_CLOUD_ID',
-  watch: false, // disable automatic tracking
+  watch: false, // 禁用自动跟踪
 })
 
-// Custom page tracking with additional logic
+// 结合额外逻辑的自定义页面跟踪
 useScriptEventPage((payload) => {
-  // Set custom dimensions based on route
+  // 根据路由设置自定义维度
   if (payload.path.startsWith('/products')) {
-    proxy._paq.push(['setCustomDimension', 1, 'Product Page'])
+    proxy._paq.push(['setCustomDimension', 1, '产品页面'])
   }
 
-  // Standard Matomo tracking calls (same as built-in watch behavior)
+  // 标准的 Matomo 跟踪调用（与内置的 watch 行为相同）
   proxy._paq.push(['setDocumentTitle', payload.title])
   proxy._paq.push(['setCustomUrl', payload.path])
   proxy._paq.push(['trackPageView'])
 
-  // Track additional custom events
+  // 跟踪额外的自定义事件
   proxy._paq.push(['trackEvent', 'Navigation', 'PageView', payload.path])
 })
 ```
 
-### Using Matomo Self-Hosted
+### 使用自托管 Matomo
 
-For self-hosted Matomo, set `matomoUrl` to customize tracking, you may need to set the `trackerUrl` if you've customized this.
+对于自托管 Matomo，设置 `matomoUrl` 来自定义跟踪，如果你自定义了地址，可能还需要设置 `trackerUrl`。
 
 ```ts
 const matomoAnalytics = useScriptMatomoAnalytics({
-  // e.g. https://your-url.com/tracker.js & https://your-url.com//matomo.php both exists
+  // 例如 https://your-url.com/tracker.js 和 https://your-url.com//matomo.php 都存在
   matomoUrl: 'https://your-url.com',
 })
 ```
 
-### Using Matomo Whitelabel
+### 使用 Matomo 白标版本
 
-For Matomo Whitelabel, set `trackerUrl` and `scriptInput.src` to customize tracking.
+对于 Matomo 白标版本，需要通过设置 `trackerUrl` 和 `scriptInput.src` 来自定义跟踪。
 
 ```ts
 const matomoAnalytics = useScriptMatomoAnalytics({
@@ -162,7 +160,7 @@ const matomoAnalytics = useScriptMatomoAnalytics({
 })
 ```
 
-Please follow the [Registry Scripts](/docs/guides/registry-scripts) guide to learn more about advanced usage.
+请参考 [Registry Scripts](/docs/guides/registry-scripts) 指南了解更多高级用法。
 
 ### MatomoAnalyticsApi
 
@@ -172,27 +170,27 @@ interface MatomoAnalyticsApi {
 }
 ```
 
-### Config Schema
+### 配置 Schema
 
-You must provide the options when setting up the script for the first time.
+首次设置脚本时必须提供如下选项。
 
 ```ts
-// matomoUrl and site are required
+// matomoUrl 和 siteId 是必需的
 export const MatomoAnalyticsOptions = object({
   matomoUrl: optional(string()),
   siteId: optional(union([string(), number()])),
   cloudId: optional(string()),
   trackerUrl: optional(string()),
-  trackPageView: optional(boolean()), // deprecated - use watch instead
+  trackPageView: optional(boolean()), // 已废弃 - 请改用 watch
   enableLinkTracking: optional(boolean()),
   disableCookies: optional(boolean()),
-  watch: optional(boolean()), // default: true
+  watch: optional(boolean()), // 默认：true
 })
 ```
 
-## Example
+## 示例
 
-Using Matomo Analytics only in production while using `_paq` to send a conversion event.
+仅在生产环境中使用 Matomo 分析，并通过 `_paq` 发送转化事件。
 
 ::code-group
 
@@ -200,8 +198,8 @@ Using Matomo Analytics only in production while using `_paq` to send a conversio
 <script setup lang="ts">
 const { proxy } = useScriptMatomoAnalytics()
 
-// noop in development, ssr
-// just works in production, client
+// 开发环境和 SSR 不起作用
+// 仅在生产客户端生效
 function sendConversion() {
   proxy._paq.push(['trackGoal', 1])
 }
@@ -210,7 +208,7 @@ function sendConversion() {
 <template>
   <div>
     <button @click="sendConversion">
-      Send Conversion
+      发送转化
     </button>
   </div>
 </template>

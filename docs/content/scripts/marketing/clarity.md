@@ -1,28 +1,26 @@
 ---
 title: Clarity
-description: Use Clarity in your Nuxt app.
+description: 在你的 Nuxt 应用中使用 Clarity。
 links:
-- label: Source
+- label: 源代码
   icon: i-simple-icons-github
   to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/clarity.ts
   size: xs
 ---
 
-[Clarity](https://clarity.microsoft.com/) by Microsoft is a screen recorder and heatmap tool that helps you understand how users interact with your website.
+[Clarity](https://clarity.microsoft.com/) 是微软提供的一款屏幕录制和热图工具，帮助你了解用户如何与网站交互。
 
-Nuxt Scripts provides a registry script composable `useScriptClarity` to easily integrate Clarity in your Nuxt app.
+Nuxt Scripts 提供了一个注册脚本组合式函数 `useScriptClarity`，让你可以轻松地在 Nuxt 应用中集成 Clarity。
 
-The simplest way to load Clarity globally in your Nuxt App is to use Nuxt config. Alternatively you can directly
-use the [useScriptClarity](#useScriptClarity) composable.
+在 Nuxt 应用中全局加载 Clarity 的最简单方式是通过 Nuxt 配置。或者你也可以直接使用 [useScriptClarity](#useScriptClarity) 组合式函数。
 
-## Loading Globally
+## 全局加载
 
-If you don't plan to send custom events you can use the [Environment overrides](https://nuxt.com/docs/getting-started/configuration#environment-overrides) to
-disable the script in development.
+如果你不打算发送自定义事件，可以使用 [环境覆盖](https://nuxt.com/docs/getting-started/configuration#environment-overrides) 来在开发环境中禁用脚本。
 
 ::code-group
 
-```ts [Always enabled]
+```ts [始终启用]
 export default defineNuxtConfig({
   scripts: {
     registry: {
@@ -34,7 +32,7 @@ export default defineNuxtConfig({
 })
 ```
 
-```ts [Production only]
+```ts [仅生产环境]
 export default defineNuxtConfig({
   $production: {
     scripts: {
@@ -49,19 +47,19 @@ export default defineNuxtConfig({
 ```
 
 
-```ts [Environment Variables]
+```ts [环境变量]
 export default defineNuxtConfig({
   scripts: {
     registry: {
       clarity: true,
     }
   },
-  // you need to provide a runtime config to access the environment variables
+  // 你需要提供运行时配置以访问环境变量
   runtimeConfig: {
     public: {
       scripts: {
         clarity: {
-          // .env
+          // .env 文件中
           // NUXT_PUBLIC_SCRIPTS_CLARITY_ID=<your-id>
           id: '',
         },
@@ -75,17 +73,17 @@ export default defineNuxtConfig({
 
 ## useScriptClarity
 
-The `useScriptClarity` composable lets you have fine-grain control over when and how Clarity is loaded on your site.
+`useScriptClarity` 组合式函数允许你精细控制 Clarity 在你的网站上何时及如何加载。
 
 ```ts
 const { proxy } = useScriptClarity({
   id: 'YOUR_ID'
 })
-// example
+// 示例
 proxy.clarity("identify", "custom-id", "custom-session-id", "custom-page-id", "friendly-name")	
 ```
 
-Please follow the [Registry Scripts](/docs/guides/registry-scripts) guide to learn more about advanced usage.
+请参阅 [注册脚本](/docs/guides/registry-scripts) 指南以了解更多高级用法。
 
 ### ClarityApi
 
@@ -112,22 +110,22 @@ export interface ClarityApi {
 
 ```
 
-### Config Schema
+### 配置 Schema
 
-You must provide the options when setting up the script for the first time.
+首次设置脚本时必须提供选项。
 
 ```ts
 export const ClarityOptions = object({
   /**
-   * The Clarity token.
+   * Clarity 令牌。
    */
   id: pipe(string(), minLength(10)),
 })
 ```
 
-## Example
+## 示例
 
-Using Clarity only in production while using `clarity` to send a conversion event.
+仅在生产环境使用 Clarity，同时使用 `clarity` 发送转化事件。
 
 ::code-group
 
@@ -135,8 +133,8 @@ Using Clarity only in production while using `clarity` to send a conversion even
 <script setup lang="ts">
 const { proxy } = useScriptClarity()
 
-// noop in development, ssr
-// just works in production, client
+// 在开发环境和 SSR 中无操作
+// 在生产环境和客户端正常工作
 function sendConversion() {
   proxy.clarity('event', 'conversion')
 }
@@ -145,11 +143,10 @@ function sendConversion() {
 <template>
   <div>
     <button @click="sendConversion">
-      Send Conversion
+      发送转化事件
     </button>
   </div>
 </template>
 ```
-
 
 ::
