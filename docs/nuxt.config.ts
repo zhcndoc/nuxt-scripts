@@ -106,6 +106,7 @@ export default defineNuxtConfig({
 
   nitro: {
     prerender: {
+      ignore: ['/__og-image__/**'],
       // For CF trailing slash issue
       autoSubfolderIndex: false,
     },

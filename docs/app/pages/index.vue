@@ -256,7 +256,7 @@ const contributors = useRuntimeConfig().public.contributors
 
     <UPageSection :ui="{ container: 'pt-0 py-6 sm:py-14 lg:py-14' }">
       <ul class="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-x-8 lg:gap-y-16">
-        <ShowcaseCard v-for="feature in features" :key="feature.name" :label="feature.name" :description="feature.description">
+        <ShowcaseCard v-for="feature in features" :key="feature?.name" :label="feature?.name" :description="feature.description">
           <UIcon :name="feature.icon" class="h-20 w-20 shrink-0 text-primary" />
         </ShowcaseCard>
       </ul>
