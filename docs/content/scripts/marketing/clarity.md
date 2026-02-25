@@ -123,6 +123,38 @@ export const ClarityOptions = object({
 })
 ```
 
+## First-Party 模式
+
+该脚本支持 [First-Party 模式](/docs/guides/first-party)，此模式通过你的域名路由所有流量，以提升隐私性及绕过广告拦截。
+
+当通过 `scripts.firstParty: true` 全局启用时，该脚本将：
+- 从你的域名加载，而非 `www.clarity.ms`
+- 通过你的服务器路由数据/事件收集（`d.clarity.ms`, `e.clarity.ms`）
+- 将用户 IP 地址匿名化至子网级别
+- 将设备指纹数据归类到通用的类别中
+
+```ts [nuxt.config.ts]
+export default defineNuxtConfig({
+  scripts: {
+    firstParty: true,
+    registry: {
+      clarity: { id: 'YOUR_ID' }
+    }
+  }
+})
+```
+
+如果想针对特定脚本选择退出：
+
+```ts
+useScriptClarity({
+  id: 'YOUR_ID',
+  scriptOptions: {
+    firstParty: false // 直接从微软加载
+  }
+})
+```
+
 ## 示例
 
 仅在生产环境使用 Clarity，同时使用 `clarity` 发送转化事件。

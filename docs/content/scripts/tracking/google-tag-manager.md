@@ -255,6 +255,38 @@ function sendConversion() {
 
 ::
 
+## 第一方模式
+
+该脚本支持[第一方模式](/docs/guides/first-party)，通过你的域名路由所有流量，以提升隐私保护并绕过广告拦截器。
+
+当你在全局通过 `scripts.firstParty: true` 启用时，该脚本将：
+- 从你的域名加载而非 `www.googletagmanager.com`
+- 通过你的服务器路由所有 GTM 请求
+- 将用户 IP 地址匿名化至子网级别
+- 将设备指纹数据泛化至常见的分组
+
+```ts [nuxt.config.ts]
+export default defineNuxtConfig({
+  scripts: {
+    firstParty: true,
+    registry: {
+      googleTagManager: { id: 'GTM-XXXXXX' }
+    }
+  }
+})
+```
+
+若想对该脚本特定取消第一方模式：
+
+```ts
+useScriptGoogleTagManager({
+  id: 'GTM-XXXXXX',
+  scriptOptions: {
+    firstParty: false // 直接从 Google 加载
+  }
+})
+```
+
 ## GTM 启动前的配置
 
 `useScriptGoogleTagManager` 会自动初始化 Google Tag Manager，即自动触发 `js`、`config` 和 `gtm.start` 事件。

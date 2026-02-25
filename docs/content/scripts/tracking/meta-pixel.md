@@ -145,6 +145,39 @@ export const MetaPixelOptions = object({
 })
 ```
 
+## First-Party 模式
+
+此脚本支持[第一方模式](/docs/guides/first-party)，通过你的域名路由所有流量，以提升隐私保护和绕过广告拦截。
+
+通过在全局配置中启用 `scripts.firstParty: true`，该脚本将会：
+
+- 从你的域名加载，而非 `connect.facebook.net`
+- 通过你的服务器路由追踪请求（`/tr`）
+- 匿名化用户 IP 地址到子网级别
+- 泛化设备指纹数据到常见分类
+
+```ts [nuxt.config.ts]
+export default defineNuxtConfig({
+  scripts: {
+    firstParty: true,
+    registry: {
+      metaPixel: { id: '123456789' }
+    }
+  }
+})
+```
+
+如果你想为该脚本单独禁用第一方模式：
+
+```ts
+useScriptMetaPixel({
+  id: '123456789',
+  scriptOptions: {
+    firstParty: false // 直接从 Meta 加载
+  }
+})
+```
+
 ## 示例
 
 在生产环境中使用 Meta Pixel，并通过 `fbq` 发送转化事件。

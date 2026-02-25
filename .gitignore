@@ -32,6 +32,8 @@ reports
 coverage
 *.lcov
 .nyc_output
+test/fixtures/**/proxy-test.json
+test/fixtures/**/sw-status.json
 
 # VSCode
 .vscode/*
@@ -55,3 +57,6 @@ Network Trash Folder
 Temporary Items
 .apdisk
 /docs/.data/content/contents.sqlite
+
+# Skilld references (recreated by `skilld install`)
+.skilld

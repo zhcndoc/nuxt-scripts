@@ -172,6 +172,38 @@ export const SnapTrPixelOptions = object({
 })
 ```
 
+## 一方模式
+
+此脚本支持[一方模式](/docs/guides/first-party)，通过你的域名路由所有流量，以增强隐私性并绕过广告拦截器。
+
+当通过 `scripts.firstParty: true` 全局启用时，此脚本将：
+- 从你的域名加载，而非 `tr.snapchat.com`
+- 通过你的服务器路由跟踪请求
+- 将用户 IP 地址匿名化至子网级别
+- 将设备指纹数据（`d_os`、`d_bvs`、屏幕尺寸）泛化为常见分组
+
+```ts [nuxt.config.ts]
+export default defineNuxtConfig({
+  scripts: {
+    firstParty: true,
+    registry: {
+      snapchatPixel: { id: 'YOUR_ID' }
+    }
+  }
+})
+```
+
+若要对该脚本禁用一方模式：
+
+```ts
+useScriptSnapchatPixel({
+  id: 'YOUR_ID',
+  scriptOptions: {
+    firstParty: false // 直接从 Snapchat 加载
+  }
+})
+```
+
 ## 示例
 
 仅在生产环境中使用 Snapchat 像素，并通过 `snaptr` 发送转化事件。

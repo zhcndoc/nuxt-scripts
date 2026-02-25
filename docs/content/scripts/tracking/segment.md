@@ -116,6 +116,38 @@ export const SegmentOptions = object({
 })
 ```
 
+## 第一方模式
+
+此脚本支持[第一方模式](/docs/guides/first-party)，该模式通过你的域名路由所有流量，以提升隐私保护并绕过广告拦截。
+
+当在全局开启 `scripts.firstParty: true` 后，此脚本将会：
+- 从你的域名加载资源，而非 `cdn.segment.com`
+- 通过你的服务器代理 API 请求（`api.segment.io`）
+- 将用户 IP 地址匿名化到子网级别
+- 标准化 User-Agent 并将设备指纹信息通用化到常见类别
+
+```ts [nuxt.config.ts]
+export default defineNuxtConfig({
+  scripts: {
+    firstParty: true,
+    registry: {
+      segment: { writeKey: 'YOUR_WRITE_KEY' }
+    }
+  }
+})
+```
+
+如需在此脚本中选择退出：
+
+```ts
+useScriptSegment({
+  writeKey: 'YOUR_WRITE_KEY',
+  scriptOptions: {
+    firstParty: false // 直接从 Segment 加载
+  }
+})
+```
+
 ## 示例
 
 仅在生产环境中使用 Segment，同时使用 `analytics` 发送转化事件。

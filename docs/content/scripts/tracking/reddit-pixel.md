@@ -114,6 +114,38 @@ export const RedditPixelOptions = object({
 })
 ```
 
+## 第一方模式
+
+此脚本支持 [第一方模式](/docs/guides/first-party)，该模式通过你的域名路由所有流量，以提升隐私保护并绕过广告拦截器。
+
+当全局启用 `scripts.firstParty: true` 时，此脚本将：
+- 从你的域名加载，而非 `alb.reddit.com`
+- 通过你的服务器转发跟踪请求
+- 匿名化用户 IP 地址至子网级别
+- 将设备指纹数据泛化为通用类别
+
+```ts [nuxt.config.ts]
+export default defineNuxtConfig({
+  scripts: {
+    firstParty: true,
+    registry: {
+      redditPixel: { id: 'YOUR_ID' }
+    }
+  }
+})
+```
+
+若想为此特定脚本选择退出：
+
+```ts
+useScriptRedditPixel({
+  id: 'YOUR_ID',
+  scriptOptions: {
+    firstParty: false // 直接从 Reddit 加载
+  }
+})
+```
+
 ## 示例
 
 仅在生产环境使用 Reddit 像素，同时使用 `rdt` 发送跟踪事件。

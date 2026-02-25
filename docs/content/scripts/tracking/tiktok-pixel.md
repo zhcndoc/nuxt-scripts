@@ -131,6 +131,38 @@ export const TikTokPixelOptions = object({
 })
 ```
 
+## First-Party 模式
+
+此脚本支持 [First-Party Mode](/docs/guides/first-party)，该模式通过你的域名路由所有流量，以提升隐私保护并绕过广告拦截器。
+
+当在全局通过 `scripts.firstParty: true` 启用时，该脚本将：
+- 从你的域名加载，而非 `analytics.tiktok.com`
+- 通过你的服务器路由跟踪请求
+- 将用户 IP 地址匿名化到子网级别
+- 将设备指纹数据泛化到常见的分组中
+
+```ts [nuxt.config.ts]
+export default defineNuxtConfig({
+  scripts: {
+    firstParty: true,
+    registry: {
+      tiktokPixel: { id: 'YOUR_PIXEL_ID' }
+    }
+  }
+})
+```
+
+如果你想为此脚本单独禁用该功能：
+
+```ts
+useScriptTikTokPixel({
+  id: 'YOUR_PIXEL_ID',
+  scriptOptions: {
+    firstParty: false // 直接从 TikTok 加载
+  }
+})
+```
+
 ## 示例
 
 使用 TikTok Pixel 跟踪购买事件。

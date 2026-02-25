@@ -183,6 +183,39 @@ if (consumerGtagId.value) {
 </script>
 ```
 
+## First-Party 模式
+
+该脚本支持[第一方模式](/docs/guides/first-party)，通过你的域名路由所有流量以提升隐私并绕过广告拦截。
+
+当通过 `scripts.firstParty: true` 全局启用时，该脚本将会：
+
+- 从你的域名加载资源，而非第三方服务器
+- 通过你的服务器路由收集请求（`/g/collect`）
+- 将用户 IP 地址匿名化到子网级别
+- 将设备指纹数据（`sr`，`vp`，`ul`）泛化为常见分组
+
+```ts [nuxt.config.ts]
+export default defineNuxtConfig({
+  scripts: {
+    firstParty: true,
+    registry: {
+      googleAnalytics: { id: 'G-XXXXXX' }
+    }
+  }
+})
+```
+
+若想为此脚本单独关闭：
+
+```ts
+useScriptGoogleAnalytics({
+  id: 'G-XXXXXX',
+  scriptOptions: {
+    firstParty: false // 直接从 Google 加载
+  }
+})
+```
+
 ## 示例
 
 仅在生产环境使用 Google Analytics，同时用 `gtag` 发送转化事件。

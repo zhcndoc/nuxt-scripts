@@ -3,9 +3,7 @@ import fsp from 'node:fs/promises'
 import { createUnplugin } from 'unplugin'
 import MagicString from 'magic-string'
 import type { SourceMapInput } from 'rollup'
-import type { Node } from 'estree-walker'
-import { asyncWalk } from 'estree-walker'
-import type { Literal, ObjectExpression, Property, SimpleCallExpression } from 'estree'
+import { parseAndWalk } from 'oxc-walker'
 import type { InferInput } from 'valibot'
 import { hasProtocol, parseURL, joinURL } from 'ufo'
 import { hash as ohash } from 'ohash'
@@ -16,6 +14,7 @@ import type { FetchOptions } from 'ofetch'
 import { $fetch } from 'ofetch'
 import { logger } from '../logger'
 import { bundleStorage } from '../assets'
+import { getProxyConfig, rewriteScriptUrls, type ProxyRewrite } from '../proxy-configs'
 import { isJS, isVue } from './util'
 import type { RegistryScript } from '#nuxt-scripts/types'
 
@@ -59,6 +58,14 @@ export interface AssetBundlerTransformerOptions {
    * Used to provide default options to script bundling functions when no arguments are provided
    */
   registryConfig?: Record<string, any>
+  /**
+   * Whether first-party mode is enabled
+   */
+  firstPartyEnabled?: boolean
+  /**
+   * Path prefix for collection proxy endpoints
+   */
+  firstPartyCollectPrefix?: string
   fallbackOnSrcOnBundleFail?: boolean
   fetchOptions?: FetchOptions
   cacheMaxAge?: number
@@ -91,9 +98,10 @@ async function downloadScript(opts: {
   url: string
   filename?: string
   forceDownload?: boolean
+  proxyRewrites?: ProxyRewrite[]
   integrity?: boolean | IntegrityAlgorithm
 }, renderedScript: NonNullable<AssetBundlerTransformerOptions['renderedScript']>, fetchOptions?: FetchOptions, cacheMaxAge?: number) {
-  const { src, url, filename, forceDownload, integrity } = opts
+  const { src, url, filename, forceDownload, integrity, proxyRewrites } = opts
   if (src === url || !filename) {
     return
   }
@@ -102,7 +110,10 @@ async function downloadScript(opts: {
   let res: Buffer | undefined = scriptContent instanceof Error ? undefined : scriptContent?.content
   if (!res) {
     // Use storage to cache the font data between builds
-    const cacheKey = `bundle:${filename}`
+    // Include proxy in cache key to differentiate proxied vs non-proxied versions
+    // Also include a hash of proxyRewrites content to handle different collectPrefix values
+    const proxyRewritesHash = proxyRewrites?.length ? `-${ohash(proxyRewrites)}` : ''
+    const cacheKey = proxyRewrites?.length ? `bundle-proxy:${filename.replace('.js', `${proxyRewritesHash}.js`)}` : `bundle:${filename}`
     const shouldUseCache = !forceDownload && await storage.hasItem(cacheKey) && !(await isCacheExpired(storage, filename, cacheMaxAge))
 
     if (shouldUseCache) {
@@ -130,12 +141,21 @@ async function downloadScript(opts: {
       return Buffer.from(r._data || await r.arrayBuffer())
     })
 
-    // Calculate integrity hash if enabled
+    await storage.setItemRaw(`bundle:${filename}`, res)
+    // Apply URL rewrites for proxy mode
+    if (proxyRewrites?.length && res) {
+      const content = res.toString('utf-8')
+      const rewritten = rewriteScriptUrls(content, proxyRewrites)
+      res = Buffer.from(rewritten, 'utf-8')
+      logger.debug(`Rewrote ${proxyRewrites.length} URL patterns in ${filename}`)
+    }
+
+    // Calculate integrity hash after rewrites so the hash matches the served content
     const integrityHash = integrity && res
       ? calculateIntegrity(res, integrity === true ? 'sha384' : integrity)
       : undefined
 
-    await storage.setItemRaw(`bundle:${filename}`, res)
+    await storage.setItemRaw(cacheKey, res)
     // Save metadata with timestamp for cache expiration
     await storage.setItem(`bundle-meta:${filename}`, {
       timestamp: Date.now(),
@@ -193,51 +213,60 @@ export function NuxtScriptBundleTransformer(options: AssetBundlerTransformerOpti
     return {
       name: 'nuxt:scripts:bundler-transformer',
 
-      transformInclude(id) {
-        return isVue(id, { type: ['template', 'script'] }) || isJS(id)
-      },
+      transform: {
+        filter: {
+          id: {
+            include: [/\.vue/, /\.[cm]?[jt]sx?$/],
+            exclude: [/\.(?:test|spec)\./],
+          },
+        },
+        async handler(code, id) {
+          if (!isVue(id, { type: ['template', 'script'] }) && !isJS(id))
+            return
+          if (!code.includes('useScript')) // all integrations should start with useScriptX
+            return
 
-      async transform(code, id) {
-        if (!code.includes('useScript')) // all integrations should start with useScriptX
-          return
-
-        const ast = this.parse(code)
-        const s = new MagicString(code)
-        await asyncWalk(ast as Node, {
-          async enter(_node) {
-            // @ts-expect-error untyped
-            const calleeName = (_node as SimpleCallExpression).callee?.name
+          const s = new MagicString(code)
+          const deferredOps: (() => Promise<void>)[] = []
+          parseAndWalk(code, id, function (_node) {
+            const calleeName = (_node as any).callee?.name
             if (!calleeName)
               return
             // check it starts with useScriptX where X must be a A-Z alphabetical letter
             const isValidCallee = calleeName === 'useScript' || (calleeName?.startsWith('useScript') && /^[A-Z]$/.test(calleeName?.charAt(9)) && !calleeName.startsWith('useScriptTrigger') && !calleeName.startsWith('useScriptEvent'))
             if (
               _node.type === 'CallExpression'
-              && _node.callee.type === 'Identifier'
+              && (_node as any).callee.type === 'Identifier'
               && isValidCallee) {
-              // we're either dealing with useScript or an integration such as useScriptHotjar, we need to handle
-              // both cases
-              const fnName = _node.callee?.name
-              const node = _node as SimpleCallExpression
-              let scriptSrcNode: Literal & { start: number, end: number } | undefined
+            // we're either dealing with useScript or an integration such as useScriptHotjar, we need to handle
+            // both cases
+              const fnName = (_node as any).callee?.name
+              const node = _node as any
+              let scriptSrcNode: { start: number, end: number, value: any } | undefined
               let src: false | string | undefined
+              // Compute registryKey for proxy config lookup
+              let registryKey: string | undefined
+              if (fnName !== 'useScript') {
+                const baseName = fnName.replace(/^useScript/, '')
+                registryKey = baseName.length > 0 ? baseName.charAt(0).toLowerCase() + baseName.slice(1) : undefined
+              }
               if (fnName === 'useScript') {
-                // do easy case first where first argument is a literal
+              // do easy case first where first argument is a literal
                 if (node.arguments[0]?.type === 'Literal') {
-                  scriptSrcNode = node.arguments[0] as Literal & { start: number, end: number }
+                  scriptSrcNode = node.arguments[0]
                 }
                 else if (node.arguments[0]?.type === 'ObjectExpression') {
                   const srcProperty = node.arguments[0].properties.find(
                     (p: any) => (p.key?.name === 'src' || p.key?.value === 'src') && p?.value.type === 'Literal',
                   )
-                  scriptSrcNode = (srcProperty as Property | undefined)?.value as Literal & { start: number, end: number }
+                  scriptSrcNode = srcProperty?.value
                 }
               }
               else {
-                // find the registry node
+              // find the registry node
                 const registryNode = options.scripts?.find(i => i.import.name === fnName)
                 if (!registryNode) {
-                  // silent failure
+                // silent failure
                   return
                 }
                 // this is only needed when we have a dynamic src that we need to compute
@@ -245,65 +274,61 @@ export function NuxtScriptBundleTransformer(options: AssetBundlerTransformerOpti
                   return
 
                 // integration case
-                // Get registry key from function name (e.g., useScriptGoogleTagManager -> googleTagManager)
-                const baseName = fnName.replace(/^useScript/, '')
-                const registryKey = baseName.length > 0 ? baseName.charAt(0).toLowerCase() + baseName.slice(1) : ''
-
                 // Get registry config for this script
-                const registryConfig = options.registryConfig?.[registryKey] || {}
+                const registryConfig = options.registryConfig?.[registryKey || ''] || {}
 
-                const fnArg0 = {}
+                const fnArg0: Record<string, any> = {}
 
                 // extract the options as the first argument that we'll use to reconstruct the src
                 if (node.arguments[0]?.type === 'ObjectExpression') {
-                  const optionsNode = node.arguments[0] as ObjectExpression
+                  const optionsNode = node.arguments[0]
                   // extract literal values from the object to reconstruct the options
                   for (const prop of optionsNode.properties) {
                     if (prop.type === 'Property' && prop.value.type === 'Literal' && prop.key && 'name' in prop.key)
-                      // @ts-expect-error untyped
                       fnArg0[prop.key.name] = prop.value.value
                   }
 
                   const srcProperty = node.arguments[0].properties.find(
                     (p: any) => (p.key?.name === 'src' || p.key?.value === 'src') && p?.value.type === 'Literal' && p.type === 'Property',
-                  ) as Property | undefined
-                  if ((srcProperty?.value as Literal)?.value) {
-                    scriptSrcNode = srcProperty?.value as Literal & { start: number, end: number }
+                  )
+                  if (srcProperty?.value?.value) {
+                    scriptSrcNode = srcProperty?.value
                   }
                 }
 
                 // If no src was found from function arguments, try to generate from registry config
                 if (!scriptSrcNode) {
-                  // Merge registry config with function arguments (function args take precedence)
+                // Merge registry config with function arguments (function args take precedence)
                   const mergedOptions = { ...registryConfig, ...fnArg0 }
 
                   src = registryNode.scriptBundling && registryNode.scriptBundling(mergedOptions as InferInput<any>)
                   // not supported
                   if (src === false)
                     return
+                  if (!src && registryNode.src)
+                    src = registryNode.src
                 }
               }
 
               // Check for dynamic src with bundle option - warn user and replace with 'unsupported'
               if (!scriptSrcNode && !src) {
-                // This is a dynamic src case, check if bundle option is specified
+              // This is a dynamic src case, check if bundle option is specified
                 const hasBundleOption = node.arguments[1]?.type === 'ObjectExpression'
-                  && (node.arguments[1] as ObjectExpression).properties.some(
+                  && node.arguments[1].properties.some(
                     (p: any) => (p.key?.name === 'bundle' || p.key?.value === 'bundle') && p.type === 'Property',
                   )
 
                 if (hasBundleOption) {
-                  const scriptOptionsArg = node.arguments[1] as ObjectExpression & { start: number, end: number }
+                  const scriptOptionsArg = node.arguments[1]
                   const bundleProperty = scriptOptionsArg.properties.find(
                     (p: any) => (p.key?.name === 'bundle' || p.key?.value === 'bundle') && p.type === 'Property',
-                  ) as Property & { start: number, end: number } | undefined
+                  )
 
                   if (bundleProperty && bundleProperty.value.type === 'Literal') {
                     const bundleValue = bundleProperty.value.value
                     if (bundleValue === true || bundleValue === 'force' || String(bundleValue) === 'true') {
-                      // Replace bundle value with 'unsupported' - runtime will handle the warning
-                      const valueNode = bundleProperty.value as any
-                      s.overwrite(valueNode.start, valueNode.end, `'unsupported'`)
+                    // Replace bundle value with 'unsupported' - runtime will handle the warning
+                      s.overwrite(bundleProperty.value.start, bundleProperty.value.end, `'unsupported'`)
                     }
                   }
                 }
@@ -317,14 +342,13 @@ export function NuxtScriptBundleTransformer(options: AssetBundlerTransformerOpti
                   let forceDownload = options.defaultBundle === 'force'
                   // useScript
                   if (node.arguments[1]?.type === 'ObjectExpression') {
-                    const scriptOptionsArg = node.arguments[1] as ObjectExpression & { start: number, end: number }
+                    const scriptOptionsArg = node.arguments[1]
                     // second node needs to be an object with an property of assetStrategy and a value of 'bundle'
                     const bundleProperty = scriptOptionsArg.properties.find(
                       (p: any) => (p.key?.name === 'bundle' || p.key?.value === 'bundle') && p.type === 'Property',
-                    ) as Property & { start: number, end: number } | undefined
+                    )
                     if (bundleProperty && bundleProperty.value.type === 'Literal') {
-                      const value = bundleProperty.value as Literal
-                      const bundleValue = value.value
+                      const bundleValue = bundleProperty.value.value
                       if (bundleValue !== true && bundleValue !== 'force' && String(bundleValue) !== 'true') {
                         canBundle = false
                         return
@@ -336,20 +360,18 @@ export function NuxtScriptBundleTransformer(options: AssetBundlerTransformerOpti
                       else {
                         const nextProperty = scriptOptionsArg.properties.find(
                           (p: any) => p.start > bundleProperty.end && p.type === 'Property',
-                        ) as undefined | (Property & { start: number, end: number })
+                        )
                         s.remove(bundleProperty.start, nextProperty ? nextProperty.start : bundleProperty.end)
                       }
                       canBundle = true
                       forceDownload = bundleValue === 'force'
                     }
                   }
-                  // @ts-expect-error untyped
                   const scriptOptions = node.arguments[0]?.properties?.find(
                     (p: any) => (p.key?.name === 'scriptOptions'),
-                  ) as Property | undefined
+                  )
                   // we need to check if scriptOptions contains bundle: true/false/'force', if it exists
-                  // @ts-expect-error untyped
-                  const bundleOption = scriptOptions?.value.properties?.find((prop) => {
+                  const bundleOption = scriptOptions?.value.properties?.find((prop: any) => {
                     return prop.type === 'Property' && prop.key?.name === 'bundle' && prop.value.type === 'Literal'
                   })
                   if (bundleOption) {
@@ -357,106 +379,144 @@ export function NuxtScriptBundleTransformer(options: AssetBundlerTransformerOpti
                     canBundle = bundleValue === true || bundleValue === 'force' || String(bundleValue) === 'true'
                     forceDownload = bundleValue === 'force'
                   }
+                  // Check for per-script first-party opt-out (firstParty: false)
+                  // Check in three locations:
+                  // 1. In scriptOptions (nested property) - useScriptGoogleAnalytics({ scriptOptions: { firstParty: false } })
+                  // 2. In the second argument for direct options - useScript('...', { firstParty: false })
+                  // 3. In the first argument's direct properties - useScript({ src: '...', firstParty: false })
+
+                  // Check in scriptOptions (nested)
+                  const firstPartyOption = scriptOptions?.value.properties?.find((prop: any) => {
+                    return prop.type === 'Property' && prop.key?.name === 'firstParty' && prop.value.type === 'Literal'
+                  })
+                  let firstPartyOptOut = firstPartyOption?.value.value === false
+
+                  // Check in second argument (direct options)
+                  if (!firstPartyOptOut && node.arguments[1]?.type === 'ObjectExpression') {
+                    const secondArgFirstPartyProp = node.arguments[1].properties.find(
+                      (p: any) => p.type === 'Property' && p.key?.name === 'firstParty' && p.value.type === 'Literal',
+                    )
+                    firstPartyOptOut = secondArgFirstPartyProp?.value.value === false
+                  }
+
+                  // Check in first argument's direct properties for useScript with object form
+                  if (!firstPartyOptOut && node.arguments[0]?.type === 'ObjectExpression') {
+                    const firstArgFirstPartyProp = node.arguments[0].properties.find(
+                      (p: any) => p.type === 'Property' && p.key?.name === 'firstParty' && p.value.type === 'Literal',
+                    )
+                    firstPartyOptOut = firstArgFirstPartyProp?.value.value === false
+                  }
                   if (canBundle) {
                     const { url: _url, filename } = normalizeScriptData(src, options.assetsBaseURL)
-                    let url = _url
-                    try {
-                      await downloadScript({ src, url, filename, forceDownload, integrity: options.integrity }, renderedScript, options.fetchOptions, options.cacheMaxAge)
-                    }
-                    catch (e: any) {
-                      if (options.fallbackOnSrcOnBundleFail) {
-                        logger.warn(`[Nuxt Scripts: Bundle Transformer] Failed to bundle ${src}. Fallback to remote loading.`)
-                        url = src
+                    // Get proxy rewrites if first-party is enabled, not opted out, and script supports it
+                    // Use script's proxy field if defined, otherwise fall back to registry key
+                    const script = options.scripts?.find(s => s.import.name === fnName)
+                    const proxyConfigKey = script?.proxy !== false ? (script?.proxy || registryKey) : undefined
+                    const proxyRewrites = options.firstPartyEnabled && !firstPartyOptOut && proxyConfigKey && options.firstPartyCollectPrefix
+                      ? getProxyConfig(proxyConfigKey, options.firstPartyCollectPrefix)?.rewrite
+                      : undefined
+
+                    // Defer async download + MagicString operations
+                    deferredOps.push(async () => {
+                      let url = _url
+                      try {
+                        await downloadScript({ src: src as string, url, filename, forceDownload, proxyRewrites, integrity: options.integrity }, renderedScript, options.fetchOptions, options.cacheMaxAge)
                       }
-                      else {
-                        // Provide more helpful error message, especially for Docker/network issues
-                        const errorMessage = e?.message || 'Unknown error'
-                        if (errorMessage.includes('timeout') || errorMessage.includes('network') || errorMessage.includes('ENOTFOUND')) {
-                          logger.error(`[Nuxt Scripts: Bundle Transformer] Network issue while bundling ${src}: ${errorMessage}`)
-                          logger.error(`[Nuxt Scripts: Bundle Transformer] Tip: Set 'fallbackOnSrcOnBundleFail: true' in module options or disable bundling in Docker environments`)
+                      catch (e: any) {
+                        if (options.fallbackOnSrcOnBundleFail) {
+                          logger.warn(`[Nuxt Scripts: Bundle Transformer] Failed to bundle ${src}. Fallback to remote loading.`)
+                          url = src as string
                         }
-                        throw e
+                        else {
+                        // Provide more helpful error message, especially for Docker/network issues
+                          const errorMessage = e?.message || 'Unknown error'
+                          if (errorMessage.includes('timeout') || errorMessage.includes('network') || errorMessage.includes('ENOTFOUND') || errorMessage.includes('certificate')) {
+                            logger.error(`[Nuxt Scripts: Bundle Transformer] Network issue while bundling ${src}: ${errorMessage}`)
+                            logger.error(`[Nuxt Scripts: Bundle Transformer] Tip: Set 'fallbackOnSrcOnBundleFail: true' in module options or disable bundling in Docker environments`)
+                          }
+                          throw e
+                        }
                       }
-                    }
 
-                    if (src === url) {
-                      if (src && src.startsWith('/'))
-                        logger.warn(`[Nuxt Scripts: Bundle Transformer] Relative scripts are already bundled. Skipping bundling for \`${src}\`.`)
-                      else
-                        logger.warn(`[Nuxt Scripts: Bundle Transformer] Failed to bundle ${src}.`)
-                    }
+                      if (src === url) {
+                        if (src && (src as string).startsWith('/'))
+                          logger.warn(`[Nuxt Scripts: Bundle Transformer] Relative scripts are already bundled. Skipping bundling for \`${src}\`.`)
+                        else
+                          logger.warn(`[Nuxt Scripts: Bundle Transformer] Failed to bundle ${src}.`)
+                      }
 
-                    // Get the integrity hash from rendered script
-                    const scriptMeta = renderedScript.get(url)
-                    const integrityHash = scriptMeta instanceof Error ? undefined : scriptMeta?.integrity
+                      // Get the integrity hash from rendered script
+                      const scriptMeta = renderedScript.get(url)
+                      const integrityHash = scriptMeta instanceof Error ? undefined : scriptMeta?.integrity
 
-                    if (scriptSrcNode) {
+                      if (scriptSrcNode) {
                       // For useScript('src') pattern, we need to convert to object form to add integrity
-                      if (integrityHash && fnName === 'useScript' && node.arguments[0]?.type === 'Literal') {
-                        s.overwrite(scriptSrcNode.start, scriptSrcNode.end, `{ src: '${url}', integrity: '${integrityHash}', crossorigin: 'anonymous' }`)
-                      }
-                      else if (integrityHash && fnName === 'useScript' && node.arguments[0]?.type === 'ObjectExpression') {
+                        if (integrityHash && fnName === 'useScript' && node.arguments[0]?.type === 'Literal') {
+                          s.overwrite(scriptSrcNode.start, scriptSrcNode.end, `{ src: '${url}', integrity: '${integrityHash}', crossorigin: 'anonymous' }`)
+                        }
+                        else if (integrityHash && fnName === 'useScript' && node.arguments[0]?.type === 'ObjectExpression') {
                         // For useScript({ src: '...' }) pattern, update src and add integrity
-                        s.overwrite(scriptSrcNode.start, scriptSrcNode.end, `'${url}'`)
-                        const objArg = node.arguments[0] as ObjectExpression & { end: number }
-                        s.appendLeft(objArg.end - 1, `, integrity: '${integrityHash}', crossorigin: 'anonymous'`)
+                          s.overwrite(scriptSrcNode.start, scriptSrcNode.end, `'${url}'`)
+                          s.appendLeft(node.arguments[0].end - 1, `, integrity: '${integrityHash}', crossorigin: 'anonymous'`)
+                        }
+                        else {
+                          s.overwrite(scriptSrcNode.start, scriptSrcNode.end, `'${url}'`)
+                        }
                       }
                       else {
-                        s.overwrite(scriptSrcNode.start, scriptSrcNode.end, `'${url}'`)
-                      }
-                    }
-                    else {
                       // Handle case where we need to add scriptInput (registry scripts)
-                      const integrityProps = integrityHash ? `, integrity: '${integrityHash}', crossorigin: 'anonymous'` : ''
-                      if (node.arguments[0]) {
+                        const integrityProps = integrityHash ? `, integrity: '${integrityHash}', crossorigin: 'anonymous'` : ''
+                        if (node.arguments[0]) {
                         // There's at least one argument
-                        const optionsNode = node.arguments[0] as ObjectExpression
-                        // check if there's a scriptInput property
-                        const scriptInputProperty = optionsNode.properties.find(
-                          (p: any) => p.key?.name === 'scriptInput' || p.key?.value === 'scriptInput',
-                        )
-                        // see if there is a script input on it
-                        if (scriptInputProperty) {
-                          // @ts-expect-error untyped
-                          const scriptInput = scriptInputProperty.value
-                          if (scriptInput.type === 'ObjectExpression') {
-                            const srcProperty = scriptInput.properties.find(
-                              (p: any) => p.key?.name === 'src' || p.key?.value === 'src',
-                            )
-                            if (srcProperty) {
-                              s.overwrite(srcProperty.value.start, srcProperty.value.end, `'${url}'`)
-                              if (integrityHash)
-                                s.appendLeft(scriptInput.end - 1, integrityProps)
+                          const optionsNode = node.arguments[0]
+                          // check if there's a scriptInput property
+                          const scriptInputProperty = optionsNode.properties.find(
+                            (p: any) => p.key?.name === 'scriptInput' || p.key?.value === 'scriptInput',
+                          )
+                          // see if there is a script input on it
+                          if (scriptInputProperty) {
+                            const scriptInput = scriptInputProperty.value
+                            if (scriptInput.type === 'ObjectExpression') {
+                              const srcProperty = scriptInput.properties.find(
+                                (p: any) => p.key?.name === 'src' || p.key?.value === 'src',
+                              )
+                              if (srcProperty) {
+                                s.overwrite(srcProperty.value.start, srcProperty.value.end, `'${url}'`)
+                                if (integrityHash)
+                                  s.appendLeft(scriptInput.end - 1, integrityProps)
+                              }
+                              else {
+                                s.appendRight(scriptInput.end - 1, `, src: '${url}'${integrityProps}`)
+                              }
                             }
-                            else {
-                              s.appendRight(scriptInput.end - 1, `, src: '${url}'${integrityProps}`)
-                            }
+                          }
+                          else {
+                            s.appendRight(node.arguments[0].start + 1, ` scriptInput: { src: '${url}'${integrityProps} }, `)
                           }
                         }
                         else {
-                          // @ts-expect-error untyped
-                          s.appendRight(node.arguments[0].start + 1, ` scriptInput: { src: '${url}'${integrityProps} }, `)
+                        // No arguments at all, need to create the first argument
+                          s.appendRight(node.callee.end, `({ scriptInput: { src: '${url}'${integrityProps} } })`)
                         }
                       }
-                      else {
-                        // No arguments at all, need to create the first argument
-                        // @ts-expect-error untyped
-                        s.appendRight(node.callee.end, `({ scriptInput: { src: '${url}'${integrityProps} } })`)
-                      }
-                    }
+                    })
                   }
                 }
               }
             }
-          },
-        })
+          })
 
-        if (s.hasChanged()) {
-          return {
-            code: s.toString(),
-            map: s.generateMap({ includeContent: true, source: id }) as SourceMapInput,
+          for (const op of deferredOps) {
+            await op()
           }
-        }
+
+          if (s.hasChanged()) {
+            return {
+              code: s.toString(),
+              map: s.generateMap({ includeContent: true, source: id }) as SourceMapInput,
+            }
+          }
+        },
       },
     }
   })

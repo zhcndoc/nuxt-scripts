@@ -135,6 +135,38 @@ export const XPixelOptions = object({
 })
 ```
 
+## First-Party 模式
+
+该脚本支持[第一方模式](/docs/guides/first-party)，可通过你的域名路由所有流量，以提升隐私保护并绕过广告拦截器。
+
+当通过 `scripts.firstParty: true` 全局启用时，该脚本将会：
+- 从你的域名加载，而非 `analytics.twitter.com`
+- 通过你的服务器路由跟踪请求（`t.co`）
+- 将用户 IP 地址匿名化至子网级别
+- 将设备指纹数据（`dv` 合并设备信息）泛化至常见类别
+
+```ts [nuxt.config.ts]
+export default defineNuxtConfig({
+  scripts: {
+    firstParty: true,
+    registry: {
+      xPixel: { id: 'YOUR_ID' }
+    }
+  }
+})
+```
+
+若你想为此特定脚本选择退出此模式：
+
+```ts
+useScriptXPixel({
+  id: 'YOUR_ID',
+  scriptOptions: {
+    firstParty: false // 直接从 X/Twitter 加载
+  }
+})
+```
+
 ## 示例
 
 仅在生产环境中使用 X Pixel，同时使用 `twq` 发送转化事件。
@@ -163,6 +195,5 @@ function sendConversion() {
   </div>
 </template>
 ```
-
 
 ::
