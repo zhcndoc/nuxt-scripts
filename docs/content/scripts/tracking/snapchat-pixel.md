@@ -179,8 +179,7 @@ export const SnapTrPixelOptions = object({
 当通过 `scripts.firstParty: true` 全局启用时，此脚本将：
 - 从你的域名加载，而非 `tr.snapchat.com`
 - 通过你的服务器路由跟踪请求
-- 将用户 IP 地址匿名化至子网级别
-- 将设备指纹数据（`d_os`、`d_bvs`、屏幕尺寸）泛化为常见分组
+- 完全隐私匿名化 — IP、用户代理、语言、屏幕、时区和硬件指纹均匿名化（不信任的广告网络）
 
 ```ts [nuxt.config.ts]
 export default defineNuxtConfig({

@@ -7,6 +7,7 @@ import { logger } from '../logger'
 export const PostHogOptions = object({
   apiKey: string(),
   region: optional(union([literal('us'), literal('eu')])),
+  apiHost: optional(string()),
   autocapture: optional(boolean()),
   capturePageview: optional(boolean()),
   capturePageleave: optional(boolean()),
@@ -74,17 +75,15 @@ export function useScriptPostHog<T extends PostHogApi>(_options?: PostHogInput) 
           }
 
           const region = options?.region || 'us'
-          const apiHost = region === 'eu'
+          let apiHost = options?.apiHost || (region === 'eu'
             ? 'https://eu.i.posthog.com'
-            : 'https://us.i.posthog.com'
-
-          // eslint-disable-next-line no-console
-          console.log('[PostHog] Starting dynamic import of posthog-js...')
+            : 'https://us.i.posthog.com')
+          // Resolve relative proxy paths to absolute URLs so SDKs using new URL() don't throw
+          if (apiHost.startsWith('/'))
+            apiHost = window.location.origin + apiHost
 
           window.__posthogInitPromise = import('posthog-js')
             .then(({ default: posthog }) => {
-              // eslint-disable-next-line no-console
-              console.log('[PostHog] posthog-js imported successfully')
               const config: Partial<PostHogConfig> = {
                 api_host: apiHost,
                 ...options?.config as Partial<PostHogConfig>,
@@ -98,35 +97,23 @@ export function useScriptPostHog<T extends PostHogApi>(_options?: PostHogInput) 
               if (typeof options?.disableSessionRecording === 'boolean')
                 config.disable_session_recording = options.disableSessionRecording
 
-              // eslint-disable-next-line no-console
-              console.log('[PostHog] Calling posthog.init with apiKey:', options.apiKey, 'config:', config)
               const instance = posthog.init(options.apiKey, config)
               if (!instance) {
                 logger.error('PostHog init returned undefined - initialization failed')
-                // Clear queue on init failure to prevent memory leak
                 delete window._posthogQueue
                 return undefined
               }
 
-              // eslint-disable-next-line no-console
-              console.log('[PostHog] posthog.init succeeded, instance:', instance)
               window.posthog = instance
               // Flush queued calls now that PostHog is ready
               if (window._posthogQueue && window._posthogQueue.length > 0) {
-                // eslint-disable-next-line no-console
-                console.log('[PostHog] Flushing', window._posthogQueue.length, 'queued calls')
                 window._posthogQueue.forEach(q => (window.posthog as any)[q.prop]?.(...q.args))
                 delete window._posthogQueue
               }
-              // eslint-disable-next-line no-console
-              console.log('[PostHog] Initialization complete!')
               return window.posthog
             })
             .catch((e) => {
               logger.error('Failed to load posthog-js:', e)
-
-              console.error('[PostHog] Import/init error:', e)
-              // Clear queue on error to prevent memory leak
               delete window._posthogQueue
               return undefined
             })

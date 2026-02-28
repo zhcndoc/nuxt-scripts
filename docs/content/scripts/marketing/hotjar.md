@@ -110,6 +110,43 @@ export const HotjarOptions = object({
 
 ## 示例
 
+该脚本支持[第一方模式](/docs/guides/first-party)，通过你的域名路由所有流量，以提升隐私保护并绕过广告拦截器。
+
+当通过 `scripts.firstParty: true` 全局启用时，该脚本将：
+
+- 从你的域名加载而非 `static.hotjar.com`
+- 通过你的服务器路由配置和数据请求（`vars.hotjar.com`、`in.hotjar.com`）
+- 匿名化 IP 地址、语言和硬件指纹（canvas、webgl、浏览器版本）
+- 保留 User-Agent、屏幕分辨率和时区，以确保热力图和设备过滤的准确性
+
+::callout{type="info"}
+Hotjar 使用 WebSocket 连接进行会话录制数据。代理负责初始设置，但 WebSocket 连接直接连接到 Hotjar 服务器。
+::
+
+```ts [nuxt.config.ts]
+export default defineNuxtConfig({
+  scripts: {
+    firstParty: true,
+    registry: {
+      hotjar: { id: 123456 }
+    }
+  }
+})
+```
+
+若要针对该脚本选择退出：
+
+```ts
+useScriptHotjar({
+  id: 123456,
+  scriptOptions: {
+    firstParty: false // 直接从 Hotjar 加载
+  }
+})
+```
+
+## 示例
+
 仅在生产环境使用 Hotjar，并通过 `hj` 发送转化事件。
 
 ::code-group

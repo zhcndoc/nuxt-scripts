@@ -191,8 +191,8 @@ if (consumerGtagId.value) {
 
 - 从你的域名加载资源，而非第三方服务器
 - 通过你的服务器路由收集请求（`/g/collect`）
-- 将用户 IP 地址匿名化到子网级别
-- 将设备指纹数据（`sr`，`vp`，`ul`）泛化为常见分组
+- 匿名化 IP 地址、语言和硬件指纹（canvas、webgl、浏览器版本）
+- 保留用户代理、屏幕分辨率和时区以确保设备、操作系统和时间基础报告的准确性
 
 ```ts [nuxt.config.ts]
 export default defineNuxtConfig({

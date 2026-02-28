@@ -142,8 +142,7 @@ export const XPixelOptions = object({
 当通过 `scripts.firstParty: true` 全局启用时，该脚本将会：
 - 从你的域名加载，而非 `analytics.twitter.com`
 - 通过你的服务器路由跟踪请求（`t.co`）
-- 将用户 IP 地址匿名化至子网级别
-- 将设备指纹数据（`dv` 合并设备信息）泛化至常见类别
+- 完全的隐私匿名化 — IP、用户代理、语言、屏幕、时区和硬件指纹均被匿名处理（针对不可信的广告网络）
 
 ```ts [nuxt.config.ts]
 export default defineNuxtConfig({

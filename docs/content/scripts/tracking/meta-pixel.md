@@ -153,8 +153,7 @@ export const MetaPixelOptions = object({
 
 - 从你的域名加载，而非 `connect.facebook.net`
 - 通过你的服务器路由追踪请求（`/tr`）
-- 匿名化用户 IP 地址到子网级别
-- 泛化设备指纹数据到常见分类
+- 全方位隐私匿名化 — IP、用户代理、语言、屏幕、时区和硬件指纹数据均被匿名化（不信任的广告网络）
 
 ```ts [nuxt.config.ts]
 export default defineNuxtConfig({

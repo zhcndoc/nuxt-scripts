@@ -130,8 +130,8 @@ export const ClarityOptions = object({
 当通过 `scripts.firstParty: true` 全局启用时，该脚本将：
 - 从你的域名加载，而非 `www.clarity.ms`
 - 通过你的服务器路由数据/事件收集（`d.clarity.ms`, `e.clarity.ms`）
-- 将用户 IP 地址匿名化至子网级别
-- 将设备指纹数据归类到通用的类别中
+- 对 IP 地址、语言和硬件指纹（canvas、webgl、浏览器版本）进行匿名化处理
+- 保留 User-Agent、屏幕分辨率和时区，以便生成准确的热图和设备过滤
 
 ```ts [nuxt.config.ts]
 export default defineNuxtConfig({

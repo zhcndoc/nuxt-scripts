@@ -8,7 +8,7 @@ describe('proxy configs', () => {
       const output = rewriteScriptUrls(input, [
         { from: 'www.google-analytics.com', to: '/_scripts/c/ga' },
       ])
-      expect(output).toBe(`fetch("/_scripts/c/ga/g/collect")`)
+      expect(output).toBe(`fetch(self.location.origin+"/_scripts/c/ga/g/collect")`)
     })
 
     it('rewrites https URLs with single quotes', () => {
@@ -16,7 +16,7 @@ describe('proxy configs', () => {
       const output = rewriteScriptUrls(input, [
         { from: 'www.google-analytics.com', to: '/_scripts/c/ga' },
       ])
-      expect(output).toBe(`url='/_scripts/c/ga/analytics.js'`)
+      expect(output).toBe(`url=self.location.origin+'/_scripts/c/ga/analytics.js'`)
     })
 
     it('rewrites https URLs with backticks', () => {
@@ -24,7 +24,7 @@ describe('proxy configs', () => {
       const output = rewriteScriptUrls(input, [
         { from: 'www.google-analytics.com', to: '/_scripts/c/ga' },
       ])
-      expect(output).toBe('const u=`/_scripts/c/ga/collect`')
+      expect(output).toBe('const u=self.location.origin+`/_scripts/c/ga/collect`')
     })
 
     it('rewrites protocol-relative URLs', () => {
@@ -32,7 +32,7 @@ describe('proxy configs', () => {
       const output = rewriteScriptUrls(input, [
         { from: 'www.google-analytics.com', to: '/_scripts/c/ga' },
       ])
-      expect(output).toBe(`"/_scripts/c/ga/analytics.js"`)
+      expect(output).toBe(`self.location.origin+"/_scripts/c/ga/analytics.js"`)
     })
 
     it('rewrites http URLs', () => {
@@ -40,7 +40,7 @@ describe('proxy configs', () => {
       const output = rewriteScriptUrls(input, [
         { from: 'www.google-analytics.com', to: '/_scripts/c/ga' },
       ])
-      expect(output).toBe(`"/_scripts/c/ga/analytics.js"`)
+      expect(output).toBe(`self.location.origin+"/_scripts/c/ga/analytics.js"`)
     })
 
     it('handles multiple rewrites in single content', () => {
@@ -52,8 +52,8 @@ describe('proxy configs', () => {
         { from: 'www.google-analytics.com', to: '/_scripts/c/ga' },
         { from: 'analytics.google.com', to: '/_scripts/c/ga' },
       ])
-      expect(output).toContain(`"/_scripts/c/ga/g/collect"`)
-      expect(output).toContain(`"/_scripts/c/ga/collect"`)
+      expect(output).toContain(`self.location.origin+"/_scripts/c/ga/g/collect"`)
+      expect(output).toContain(`self.location.origin+"/_scripts/c/ga/collect"`)
     })
 
     it('handles GTM URLs', () => {
@@ -61,7 +61,7 @@ describe('proxy configs', () => {
       const output = rewriteScriptUrls(input, [
         { from: 'www.googletagmanager.com', to: '/_scripts/c/gtm' },
       ])
-      expect(output).toBe(`src="/_scripts/c/gtm/gtm.js?id=GTM-XXXX"`)
+      expect(output).toBe(`src=self.location.origin+"/_scripts/c/gtm/gtm.js?id=GTM-XXXX"`)
     })
 
     it('handles Meta Pixel URLs', () => {
@@ -69,7 +69,27 @@ describe('proxy configs', () => {
       const output = rewriteScriptUrls(input, [
         { from: 'connect.facebook.net', to: '/_scripts/c/meta' },
       ])
-      expect(output).toBe(`"/_scripts/c/meta/en_US/fbevents.js"`)
+      expect(output).toBe(`self.location.origin+"/_scripts/c/meta/en_US/fbevents.js"`)
+    })
+
+    it('does not rewrite bare domain strings without fromPath', () => {
+      // GA4 constructs URLs dynamically: "https://" + prefix + "analytics.google.com/" + "g/collect"
+      // The bare "analytics.google.com/" fragment should NOT be rewritten
+      const input = `"https://"+e+"analytics.google.com/"+"g/collect"`
+      const output = rewriteScriptUrls(input, [
+        { from: 'analytics.google.com', to: '/_scripts/c/ga' },
+      ])
+      // The bare string "analytics.google.com/" must survive — it's a concatenation component
+      expect(output).toContain(`"analytics.google.com/"`)
+    })
+
+    it('does not rewrite bare suffix-matched domain strings without fromPath', () => {
+      // Suffix match (.google-analytics.com) on bare string without path should not rewrite
+      const input = `"https://"+e+".google-analytics.com/"+"g/collect"`
+      const output = rewriteScriptUrls(input, [
+        { from: '.google-analytics.com', to: '/_scripts/c/ga' },
+      ])
+      expect(output).toContain(`".google-analytics.com/"`)
     })
 
     it('returns unmodified content when no matches', () => {
@@ -148,15 +168,42 @@ describe('proxy configs', () => {
       expect(configs).toHaveProperty('segment')
       expect(configs).toHaveProperty('clarity')
       expect(configs).toHaveProperty('hotjar')
+      expect(configs).toHaveProperty('xPixel')
+      expect(configs).toHaveProperty('snapchatPixel')
+      expect(configs).toHaveProperty('redditPixel')
+      expect(configs).toHaveProperty('posthog')
     })
 
     it('all configs have valid structure', () => {
       const configs = getAllProxyConfigs('/_scripts/c')
+      const fullAnonymize = ['metaPixel', 'tiktokPixel', 'xPixel', 'snapchatPixel', 'redditPixel']
+      const passthrough = ['segment', 'googleTagManager', 'posthog']
       for (const [key, config] of Object.entries(configs)) {
         expect(config, `${key} should have routes`).toHaveProperty('routes')
-        expect(config, `${key} should have rewrite`).toHaveProperty('rewrite')
-        expect(Array.isArray(config.rewrite), `${key}.rewrite should be an array`).toBe(true)
         expect(typeof config.routes, `${key}.routes should be an object`).toBe('object')
+        if (config.rewrite) {
+          expect(Array.isArray(config.rewrite), `${key}.rewrite should be an array`).toBe(true)
+        }
+        // Every config must declare a non-null privacy object with all six boolean flags
+        expect(config.privacy, `${key} should have privacy`).toBeDefined()
+        expect(config.privacy, `${key}.privacy should not be null`).not.toBeNull()
+        expect(typeof config.privacy, `${key}.privacy should be an object`).toBe('object')
+        const privacyFlags = ['ip', 'userAgent', 'language', 'screen', 'timezone', 'hardware'] as const
+        for (const flag of privacyFlags) {
+          expect(typeof config.privacy[flag], `${key}.privacy.${flag} should be boolean`).toBe('boolean')
+        }
+
+        if (fullAnonymize.includes(key)) {
+          expect(config.privacy, `${key} should be fully anonymized`).toEqual({
+            ip: true, userAgent: true, language: true, screen: true, timezone: true, hardware: true,
+          })
+        }
+        if (passthrough.includes(key)) {
+          // All flags should be false (no-op privacy)
+          for (const flag of Object.values(config.privacy)) {
+            expect(flag, `${key} privacy flags should be false`).toBe(false)
+          }
+        }
       }
     })
   })

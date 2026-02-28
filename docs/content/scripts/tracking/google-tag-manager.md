@@ -262,8 +262,7 @@ function sendConversion() {
 当你在全局通过 `scripts.firstParty: true` 启用时，该脚本将：
 - 从你的域名加载而非 `www.googletagmanager.com`
 - 通过你的服务器路由所有 GTM 请求
-- 将用户 IP 地址匿名化至子网级别
-- 将设备指纹数据泛化至常见的分组
+- 无隐私匿名处理（仅容器脚本加载 — 这些请求中不包含用户数据）
 
 ```ts [nuxt.config.ts]
 export default defineNuxtConfig({
@@ -311,11 +310,11 @@ useScriptGoogleTagManager({
 
 #### 同意模式 v2 信号
 
-| 信号              | 用途                  |
-|-------------------|-----------------------|
-| `ad_storage`      | 广告用 Cookie          |
-| `ad_user_data`    | 发送用户数据给 Google 广告 |
-| `ad_personalization` | 个性化广告（再营销）      |
+| 信号                | 用途                   |
+|---------------------|------------------------|
+| `ad_storage`        | 广告用 Cookie          |
+| `ad_user_data`      | 发送用户数据给 Google 广告 |
+| `ad_personalization`| 个性化广告（再营销）      |
 | `analytics_storage` | 分析用 Cookie          |
 
 #### 同意状态更新

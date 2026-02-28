@@ -104,6 +104,7 @@ export interface PostHogApi {
 export const PostHogOptions = object({
   apiKey: string(),
   region: optional(union([literal('us'), literal('eu')])),
+  apiHost: optional(string()), // 自定义 API 主机 URL（例如用于反向代理的 '/ph'）
   autocapture: optional(boolean()),
   capturePageview: optional(boolean()),
   capturePageleave: optional(boolean()),
@@ -157,6 +158,47 @@ export default defineNuxtConfig({
   }
 })
 ```
+
+## 首方代理
+
+当启用[首方模式](/docs/guides/first-party)时，PostHog 请求会自动通过你自己的服务器代理转发。这通过绕过广告拦截器，提高了事件捕获的可靠性。不会应用隐私匿名处理——PostHog 是一个受信任的开源工具，需完整数据以进行 GeoIP 丰富化、功能标记和会话回放。
+
+无需额外配置——该模块会自动将 `apiHost` 设置为通过你服务器的代理端点路由：
+
+```ts
+export default defineNuxtConfig({
+  scripts: {
+    firstParty: true, // 默认为启用
+    registry: {
+      posthog: {
+        apiKey: 'YOUR_API_KEY',
+        // apiHost 会自动设置为 '/_proxy/ph'（或针对欧盟区域为 '/_proxy/ph-eu'）
+      }
+    }
+  }
+})
+```
+
+代理会处理 API 请求和静态资源（如会话录制 SDK），路由到正确的 PostHog 端点。
+
+## 自定义 API 主机
+
+如需使用自定义的反向代理或自托管的 PostHog 实例，直接设置 `apiHost`：
+
+```ts
+export default defineNuxtConfig({
+  scripts: {
+    registry: {
+      posthog: {
+        apiKey: 'YOUR_API_KEY',
+        apiHost: '/my-proxy'
+      }
+    }
+  }
+})
+```
+
+`apiHost` 选项支持任何 URL 或相对路径，会覆盖 `region` 默认设置和首方代理的自动配置。对于 `ui_host` 等额外的 PostHog SDK 选项，可通过 `config` 透传。
 
 ## 功能标记
 

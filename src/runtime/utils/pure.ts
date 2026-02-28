@@ -77,7 +77,7 @@ export function rewriteScriptUrls(content: string, rewrites: ProxyRewrite[]): st
           }
         }
       }
-      else if ((fromPath && inner.startsWith(from)) || (isSuffixMatch && inner.includes(from))) {
+      else if (fromPath && (inner.startsWith(from) || (isSuffixMatch && inner.includes(from)))) {
         // Bare domain path or partial match
         const domainEnd = inner.indexOf(from) + from.length
         const nextChar = inner[domainEnd]
@@ -93,7 +93,11 @@ export function rewriteScriptUrls(content: string, rewrites: ProxyRewrite[]): st
         const rewritten = rewriteSuffix === '/' || rewriteSuffix.startsWith('?') || rewriteSuffix.startsWith('#')
           ? to + rewriteSuffix
           : joinURL(to, rewriteSuffix)
-        return quote + rewritten + quote
+        // Produce absolute URL by prepending self.location.origin as an expression.
+        // This breaks out of the string literal: "https://example.com/path" → self.location.origin+"/_proxy/path"
+        // Necessary because some SDKs (e.g. TikTok) pass URLs to new URL() without a base argument,
+        // which requires an absolute URL.
+        return 'self.location.origin+' + quote + rewritten + quote
       }
 
       return match
@@ -105,11 +109,11 @@ export function rewriteScriptUrls(content: string, rewrites: ProxyRewrite[]): st
   if (gaRewrite) {
     result = result.replace(
       /"https:\/\/"\+\(.*?\)\+"\.google-analytics\.com\/g\/collect"/g,
-      `"${gaRewrite.to}"`,
+      `self.location.origin+"${gaRewrite.to}"`,
     )
     result = result.replace(
       /"https:\/\/"\+\(.*?\)\+"\.analytics\.google\.com\/g\/collect"/g,
-      `"${gaRewrite.to}"`,
+      `self.location.origin+"${gaRewrite.to}"`,
     )
   }
 

@@ -121,8 +121,7 @@ export const RedditPixelOptions = object({
 当全局启用 `scripts.firstParty: true` 时，此脚本将：
 - 从你的域名加载，而非 `alb.reddit.com`
 - 通过你的服务器转发跟踪请求
-- 匿名化用户 IP 地址至子网级别
-- 将设备指纹数据泛化为通用类别
+- 完全隐私匿名化 — IP、用户代理、语言、屏幕、时区和硬件指纹全部匿名化（不信任广告网络）
 
 ```ts [nuxt.config.ts]
 export default defineNuxtConfig({
