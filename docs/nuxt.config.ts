@@ -25,7 +25,7 @@ export default defineNuxtConfig({
         }
         throw new Error('Failed to fetch contributors')
       })
-      nuxt.options.runtimeConfig.public.contributors = contributors.map((m: any) => m.id)
+      nuxt.options.runtimeConfig.public.contributors = contributors.map(m => m.id)
     },
   ],
 
@@ -35,13 +35,13 @@ export default defineNuxtConfig({
       '/api/_content/query/**': { cache: { group: 'content', name: 'query', maxAge: 60 * 60 } },
       '/api/_nuxt_icon': { cache: { group: 'icon', name: 'icon', maxAge: 60 * 60 * 24 * 7 } },
     },
-    // scripts: {
-    //   registry: {
-    //     plausibleAnalytics: {
-    //       domain: 'scripts.nuxt.com',
-    //     },
-    //   },
-    // },
+    scripts: {
+      registry: {
+        plausibleAnalytics: {
+          domain: 'scripts.nuxt.com',
+        },
+      },
+    },
   },
 
   devtools: {
@@ -60,7 +60,7 @@ export default defineNuxtConfig({
 
   site: {
     name: 'Nuxt Scripts 中文文档',
-    url: 'nuxt-scripts.zhcndoc.com',
+    url: 'https://nuxt-scripts.zhcndoc.com',
     description: 'Nuxt Scripts 让你以更高的性能、更好的隐私和安全性以及更好的开发体验加载第三方脚本。它开箱即支持许多流行的第三方服务。',
   },
 
@@ -106,7 +106,6 @@ export default defineNuxtConfig({
 
   nitro: {
     prerender: {
-      ignore: ['/__og-image__/**'],
       // For CF trailing slash issue
       autoSubfolderIndex: false,
     },
@@ -118,10 +117,6 @@ export default defineNuxtConfig({
       const globals = components.filter(c => ['UButton', 'UIcon', 'UAlert'].includes(c.pascalName) || c.pascalName.includes('Prose'))
       globals.forEach(c => c.global = true)
     },
-  },
-
-  fonts: {
-    provider: 'none',
   },
 
   icon: {
@@ -150,13 +145,13 @@ export default defineNuxtConfig({
     zeroRuntime: true,
   },
 
-  // scripts: {
-  //   registry: {
-  //     googleSignIn: {
-  //       clientId: '1035629894173-c0rpj3bqmcgsi8r8r08hh0kej3cpmikv.apps.googleusercontent.com',
-  //     },
-  //   },
-  // },
+  scripts: {
+    registry: {
+      googleSignIn: {
+        clientId: '1035629894173-c0rpj3bqmcgsi8r8r08hh0kej3cpmikv.apps.googleusercontent.com',
+      },
+    },
+  },
 
   seo: {
     meta: {
