@@ -1,21 +1,18 @@
-import type { PostHog, PostHogConfig } from 'posthog-js'
-import { any, record, string, object, optional, boolean, union, literal } from '#nuxt-scripts-validator'
 import type { RegistryScriptInput } from '#nuxt-scripts/types'
-import { useRegistryScript } from '../utils'
+import type { PostHog, PostHogConfig } from 'posthog-js'
 import { logger } from '../logger'
+import { useRegistryScript } from '../utils'
+import { PostHogOptions } from './schemas'
 
-export const PostHogOptions = object({
-  apiKey: string(),
-  region: optional(union([literal('us'), literal('eu')])),
-  apiHost: optional(string()),
-  autocapture: optional(boolean()),
-  capturePageview: optional(boolean()),
-  capturePageleave: optional(boolean()),
-  disableSessionRecording: optional(boolean()),
-  config: optional(record(string(), any())),
-})
+export { PostHogOptions }
 
-export type PostHogInput = RegistryScriptInput<typeof PostHogOptions, false, true>
+export type PostHogInput = Omit<RegistryScriptInput<typeof PostHogOptions, false, true>, 'config'> & {
+  /**
+   * Additional PostHog configuration options passed directly to `posthog.init()`.
+   * @see https://posthog.com/docs/libraries/js/config
+   */
+  config?: Partial<PostHogConfig>
+}
 
 export interface PostHogApi {
   posthog: PostHog
@@ -90,7 +87,7 @@ export function useScriptPostHog<T extends PostHogApi>(_options?: PostHogInput) 
               }
               if (typeof options?.autocapture === 'boolean')
                 config.autocapture = options.autocapture
-              if (typeof options?.capturePageview === 'boolean')
+              if (typeof options?.capturePageview === 'boolean' || options?.capturePageview === 'history_change')
                 config.capture_pageview = options.capturePageview
               if (typeof options?.capturePageleave === 'boolean')
                 config.capture_pageleave = options.capturePageleave
@@ -122,5 +119,5 @@ export function useScriptPostHog<T extends PostHogApi>(_options?: PostHogInput) 
           return window.__posthogInitPromise
         },
     }
-  }, _options)
+  }, _options as RegistryScriptInput<typeof PostHogOptions>)
 }

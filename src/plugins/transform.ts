@@ -1,22 +1,24 @@
+import type { RegistryScript } from '#nuxt-scripts/types'
+import type { FetchOptions } from 'ofetch'
+import type { SourceMapInput } from 'rollup'
+import type { InferInput } from 'valibot'
+import type { ProxyRewrite } from '../proxy-configs'
 import { createHash } from 'node:crypto'
 import fsp from 'node:fs/promises'
-import { createUnplugin } from 'unplugin'
-import MagicString from 'magic-string'
-import type { SourceMapInput } from 'rollup'
-import { parseAndWalk } from 'oxc-walker'
-import type { InferInput } from 'valibot'
-import { hasProtocol, parseURL, joinURL } from 'ufo'
-import { hash as ohash } from 'ohash'
-import { join } from 'pathe'
-import { colors } from 'consola/utils'
 import { tryUseNuxt, useNuxt } from '@nuxt/kit'
-import type { FetchOptions } from 'ofetch'
+import { colors } from 'consola/utils'
+import MagicString from 'magic-string'
 import { $fetch } from 'ofetch'
-import { logger } from '../logger'
+import { hash as ohash } from 'ohash'
+import { parseAndWalk } from 'oxc-walker'
+import { join } from 'pathe'
+import { hasProtocol, joinURL, parseURL } from 'ufo'
+import { createUnplugin } from 'unplugin'
 import { bundleStorage } from '../assets'
-import { getProxyConfig, rewriteScriptUrls, type ProxyRewrite } from '../proxy-configs'
+import { logger } from '../logger'
+import { getProxyConfig } from '../proxy-configs'
+import { rewriteScriptUrlsAST } from './rewrite-ast'
 import { isJS, isVue } from './util'
-import type { RegistryScript } from '#nuxt-scripts/types'
 
 const SEVEN_DAYS_IN_MS = 7 * 24 * 60 * 60 * 1000
 
@@ -82,9 +84,10 @@ function normalizeScriptData(src: string, assetsBaseURL: string = '/_scripts'): 
   if (hasProtocol(src, { acceptRelative: true })) {
     src = src.replace(/^\/\//, 'https://')
     const url = parseURL(src)
-    const file = [
-      `${ohash(url)}.js`, // force an extension
-    ].filter(Boolean).join('-')
+    const h = ohash(url)
+    // Prefix hashes starting with '-' — Nitro's publicAssets handler cannot serve
+    // files whose names begin with a dash (they get omitted from the asset manifest).
+    const file = `${h.startsWith('-') ? `_${h.slice(1)}` : h}.js`
     const nuxt = tryUseNuxt()
     // Use cdnURL if available, otherwise fall back to baseURL
     const cdnURL = nuxt?.options.runtimeConfig?.app?.cdnURL || nuxt?.options.app?.cdnURL || ''
@@ -142,10 +145,10 @@ async function downloadScript(opts: {
     })
 
     await storage.setItemRaw(`bundle:${filename}`, res)
-    // Apply URL rewrites for proxy mode
+    // Apply URL rewrites for proxy mode (AST-based at build time)
     if (proxyRewrites?.length && res) {
       const content = res.toString('utf-8')
-      const rewritten = rewriteScriptUrls(content, proxyRewrites)
+      const rewritten = rewriteScriptUrlsAST(content, filename || 'script.js', proxyRewrites)
       res = Buffer.from(rewritten, 'utf-8')
       logger.debug(`Rewrote ${proxyRewrites.length} URL patterns in ${filename}`)
     }
@@ -228,7 +231,7 @@ export function NuxtScriptBundleTransformer(options: AssetBundlerTransformerOpti
 
           const s = new MagicString(code)
           const deferredOps: (() => Promise<void>)[] = []
-          parseAndWalk(code, id, function (_node) {
+          parseAndWalk(code, id, (_node) => {
             const calleeName = (_node as any).callee?.name
             if (!calleeName)
               return
@@ -237,7 +240,8 @@ export function NuxtScriptBundleTransformer(options: AssetBundlerTransformerOpti
             if (
               _node.type === 'CallExpression'
               && (_node as any).callee.type === 'Identifier'
-              && isValidCallee) {
+              && isValidCallee
+            ) {
             // we're either dealing with useScript or an integration such as useScriptHotjar, we need to handle
             // both cases
               const fnName = (_node as any).callee?.name

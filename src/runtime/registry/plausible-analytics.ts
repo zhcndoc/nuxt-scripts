@@ -1,7 +1,7 @@
-import { useRegistryScript } from '../utils'
-import { any, array, boolean, literal, object, optional, record, string, union } from '#nuxt-scripts-validator'
 import type { RegistryScriptInput } from '#nuxt-scripts/types'
+import { any, array, boolean, literal, object, optional, record, string, union } from '#nuxt-scripts-validator'
 import { logger } from '../logger'
+import { useRegistryScript } from '../utils'
 
 // Legacy extensions (deprecated but kept for backward compatibility)
 const extensions = [
@@ -157,22 +157,26 @@ export function useScriptPlausibleAnalytics<T extends PlausibleAnalyticsApi>(_op
 
     // Build init options for new script format
     const initOptions: PlausibleInitOptions = {}
-    if (options?.customProperties) initOptions.customProperties = options.customProperties
-    if (options?.endpoint) initOptions.endpoint = options.endpoint
-    if (options?.fileDownloads) initOptions.fileDownloads = options.fileDownloads
-    if (options?.hashBasedRouting !== undefined) initOptions.hashBasedRouting = options.hashBasedRouting
-    if (options?.autoCapturePageviews !== undefined) initOptions.autoCapturePageviews = options.autoCapturePageviews
-    if (options?.captureOnLocalhost !== undefined) initOptions.captureOnLocalhost = options.captureOnLocalhost
+    if (options?.customProperties)
+      initOptions.customProperties = options.customProperties
+    if (options?.endpoint)
+      initOptions.endpoint = options.endpoint
+    if (options?.fileDownloads)
+      initOptions.fileDownloads = options.fileDownloads
+    if (options?.hashBasedRouting !== undefined)
+      initOptions.hashBasedRouting = options.hashBasedRouting
+    if (options?.autoCapturePageviews !== undefined)
+      initOptions.autoCapturePageviews = options.autoCapturePageviews
+    if (options?.captureOnLocalhost !== undefined)
+      initOptions.captureOnLocalhost = options.captureOnLocalhost
 
     // Build script input
-    const scriptInput = !useNewScript && options?.domain
-      ? {
-          'src': scriptSrc,
-          'data-domain': options.domain,
-        }
-      : {
-          src: scriptSrc,
-        }
+    const scriptInput: Record<string, string> = { src: scriptSrc }
+    if (!useNewScript && options?.domain)
+      scriptInput['data-domain'] = options.domain
+    // Legacy script uses data-api attribute for custom endpoint
+    if (!useNewScript && options?.endpoint)
+      scriptInput['data-api'] = options.endpoint
 
     return {
       scriptInput,

@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest'
 import { createResolver } from '@nuxt/kit'
-import { getBrowser, url, waitForHydration, setup } from '@nuxt/test-utils/e2e'
+import { getBrowser, setup, url, waitForHydration } from '@nuxt/test-utils/e2e'
 import { parseURL } from 'ufo'
+import { describe, expect, it } from 'vitest'
 
 const { resolve } = createResolver(import.meta.url)
 
@@ -308,7 +308,6 @@ describe('third-party-capital', () => {
     // Note: Status goes to 'error' for NPM-based scripts, but clientInit still works
     await page.waitForFunction(() => window.posthog !== undefined, { timeout: 10000 })
 
-    // eslint-disable-next-line no-console
     console.log('PostHog initialized successfully')
 
     // Test event capture - verify client-side call is made
@@ -339,9 +338,9 @@ describe('third-party-capital', () => {
     expect(featureFlagPayload).toBeDefined()
 
     // Optional: Log actual values for debugging
-    // eslint-disable-next-line no-console
+
     console.log('Feature flag value:', featureFlagValue)
-    // eslint-disable-next-line no-console
+
     console.log('Feature flag payload:', featureFlagPayload)
   })
 
@@ -371,10 +370,91 @@ describe('third-party-capital', () => {
     })
     expect(hasGoogleApi).toBe(true)
   })
+
+  it('expect Vercel Analytics to initialize queue and handle events', {
+    timeout: 10000,
+  }, async () => {
+    // Create page without navigating, block the CDN script so it doesn't drain window.vaq
+    const { page } = await createPage('')
+    await page.route('**/va.vercel-scripts.com/**', route => route.abort())
+    // @ts-expect-error untyped
+    await page.goto(url('/tpc/vercel-analytics'), { waitUntil: 'hydration' })
+    await page.waitForTimeout(500)
+
+    // Verify the queue was initialized (clientInit sets up window.va)
+    const hasQueue = await page.evaluate(() => {
+      return typeof window.va === 'function'
+    })
+    expect(hasQueue).toBe(true)
+
+    // Verify window.vam is set (mode auto detects build environment)
+    const mode = await page.evaluate(() => window.vam)
+    expect(mode).toBe('production')
+
+    // Verify the script tag has correct attributes
+    const scriptAttrs = await page.evaluate(() => {
+      const script = document.querySelector('script[data-sdkn="@nuxt/scripts"]')
+      if (!script)
+        return null
+      return {
+        src: script.getAttribute('src'),
+        sdkn: script.getAttribute('data-sdkn'),
+        endpoint: script.getAttribute('data-endpoint'),
+      }
+    })
+    // Production build proxies script through /_scripts/
+    expect(scriptAttrs?.src).toContain('/_scripts/')
+    expect(scriptAttrs?.sdkn).toBe('@nuxt/scripts')
+    expect(scriptAttrs?.endpoint).toBe('/custom/collect')
+
+    // Verify beforeSend was registered in the queue
+    const hasBeforeSend = await page.evaluate(() => {
+      return (window.vaq || []).some(entry => entry[0] === 'beforeSend')
+    })
+    expect(hasBeforeSend).toBe(true)
+
+    // Track an event via the UI button
+    await page.click('#track-event')
+    await page.waitForTimeout(300)
+
+    const eventTracked = await page.$eval('#event-tracked', el => el.textContent?.trim())
+    expect(eventTracked).toBe('true')
+
+    // Track event with nested properties — in prod, nested props are silently stripped
+    await page.click('#track-nested')
+    await page.waitForTimeout(300)
+
+    const nestedError = await page.$eval('#nested-error', el => el.textContent?.trim())
+    expect(nestedError).toBe('')
+
+    // Send a pageview via the UI button
+    await page.click('#send-pageview')
+    await page.waitForTimeout(300)
+
+    const pageviewSent = await page.$eval('#pageview-sent', el => el.textContent?.trim())
+    expect(pageviewSent).toBe('true')
+
+    // Verify the queue accumulated events
+    // Queue should have: beforeSend + event + stripped-nested-event + pageview
+    const queueLength = await page.evaluate(() => {
+      return (window.vaq || []).length
+    })
+    expect(queueLength).toBe(4)
+
+    // Verify the nested event was tracked with the nested prop stripped
+    const strippedEvent = await page.evaluate(() => {
+      const events = (window.vaq || []).filter(e => e[0] === 'event')
+      const nested = events.find((e: any) => e[1]?.name === 'bad_event')
+      return nested ? (nested[1] as any)?.data : null
+    })
+    expect(strippedEvent).toBeDefined()
+    expect(strippedEvent.name).toBe('test')
+    expect(strippedEvent.nested).toBeUndefined()
+  })
 })
 
 describe('social-embeds', () => {
-  it('X embed fetches tweet data server-side and renders', {
+  it('x embed fetches tweet data server-side and renders', {
     timeout: 15000,
   }, async () => {
     const { page } = await createPage('/x-embed')
@@ -395,7 +475,7 @@ describe('social-embeds', () => {
     expect(tweetUrl).toContain('/status/')
   })
 
-  it('X embed proxies images through server', {
+  it('x embed proxies images through server', {
     timeout: 15000,
   }, async () => {
     const { page } = await createPage('/x-embed')
@@ -413,7 +493,7 @@ describe('social-embeds', () => {
     expect(hasProxiedImages).toBe(true)
   })
 
-  it('Instagram embed fetches HTML server-side and renders', {
+  it('instagram embed fetches HTML server-side and renders', {
     timeout: 15000,
   }, async () => {
     const { page } = await createPage('/instagram-embed')
@@ -433,7 +513,7 @@ describe('social-embeds', () => {
     expect(hasEmbedHtml).toBe(true)
   })
 
-  it('Instagram embed proxies images through server', {
+  it('instagram embed proxies images through server', {
     timeout: 15000,
   }, async () => {
     const { page } = await createPage('/instagram-embed')
