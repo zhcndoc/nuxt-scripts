@@ -27,7 +27,7 @@ links:
 
 ```ts
 useScriptMatomoAnalytics({
-  cloudId: 'YOUR_CLOUD_ID', // e.g. nuxt.matomo.cloud
+  cloudId: 'YOUR_CLOUD_ID', // 例如 nuxt.matomo.cloud
   siteId: 2,
   // watch: true, // 默认启用 - 自动页面跟踪！
 })
@@ -83,7 +83,7 @@ useScriptEventPage((payload) => {
 
 ```ts
 useScriptMatomoAnalytics({
-  // e.g. https://your-url.com/tracker.js & https://your-url.com//matomo.php both exists
+  // 例如 https://your-url.com/tracker.js 和 https://your-url.com//matomo.php 都存在
   matomoUrl: 'https://your-url.com',
 })
 ```

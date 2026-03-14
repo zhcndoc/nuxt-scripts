@@ -19,9 +19,9 @@ Nuxt Scripts 提供了一个 [`<ScriptXEmbed>`{lang="html"}](/scripts/x-embed){l
 ::script-types
 ::
 
-## Setup
+## 安装配置
 
-To use the X embed component, you must enable it in your `nuxt.config`:
+要使用 X 嵌入组件，必须在你的 `nuxt.config` 中启用它：
 
 ```ts [nuxt.config.ts]
 export default defineNuxtConfig({
@@ -33,7 +33,7 @@ export default defineNuxtConfig({
 })
 ```
 
-This registers the required server API routes (`/_scripts/embed/x` and `/_scripts/embed/x-image`) that handle fetching tweet data and proxying images.
+这将注册所需的服务器 API 路由（`/_scripts/embed/x` 和 `/_scripts/embed/x-image`），用于处理获取推文数据和代理图片。
 
 ## [`<ScriptXEmbed>`{lang="html"}](/scripts/x-embed){lang="html"}
 
@@ -182,10 +182,10 @@ interface SlotProps {
 
 ## 工作原理
 
-1. **Server-side fetch**: Tweet data is fetched from `cdn.syndication.twimg.com` during SSR
-2. **Image proxying**: All images are rewritten to proxy through `/_scripts/embed/x-image`
-3. **Caching**: Responses are cached for 10 minutes at the server level
-4. **No client-side API calls**: The user's browser never contacts X directly
+1. **服务器端获取**：在服务器端渲染时从 `cdn.syndication.twimg.com` 获取推文数据
+2. **图片代理**：所有图片 URL 都被重写，通过 `/_scripts/embed/x-image` 代理
+3. **缓存**：响应在服务器层缓存 10 分钟
+4. **无客户端 API 调用**：用户浏览器不会直接联系 X
 
 此方案灵感来源于 [Cloudflare Zaraz 的嵌入实现](https://blog.cloudflare.com/zaraz-supports-server-side-rendering-of-embeds/)。
 
