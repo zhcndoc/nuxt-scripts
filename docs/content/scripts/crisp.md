@@ -205,10 +205,10 @@ export function useScriptCrisp<T extends CrispApi>(_options?: CrispInput) {}
 
 ```vue
 <script setup lang="ts">
-const crisp = useScriptCrisp({
+const { proxy } = useScriptCrisp({
   id: 'YOUR_ID'
 })
-crisp.set('user:nickname', 'Harlan')
-crisp.do('chat:open')
+proxy.set('user:nickname', 'Harlan')
+proxy.do('chat:open')
 </script>
 ```

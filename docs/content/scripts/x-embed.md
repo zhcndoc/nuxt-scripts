@@ -16,6 +16,25 @@ Nuxt Scripts 提供了一个 [`<ScriptXEmbed>`{lang="html"}](/scripts/x-embed){l
 ::script-stats
 ::
 
+::script-types
+::
+
+## Setup
+
+To use the X embed component, you must enable it in your `nuxt.config`:
+
+```ts [nuxt.config.ts]
+export default defineNuxtConfig({
+  scripts: {
+    registry: {
+      xEmbed: true,
+    },
+  },
+})
+```
+
+This registers the required server API routes (`/_scripts/embed/x` and `/_scripts/embed/x-image`) that handle fetching tweet data and proxying images.
+
 ## [`<ScriptXEmbed>`{lang="html"}](/scripts/x-embed){lang="html"}
 
 `<ScriptXEmbed>` 组件是一个无头组件，功能包括：
@@ -163,10 +182,10 @@ interface SlotProps {
 
 ## 工作原理
 
-1. **服务器端获取**：在 SSR 期间，从 `cdn.syndication.twimg.com` 获取推文数据
-2. **图片代理**：所有图片地址均重写为通过 `/api/_scripts/x-embed-image` 代理
-3. **缓存**：响应在服务器层缓存 10 分钟
-4. **无客户端 API 调用**：用户浏览器不会直接访问 X
+1. **Server-side fetch**: Tweet data is fetched from `cdn.syndication.twimg.com` during SSR
+2. **Image proxying**: All images are rewritten to proxy through `/_scripts/embed/x-image`
+3. **Caching**: Responses are cached for 10 minutes at the server level
+4. **No client-side API calls**: The user's browser never contacts X directly
 
 此方案灵感来源于 [Cloudflare Zaraz 的嵌入实现](https://blog.cloudflare.com/zaraz-supports-server-side-rendering-of-embeds/)。
 

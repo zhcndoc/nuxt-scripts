@@ -26,8 +26,8 @@ links:
 默认情况下，Nuxt 使用 `siteId` 为 `1`，并且通过 `watch` 选项自动启用页面跟踪。
 
 ```ts
-const matomoAnalytics = useScriptMatomoAnalytics({
-  cloudId: 'YOUR_CLOUD_ID', // 例如 nuxt.matomo.cloud
+useScriptMatomoAnalytics({
+  cloudId: 'YOUR_CLOUD_ID', // e.g. nuxt.matomo.cloud
   siteId: 2,
   // watch: true, // 默认启用 - 自动页面跟踪！
 })
@@ -82,8 +82,8 @@ useScriptEventPage((payload) => {
 对于自托管 Matomo，设置 `matomoUrl` 以自定义跟踪，如果你自定义了 `trackerUrl`，可能需要设置它。
 
 ```ts
-const matomoAnalytics = useScriptMatomoAnalytics({
-  // 例如 https://your-url.com/tracker.js 和 https://your-url.com/matomo.php 同时存在
+useScriptMatomoAnalytics({
+  // e.g. https://your-url.com/tracker.js & https://your-url.com//matomo.php both exists
   matomoUrl: 'https://your-url.com',
 })
 ```
@@ -93,7 +93,7 @@ const matomoAnalytics = useScriptMatomoAnalytics({
 对于 Matomo 白标版，设置 `trackerUrl` 和 `scriptInput.src` 以自定义跟踪。
 
 ```ts
-const matomoAnalytics = useScriptMatomoAnalytics({
+useScriptMatomoAnalytics({
   trackerUrl: 'https://c.staging.cookie3.co/lake',
   scriptInput: {
     src: 'https://cdn.cookie3.co/scripts/latest/cookie3.analytics.min.js',

@@ -18,6 +18,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
 
   return [
     {
+      registryKey: 'plausibleAnalytics',
       label: 'Plausible Analytics',
       proxy: 'plausible',
       category: 'analytics',
@@ -34,6 +35,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'cloudflareWebAnalytics',
       label: 'Cloudflare Web Analytics',
       proxy: 'cloudflareWebAnalytics',
       src: 'https://static.cloudflareinsights.com/beacon.min.js',
@@ -45,6 +47,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'vercelAnalytics',
       label: 'Vercel Analytics',
       src: 'https://va.vercel-scripts.com/v1/script.js',
       proxy: 'vercelAnalytics',
@@ -56,6 +59,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'posthog',
       label: 'PostHog',
       src: false,
       proxy: 'posthog',
@@ -68,9 +72,10 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'fathomAnalytics',
       label: 'Fathom Analytics',
       proxy: 'fathom',
-      scriptBundling: false, // breaks script
+      src: 'https://cdn.usefathom.com/script.js',
       category: 'analytics',
       logo: `<svg width="32" height="32" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><circle cx="512" cy="512" r="512" style="fill:#9187ff"/><path d="M558.62 256c-36.31.16-78.78 10-129.45 28.4-170.71 62.15-206.9 139.74-144.79 310.45s139.73 206.89 310.45 144.76S801.74 599.88 739.6 429.16c-43.69-120-95-173.55-181-173.17zm59.1 140.16h26.73a5.33 5.33 0 0 1 5.16 6.72l-59.26 220.48a5.34 5.34 0 0 1-5.15 4h-26.75a5.33 5.33 0 0 1-5.16-6.72l3.6-13.4 2.63-9.75 53-197.38a5.33 5.33 0 0 1 5.14-3.94zM421.79 413.4h10.75a5.33 5.33 0 0 1 5.33 5.33v18a5.33 5.33 0 0 1-5.33 5.33h-9.13a36.76 36.76 0 0 0-5.51.24 4.7 4.7 0 0 0-2.56 1 4.19 4.19 0 0 0-1 1.66 18.91 18.91 0 0 0-.92 6.72v13.67h19.16a5.33 5.33 0 0 1 5.33 5.33v18a5.34 5.34 0 0 1-5.33 5.33h-19.21v108.71a5.34 5.34 0 0 1-5.34 5.34H387a5.33 5.33 0 0 1-5.33-5.34V448.48a36.74 36.74 0 0 1 3.6-16.64 29.76 29.76 0 0 1 9.73-11.16c7.9-5.48 17.62-7.27 26.82-7.31zm82.14 50c16.37 0 30.27 4.65 40.17 13.27s15.47 21.21 15.42 35.59v35.91l-16.11 59.92h-10.24a5.33 5.33 0 0 1-5.33-5.34v-4a39.13 39.13 0 0 1-4.76 3.56c-7.14 4.55-16.85 7.51-29.65 7.51a62.65 62.65 0 0 1-28.52-6.18 40.49 40.49 0 0 1-18.84-19.35 46.81 46.81 0 0 1-4-19.54 40.72 40.72 0 0 1 5.23-21.12 36.78 36.78 0 0 1 13.78-13.18c11.09-6.25 24.75-8.45 38.14-10.24 7.3-1 13.14-1.61 17.64-2.2a42 42 0 0 0 9.2-1.88 3.16 3.16 0 0 0 1.39-.86l.24-.48a6.77 6.77 0 0 0 .16-1.84v-.73a17.24 17.24 0 0 0-5.85-13.6c-3.8-3.31-9.77-5.55-18.07-5.57s-14.64 2.26-19 5.59a17.51 17.51 0 0 0-7.21 12.54 5.33 5.33 0 0 1-5.31 4.86h-22.25a5.33 5.33 0 0 1-5.33-5.57 45.64 45.64 0 0 1 17.6-34c10.47-8.34 24.85-13.12 41.49-13.12zm23.92 80.71c-1.92.48-4 1-6.31 1.45-6.47 1.28-14.29 2.41-21.87 3.48a61 61 0 0 0-14.76 3.65c-4.18 1.75-7.1 4-8.68 6.57a12.12 12.12 0 0 0-1.71 6.54v.2a12.93 12.93 0 0 0 1.32 5.87 11.81 11.81 0 0 0 3.76 4.22c3.41 2.45 9.13 4.14 16.85 4.14 11.95 0 19.52-3.5 24.32-8.32s7-11.56 7.08-19.11v-8.65zm0 0" style="fill:#fff"/></svg>`,
       import: {
@@ -79,6 +84,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'matomoAnalytics',
       label: 'Matomo Analytics',
       scriptBundling: false, // breaks script
       category: 'analytics',
@@ -89,8 +95,10 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'rybbitAnalytics',
       label: 'Rybbit Analytics',
       proxy: 'rybbit',
+      scriptBundling: false, // SDK reads document.currentScript.src to derive API host — analyticsHost config injection handles proxy instead
       category: 'analytics',
       logo: {
         light: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 263.33 173.53" width="37.24" height="32"><g><polygon fill="#0a3a3a" points="181.28 171.2 227.21 123.96 261.15 171.2 181.28 171.2"/><path fill="#0a3a3a" d="M261.15,89.05L206.64,2.33l-33.22,17.75-34.61-7.4c2.88,5.56,4.56,12.11,4.56,19.15,0,20.03-13.46,36.26-30.06,36.26-13.66,0-25.17-11-28.83-26.06l-39.92,71.46L2.18,94.19l22.66,77.01h55.81l22.28-54.01v54.01h64.66l-49.95-82.15h143.51Z"/></g><ellipse fill="#0a3a3a" cx="105.94" cy="28.62" rx="12.9" ry="18.88"/></svg>`,
@@ -102,8 +110,10 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'databuddyAnalytics',
       label: 'Databuddy Analytics',
       proxy: 'databuddy',
+      scriptBundling: () => 'https://cdn.databuddy.cc/databuddy.js',
       category: 'analytics',
       logo: `<svg xmlns="http://www.w3.org/2000/svg" width="56.5" height="32" viewBox="0 0 8 8" shape-rendering="crispEdges"><path d="M0 0h8v8H0z"/><path fill="#fff" d="M1 1h1v6H1zm1 0h4v1H2zm4 1h1v1H6zm0 1h1v1H6zm0 1h1v1H6zm0 1h1v1H6zM2 6h4v1H2zm1-3h1v1H3zm1 1h1v1H4z"/></svg>`,
       import: {
@@ -112,6 +122,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'segment',
       label: 'Segment',
       proxy: 'segment',
       scriptBundling: (options?: SegmentInput) => {
@@ -125,6 +136,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'metaPixel',
       label: 'Meta Pixel',
       proxy: 'metaPixel',
       src: 'https://connect.facebook.net/en_US/fbevents.js',
@@ -136,6 +148,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'xPixel',
       label: 'X Pixel',
       proxy: 'xPixel',
       src: 'https://static.ads-twitter.com/uwt.js',
@@ -150,6 +163,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'tiktokPixel',
       label: 'TikTok Pixel',
       proxy: 'tiktokPixel',
       category: 'ad',
@@ -165,6 +179,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'snapchatPixel',
       label: 'Snapchat Pixel',
       proxy: 'snapchatPixel',
       src: 'https://sc-static.net/scevent.min.js',
@@ -176,6 +191,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'redditPixel',
       label: 'Reddit Pixel',
       proxy: 'redditPixel',
       src: 'https://www.redditstatic.com/ads/pixel.js',
@@ -188,6 +204,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
     },
     // ad
     {
+      registryKey: 'googleAdsense',
       label: 'Google Adsense',
       proxy: 'googleAnalytics',
       scriptBundling: (options?: GoogleAdsenseInput) => {
@@ -206,6 +223,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'carbonAds',
       label: 'Carbon Ads',
       scriptBundling: false,
       category: 'ad',
@@ -213,6 +231,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
     },
     // support
     {
+      registryKey: 'intercom',
       label: 'Intercom',
       proxy: 'intercom',
       scriptBundling(options?: IntercomInput) {
@@ -229,6 +248,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'hotjar',
       label: 'Hotjar',
       proxy: 'hotjar',
       scriptBundling(options?: HotjarInput) {
@@ -247,6 +267,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'clarity',
       label: 'Clarity',
       proxy: 'clarity',
       scriptBundling(options?: ClarityInput) {
@@ -264,6 +285,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
     },
     // payments
     {
+      registryKey: 'stripe',
       label: 'Stripe',
       scriptBundling: false,
       category: 'payments',
@@ -274,6 +296,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'lemonSqueezy',
       label: 'Lemon Squeezy',
       src: false, // should not be bundled
       category: 'payments',
@@ -284,6 +307,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'paypal',
       label: 'PayPal',
       src: false, // should not be bundled
       category: 'payments',
@@ -295,6 +319,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
     },
     // video
     {
+      registryKey: 'vimeoPlayer',
       label: 'Vimeo Player',
       category: 'video',
       logo: `<svg xmlns="http://www.w3.org/2000/svg" width="36.74" height="32" viewBox="0 0 256 223"><path fill="#32B8E8" d="M255.876 51.662c-1.139 24.968-18.545 59.157-52.209 102.55c-34.806 45.327-64.254 67.989-88.343 67.989c-14.918 0-27.551-13.799-37.863-41.406c-6.892-25.306-13.775-50.61-20.664-75.915c-7.663-27.592-15.878-41.406-24.661-41.406c-1.915 0-8.617 4.038-20.091 12.081L0 60.008a3257.325 3257.325 0 0 0 37.36-33.38C54.21 12.038 66.86 4.366 75.29 3.59c19.925-1.917 32.187 11.728 36.79 40.938c4.974 31.514 8.415 51.116 10.35 58.788c5.742 26.145 12.06 39.201 18.965 39.201c5.358 0 13.407-8.478 24.138-25.436c10.722-16.963 16.464-29.868 17.24-38.733c1.525-14.638-4.22-21.975-17.24-21.975c-6.128 0-12.447 1.413-18.946 4.206c12.58-41.29 36.618-61.343 72.1-60.199c26.304.773 38.705 17.867 37.19 51.282"/></svg>`,
@@ -304,6 +329,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'youtubePlayer',
       label: 'YouTube Player',
       category: 'video',
       logo: `<svg xmlns="http://www.w3.org/2000/svg" width="45.52" height="32" viewBox="0 0 256 180"><path fill="red" d="M250.346 28.075A32.18 32.18 0 0 0 227.69 5.418C207.824 0 127.87 0 127.87 0S47.912.164 28.046 5.582A32.18 32.18 0 0 0 5.39 28.24c-6.009 35.298-8.34 89.084.165 122.97a32.18 32.18 0 0 0 22.656 22.657c19.866 5.418 99.822 5.418 99.822 5.418s79.955 0 99.82-5.418a32.18 32.18 0 0 0 22.657-22.657c6.338-35.348 8.291-89.1-.164-123.134"/><path fill="#FFF" d="m102.421 128.06l66.328-38.418l-66.328-38.418z"/></svg>`,
@@ -313,6 +339,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'googleMaps',
       label: 'Google Maps',
       category: 'content',
       logo: `<svg xmlns="http://www.w3.org/2000/svg" width="22.33" height="32" viewBox="0 0 256 367"><path fill="#34A853" d="M70.585 271.865a370.712 370.712 0 0 1 28.911 42.642c7.374 13.982 10.448 23.463 15.837 40.31c3.305 9.308 6.292 12.086 12.714 12.086c6.998 0 10.173-4.726 12.626-12.035c5.094-15.91 9.091-28.052 15.397-39.525c12.374-22.15 27.75-41.833 42.858-60.75c4.09-5.354 30.534-36.545 42.439-61.156c0 0 14.632-27.035 14.632-64.792c0-35.318-14.43-59.813-14.43-59.813l-41.545 11.126l-25.23 66.451l-6.242 9.163l-1.248 1.66l-1.66 2.078l-2.914 3.319l-4.164 4.163l-22.467 18.304l-56.17 32.432z"/><path fill="#FBBC04" d="M12.612 188.892c13.709 31.313 40.145 58.839 58.031 82.995l95.001-112.534s-13.384 17.504-37.662 17.504c-27.043 0-48.89-21.595-48.89-48.825c0-18.673 11.234-31.501 11.234-31.501l-64.489 17.28z"/><path fill="#4285F4" d="M166.705 5.787c31.552 10.173 58.558 31.53 74.893 63.023l-75.925 90.478s11.234-13.06 11.234-31.617c0-27.864-23.463-48.68-48.81-48.68c-23.969 0-37.735 17.475-37.735 17.475v-57z"/><path fill="#1A73E8" d="M30.015 45.765C48.86 23.218 82.02 0 127.736 0c22.18 0 38.89 5.823 38.89 5.823L90.29 96.516H36.205z"/><path fill="#EA4335" d="M12.612 188.892S0 164.194 0 128.414c0-33.817 13.146-63.377 30.015-82.649l60.318 50.759z"/></svg>`,
@@ -320,22 +347,48 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
         name: 'useScriptGoogleMaps',
         from: await resolve('./runtime/registry/google-maps'),
       },
+      serverHandlers: [
+        { route: '/_scripts/proxy/google-static-maps', handler: await resolve('./runtime/server/google-static-maps-proxy') },
+        { route: '/_scripts/proxy/google-maps-geocode', handler: await resolve('./runtime/server/google-maps-geocode-proxy') },
+      ],
     },
     {
+      registryKey: 'blueskyEmbed',
+      label: 'Bluesky Embed',
+      category: 'content',
+      logo: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 568 501"><path fill="#1185FE" d="M123.121 33.664C188.241 82.553 258.281 181.68 284 234.873c25.719-53.192 95.759-152.32 160.879-201.21C491.866-1.611 568-28.906 568 57.947c0 17.346-9.945 145.713-15.778 166.555c-20.275 72.453-94.155 90.933-159.875 79.748c114.875 19.831 144.097 85.561 81.022 151.291C363.929 569.326 289.18 462.062 284 449.7c-.36-.86-.36-.86 0 0c-5.18 12.362-79.929 119.626-189.369 5.84c-63.075-65.729-33.853-131.46 81.022-151.29c-65.72 11.184-139.6-7.296-159.875-79.749C9.945 203.659 0 75.291 0 57.946C0-28.906 76.134-1.612 123.121 33.664"/></svg>`,
+      serverHandlers: [
+        { route: '/_scripts/embed/bluesky', handler: await resolve('./runtime/server/bluesky-embed') },
+        { route: '/_scripts/embed/bluesky-image', handler: await resolve('./runtime/server/bluesky-embed-image') },
+      ],
+    },
+    {
+      registryKey: 'instagramEmbed',
       label: 'Instagram Embed',
       category: 'content',
       logo: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 256 256"><g fill="none"><rect width="256" height="256" fill="url(#skillIconsInstagram0)" rx="60"/><rect width="256" height="256" fill="url(#skillIconsInstagram1)" rx="60"/><path fill="#fff" d="M128.009 28c-27.158 0-30.567.119-41.233.604c-10.646.488-17.913 2.173-24.271 4.646c-6.578 2.554-12.157 5.971-17.716 11.531c-5.563 5.559-8.98 11.138-11.542 17.713c-2.48 6.36-4.167 13.63-4.646 24.271c-.477 10.667-.602 14.077-.602 41.236s.12 30.557.604 41.223c.49 10.646 2.175 17.913 4.646 24.271c2.556 6.578 5.973 12.157 11.533 17.716c5.557 5.563 11.136 8.988 17.709 11.542c6.363 2.473 13.631 4.158 24.275 4.646c10.668.485 14.073.604 41.23.604c27.161 0 30.559-.119 41.225-.604c10.646-.488 17.921-2.173 24.284-4.646c6.575-2.554 12.146-5.979 17.702-11.542c5.563-5.559 8.98-11.138 11.542-17.716c2.458-6.358 4.145-13.625 4.646-24.271c.48-10.666.604-14.066.604-41.223s-.124-30.569-.604-41.236c-.501-10.646-2.188-17.911-4.646-24.271c-2.562-6.575-5.979-12.154-11.542-17.713c-5.559-5.56-11.13-8.977-17.716-11.531c-6.375-2.473-13.646-4.158-24.292-4.646C158.57 28.119 155.164 28 128.009 28m-8.868 18.021h8.868c26.695 0 29.855.103 40.41.582c9.751.446 15.042 2.079 18.567 3.454c4.667 1.813 7.992 3.979 11.492 7.48c3.5 3.5 5.666 6.829 7.483 11.496c1.375 3.525 3.012 8.813 3.454 18.563c.479 10.558.588 13.719.588 40.413s-.109 29.854-.588 40.412c-.446 9.75-2.079 15.042-3.454 18.563c-1.813 4.667-3.983 7.992-7.483 11.492a30.94 30.94 0 0 1-11.492 7.479c-3.521 1.379-8.812 3.013-18.567 3.458c-10.554.48-13.711.589-40.41.589c-26.702 0-29.859-.109-40.413-.589c-9.75-.449-15.046-2.079-18.571-3.458c-4.667-1.813-8-3.979-11.5-7.479s-5.666-6.825-7.483-11.496c-1.375-3.521-3.012-8.813-3.454-18.563c-.479-10.558-.583-13.715-.583-40.42c0-26.704.104-29.856.583-40.413c.446-9.75 2.079-15.042 3.454-18.567c1.813-4.667 3.983-7.996 11.5-11.5a30.804 30.804 0 0 1 11.496-7.479c3.525-1.375 8.821-3.013 18.571-3.458c9.238-.421 12.82-.546 31.505-.563zm62.496 16.604c-6.625 0-12 5.37-12 12c0 6.625 5.375 12 12 12c6.625 0 12-5.375 12-12s-5.375-12-12-12m-53.628 14.021c-28.272 0-51.196 22.924-51.196 51.196s22.924 51.2 51.196 51.2c28.271 0 51.2-22.929 51.2-51.2c0-28.272-22.929-51.196-51.2-51.196m0 18.021c18.334 0 33.183 14.846 33.183 33.175c0 18.334-14.849 33.184-33.183 33.184c-18.33 0-33.175-14.85-33.175-33.184c0-18.329 14.845-33.175 33.175-33.175"/><defs><radialGradient id="skillIconsInstagram0" cx="0" cy="0" r="1" gradientTransform="matrix(0 -253.715 235.975 0 68 275.717)" gradientUnits="userSpaceOnUse"><stop stop-color="#FD5"/><stop offset=".1" stop-color="#FD5"/><stop offset=".5" stop-color="#FF543E"/><stop offset="1" stop-color="#C837AB"/></radialGradient><radialGradient id="skillIconsInstagram1" cx="0" cy="0" r="1" gradientTransform="matrix(22.25952 111.2976 -458.39518 91.75449 -42.881 18.441)" gradientUnits="userSpaceOnUse"><stop stop-color="#3771C8"/><stop offset=".128" stop-color="#3771C8"/><stop offset="1" stop-color="#60F" stop-opacity="0"/></radialGradient></defs></g></svg>`,
+      serverHandlers: [
+        { route: '/_scripts/embed/instagram', handler: await resolve('./runtime/server/instagram-embed') },
+        { route: '/_scripts/embed/instagram-image', handler: await resolve('./runtime/server/instagram-embed-image') },
+        { route: '/_scripts/embed/instagram-asset', handler: await resolve('./runtime/server/instagram-embed-asset') },
+      ],
     },
     {
+      registryKey: 'xEmbed',
       label: 'X Embed',
       category: 'content',
       logo: {
         light: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="#000" d="M18.205 2.25h3.308l-7.227 8.26l8.502 11.24H16.13l-5.214-6.817L4.95 21.75H1.64l7.73-8.835L1.215 2.25H8.04l4.713 6.231zm-1.161 17.52h1.833L7.045 4.126H5.078z"/></svg>`,
         dark: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><path fill="#fff" d="M18.205 2.25h3.308l-7.227 8.26l8.502 11.24H16.13l-5.214-6.817L4.95 21.75H1.64l7.73-8.835L1.215 2.25H8.04l4.713 6.231zm-1.161 17.52h1.833L7.045 4.126H5.078z"/></svg>`,
       },
+      serverHandlers: [
+        { route: '/_scripts/embed/x', handler: await resolve('./runtime/server/x-embed') },
+        { route: '/_scripts/embed/x-image', handler: await resolve('./runtime/server/x-embed-image') },
+      ],
     },
     // chat
     {
+      registryKey: 'crisp',
       label: 'Crisp',
       proxy: 'crisp',
       category: 'support',
@@ -350,6 +403,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
     },
     // cdn
     {
+      registryKey: 'npm',
       label: 'NPM',
       scriptBundling(options?: NpmInput) {
         return withBase(options?.file || '', `https://unpkg.com/${options?.packageName || ''}@${options?.version || 'latest'}`)
@@ -363,6 +417,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'googleRecaptcha',
       label: 'Google reCAPTCHA',
       category: 'utility',
       logo: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64"><path fill="#1c3aa9" d="M64 32a32 32 0 1 1-64 0 32 32 0 0 1 64 0"/><path fill="#4285f4" d="m32 14-2 18 2 2 18-2V14z"/><path fill="#efefef" d="M14 32v18h18l2-2-2-16-16-2z"/><path fill="#f1f1f1" d="M32 32h18v18H32z"/><path fill="#e1e1e1" d="M14 14h18v18H14z"/><path fill="#1c3aa9" d="M32 14v18H14V14z"/><path fill="#4285f4" d="M32 32v18h18V32z"/><path d="M14 32h18v18H14z" fill="#f1f1f1"/><path d="M32 14h18v18H32z" fill="#fff"/></svg>`,
@@ -381,6 +436,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'googleSignIn',
       label: 'Google Sign-In',
       src: 'https://accounts.google.com/gsi/client',
       scriptBundling: false, // CORS prevents bundling
@@ -392,6 +448,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'googleTagManager',
       label: 'Google Tag Manager',
       category: 'tag-manager',
       proxy: 'googleTagManager',
@@ -419,6 +476,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'googleAnalytics',
       label: 'Google Analytics',
       category: 'analytics',
       proxy: 'googleAnalytics',
@@ -435,8 +493,10 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'umamiAnalytics',
       label: 'Umami Analytics',
       proxy: 'umami',
+      scriptBundling: () => 'https://cloud.umami.is/script.js',
       category: 'analytics',
       logo: `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24"><path fill="currentColor" d="M2.203 8.611H.857a.845.845 0 0 0-.841.841v.858a13 13 0 0 0-.016.6c0 6.627 5.373 12 12 12c6.527 0 11.837-5.212 11.996-11.701c0-.025.004-.05.004-.075V9.452a.845.845 0 0 0-.841-.841h-1.346c-1.159-4.329-5.112-7.521-9.805-7.521S3.363 4.282 2.203 8.611m18.444 0H3.37c1.127-3.702 4.57-6.399 8.638-6.399c4.069 0 7.512 2.697 8.639 6.399"/></svg>`,
       import: {
@@ -445,6 +505,7 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
       },
     },
     {
+      registryKey: 'gravatar',
       label: 'Gravatar',
       proxy: 'gravatar',
       src: 'https://secure.gravatar.com/js/gprofiles.js',
@@ -454,6 +515,9 @@ export async function registry(resolve?: (path: string, opts?: ResolvePathOption
         name: 'useScriptGravatar',
         from: await resolve('./runtime/registry/gravatar'),
       },
+      serverHandlers: [
+        { route: '/_scripts/proxy/gravatar', handler: await resolve('./runtime/server/gravatar-proxy') },
+      ],
     },
   ]
 }

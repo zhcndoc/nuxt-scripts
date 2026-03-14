@@ -5,6 +5,7 @@ import type {
 import type { Import } from 'unimport'
 import type { InferInput, ObjectSchema, UnionSchema, ValiError } from 'valibot'
 import type { ComputedRef, Ref } from 'vue'
+import type { BlueskyEmbedInput } from './registry/bluesky-embed'
 import type { ClarityInput } from './registry/clarity'
 import type { CloudflareWebAnalyticsInput } from './registry/cloudflare-web-analytics'
 import type { CrispInput } from './registry/crisp'
@@ -160,6 +161,7 @@ export interface NuxtDevToolsScriptInstance {
 }
 
 export interface ScriptRegistry {
+  blueskyEmbed?: BlueskyEmbedInput
   crisp?: CrispInput
   clarity?: ClarityInput
   cloudflareWebAnalytics?: CloudflareWebAnalyticsInput
@@ -235,7 +237,18 @@ export type RegistryScriptInput<
       scriptOptions?: Omit<NuxtUseScriptOptions, Bundelable extends true ? '' : 'bundle' | Usable extends true ? '' : 'use'>
     } : never)
 
+export interface RegistryScriptServerHandler {
+  route: string
+  handler: string
+  middleware?: boolean
+}
+
 export interface RegistryScript {
+  /**
+   * The config key used in `scripts.registry` in nuxt.config (e.g., 'googleAnalytics', 'plausibleAnalytics').
+   * Used for direct lookup from config to script — avoids fragile import name convention matching.
+   */
+  registryKey?: string
   import?: Import // might just be a component
   scriptBundling?: false | ((options?: any) => string | false)
   /**
@@ -253,6 +266,10 @@ export interface RegistryScript {
   src?: string | false
   category?: string
   logo?: string | { light: string, dark: string }
+  /**
+   * Server handlers (routes/middleware) to register when this script is enabled via registry config.
+   */
+  serverHandlers?: RegistryScriptServerHandler[]
 }
 
 export type ElementScriptTrigger = 'immediate' | 'visible' | string | string[] | false

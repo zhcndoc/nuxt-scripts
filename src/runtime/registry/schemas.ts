@@ -1,5 +1,23 @@
 import { any, array, boolean, custom, literal, minLength, number, object, optional, pipe, record, string, union } from '#nuxt-scripts-validator'
 
+export const BlueskyEmbedOptions = object({
+  /**
+   * The Bluesky post URL to embed.
+   * @example 'https://bsky.app/profile/bsky.app/post/3mgnwwvj3u22a'
+   */
+  postUrl: string(),
+  /**
+   * Custom API endpoint for fetching post data.
+   * @default '/_scripts/embed/bluesky'
+   */
+  apiEndpoint: optional(string()),
+  /**
+   * Custom image proxy endpoint.
+   * @default '/_scripts/embed/bluesky-image'
+   */
+  imageProxyEndpoint: optional(string()),
+})
+
 export const ClarityOptions = object({
   /**
    * The Clarity token.
@@ -463,7 +481,7 @@ export const InstagramEmbedOptions = object({
   captions: optional(boolean()),
   /**
    * Custom API endpoint for fetching embed HTML.
-   * @default '/api/_scripts/instagram-embed'
+   * @default '/_scripts/embed/instagram'
    */
   apiEndpoint: optional(string()),
 })
@@ -714,6 +732,12 @@ export const RybbitAnalyticsOptions = object({
    * API key for authenticated tracking.
    */
   apiKey: optional(string()),
+  /**
+   * Override the analytics host URL. When first-party mode is enabled, this is
+   * auto-injected to route through the proxy. The SDK derives its API endpoint
+   * from the script src, so this changes the script src to `${analyticsHost}/script.js`.
+   */
+  analyticsHost: optional(string()),
 })
 
 export const SegmentOptions = object({
@@ -869,12 +893,12 @@ export const XEmbedOptions = object({
   tweetId: string(),
   /**
    * Optional: Custom API endpoint for fetching tweet data.
-   * @default '/api/_scripts/x-embed'
+   * @default '/_scripts/embed/x'
    */
   apiEndpoint: optional(string()),
   /**
    * Optional: Custom image proxy endpoint.
-   * @default '/api/_scripts/x-embed-image'
+   * @default '/_scripts/embed/x-image'
    */
   imageProxyEndpoint: optional(string()),
 })

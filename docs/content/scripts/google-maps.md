@@ -31,7 +31,23 @@ Nuxt Scripts 提供了一个 `useScriptGoogleMaps` 组合式函数和一个无 U
 pnpm add -D @types/google.maps
 ```
 
-## [`<ScriptGoogleMaps>`](../google-maps){lang="html"}
+## Setup
+
+To use the Google Maps component with server-side features (static map proxy, geocode proxy), enable it in your `nuxt.config`:
+
+```ts [nuxt.config.ts]
+export default defineNuxtConfig({
+  scripts: {
+    registry: {
+      googleMaps: true,
+    },
+  },
+})
+```
+
+This registers server API routes for the static maps image proxy (`/_scripts/proxy/google-static-maps`) and geocode proxy (`/_scripts/proxy/google-maps-geocode`), keeping your API key server-side.
+
+## [`<ScriptGoogleMaps>`{lang="html"}](/scripts/google-maps){lang="html"}
 
 `ScriptGoogleMaps` 组件是对 `useScriptGoogleMaps` 组合式函数的封装。它提供了一种简单方式在你的 Nuxt 应用中嵌入谷歌地图。
 

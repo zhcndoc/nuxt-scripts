@@ -16,6 +16,25 @@ Nuxt Scripts 提供了一个 [`<ScriptInstagramEmbed>`{lang="html"}](/scripts/in
 ::script-stats
 ::
 
+::script-types
+::
+
+## Setup
+
+To use the Instagram embed component, you must enable it in your `nuxt.config`:
+
+```ts [nuxt.config.ts]
+export default defineNuxtConfig({
+  scripts: {
+    registry: {
+      instagramEmbed: true,
+    },
+  },
+})
+```
+
+This registers the required server API routes (`/_scripts/embed/instagram`, `/_scripts/embed/instagram-image`, and `/_scripts/embed/instagram-asset`) that handle fetching embed HTML and proxying images/assets.
+
 ## [`<ScriptInstagramEmbed>`{lang="html"}](/scripts/instagram-embed){lang="html"}
 
 `<ScriptInstagramEmbed>` 组件特点：  

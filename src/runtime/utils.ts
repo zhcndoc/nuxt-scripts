@@ -11,10 +11,15 @@ import type { UseScriptInput } from '@unhead/vue'
 import type { GenericSchema, InferInput, ObjectSchema, UnionSchema, ValiError } from 'valibot'
 import { parse } from '#nuxt-scripts-validator'
 import { defu } from 'defu'
-import { useRuntimeConfig } from 'nuxt/app'
+import { createError, useRuntimeConfig } from 'nuxt/app'
 import { parseQuery, parseURL, withQuery } from 'ufo'
 import { useScript } from './composables/useScript'
 import { createNpmScriptStub } from './npm-script-stub'
+
+const URL_MATCH_RE = /https?:\/\/[^/]+\/_nuxt\/(.+\.vue)(?:\?[^)]*)?:(\d+):(\d+)/
+const URL_PAREN_MATCH_RE = /\(https?:\/\/[^/]+\/_nuxt\/(.+\.vue)(?:\?[^)]*)?:(\d+):(\d+)\)/
+const VUE_MATCH_RE = /([^/\s]+\.vue):(\d+):(\d+)/
+const CLEAN_CALLER_RE = /^\s*at\s+/
 
 export type MaybePromise<T> = Promise<T> | T
 
@@ -40,6 +45,16 @@ type OptionsFn<O> = (options: InferIfSchema<O>, ctx: { scriptInput?: UseScriptIn
 
 export function scriptRuntimeConfig<T extends keyof ScriptRegistry>(key: T) {
   return ((useRuntimeConfig().public.scripts || {}) as ScriptRegistry)[key]
+}
+
+export function requireRegistryEndpoint(componentName: string, registryKey: string): void {
+  const endpoints = (useRuntimeConfig().public['nuxt-scripts'] as any)?.endpoints
+  if (!endpoints?.[registryKey]) {
+    throw createError({
+      message: `${componentName} requires \`scripts.registry.${registryKey}\` to be enabled in nuxt.config`,
+      fatal: import.meta.dev,
+    })
+  }
 }
 
 export function useRegistryScript<T extends Record<string | symbol, any>, O = EmptyOptionsSchema>(registryKey: keyof ScriptRegistry | string, optionsFn: OptionsFn<O>, _userOptions?: RegistryScriptInput<O>): UseScriptContext<UseFunctionType<NuxtUseScriptOptions<T>, T>> {
@@ -83,7 +98,7 @@ export function useRegistryScript<T extends Record<string | symbol, any>, O = Em
   }
 
   const scriptInput = defu(finalScriptInput, userOptions.scriptInput, { key: registryKey }) as any as UseScriptInput
-  const scriptOptions = Object.assign(userOptions?.scriptOptions || {}, options.scriptOptions || {})
+  const scriptOptions = { ...userOptions?.scriptOptions, ...options.scriptOptions }
   if (import.meta.dev) {
     // Capture where the component was loaded from
     const error = new Error('Stack trace for component location')
@@ -98,8 +113,8 @@ export function useRegistryScript<T extends Record<string | symbol, any>, O = Em
     if (callerLine) {
       // Extract URL pattern like "https://localhost:3000/_nuxt/pages/features/custom-registry.vue?t=1758609859248:14:31"
       // Handle both with and without query parameters
-      const urlMatch = callerLine.match(/https?:\/\/[^/]+\/_nuxt\/(.+\.vue)(?:\?[^)]*)?:(\d+):(\d+)/)
-        || callerLine.match(/\(https?:\/\/[^/]+\/_nuxt\/(.+\.vue)(?:\?[^)]*)?:(\d+):(\d+)\)/)
+      const urlMatch = callerLine.match(URL_MATCH_RE)
+        || callerLine.match(URL_PAREN_MATCH_RE)
 
       if (urlMatch) {
         const [, filePath, line, column] = urlMatch
@@ -107,14 +122,14 @@ export function useRegistryScript<T extends Record<string | symbol, any>, O = Em
       }
       else {
         // Try to extract any .vue file path with line:column
-        const vueMatch = callerLine.match(/([^/\s]+\.vue):(\d+):(\d+)/)
+        const vueMatch = callerLine.match(VUE_MATCH_RE)
         if (vueMatch) {
           const [, fileName, line, column] = vueMatch
           loadedFrom = `./${fileName}:${line}:${column}`
         }
         else {
           // Fallback to original cleaning
-          loadedFrom = callerLine.trim().replace(/^\s*at\s+/, '')
+          loadedFrom = callerLine.trim().replace(CLEAN_CALLER_RE, '')
         }
       }
     }

@@ -47,6 +47,10 @@ export interface ScriptStats {
   loadingMethod: 'cdn' | 'npm' | 'dynamic'
 }
 
+const DOMAIN_RE = /^https?:\/\/([^/]+)/
+const USE_SCRIPT_RE = /^useScript/
+const WORD_SPLIT_RE = /[\s-]+/
+
 function computePrivacyLevel(privacy: ScriptPrivacy | null): ScriptStats['privacyLevel'] {
   if (!privacy)
     return 'unknown'
@@ -61,10 +65,11 @@ function computePrivacyLevel(privacy: ScriptPrivacy | null): ScriptStats['privac
 function extractDomains(routes: Record<string, { proxy: string }>): string[] {
   const domains = new Set<string>()
   for (const { proxy } of Object.values(routes)) {
-    const match = proxy.match(/^https?:\/\/([^/]+)/)
+    const match = proxy.match(DOMAIN_RE)
     if (match?.[1])
       domains.add(match[1])
   }
+  // eslint-disable-next-line e18e/prefer-array-to-sorted
   return [...domains].sort()
 }
 
@@ -75,12 +80,12 @@ function extractDomains(routes: Record<string, { proxy: string }>): string[] {
 function deriveMetaKey(importName?: string, label?: string): string {
   if (importName) {
     // Strip "useScript" prefix and lowercase first char
-    const stripped = importName.replace(/^useScript/, '')
+    const stripped = importName.replace(USE_SCRIPT_RE, '')
     return stripped.charAt(0).toLowerCase() + stripped.slice(1)
   }
   if (label) {
     // "Carbon Ads" → "carbonAds", "Google Tag Manager" → "googleTagManager"
-    const words = label.split(/[\s-]+/)
+    const words = label.split(WORD_SPLIT_RE)
     return words.map((w, i) =>
       i === 0 ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(),
     ).join('')
@@ -91,7 +96,7 @@ function deriveMetaKey(importName?: string, label?: string): string {
 export async function getScriptStats(): Promise<ScriptStats[]> {
   const { registry } = await import('./registry')
   const entries = await registry()
-  const proxyConfigs = getAllProxyConfigs('/_scripts')
+  const proxyConfigs = getAllProxyConfigs('/_scripts/assets')
   const sizes = scriptSizes as Record<string, { totalTransferKb: number, totalDecodedKb: number, loadTimeMs: number, scripts: ScriptSizeDetail[] }>
 
   return entries.map((entry) => {
