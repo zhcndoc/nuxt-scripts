@@ -234,6 +234,60 @@ describe('youtube', () => {
   })
 })
 
+describe('gravatar', () => {
+  async function expectImageSnapshot(buffer: Buffer, id: string) {
+    const { toMatchImageSnapshot } = await import('jest-image-snapshot')
+    expect.extend({ toMatchImageSnapshot })
+    ;(expect(buffer) as any).toMatchImageSnapshot({
+      customSnapshotIdentifier: id,
+      customSnapshotsDir: `${import.meta.dirname}/__image_snapshots__`,
+    })
+  }
+
+  it('proxy returns valid image for email lookup', {
+    timeout: 15000,
+  }, async () => {
+    const response = await fetch(url('/_scripts/proxy/gravatar?email=test@example.com&s=80&d=identicon&r=g'))
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toContain('image/')
+    expect(response.headers.get('cache-control')).toContain('public')
+
+    const buffer = Buffer.from(await response.arrayBuffer())
+    expect(buffer.length).toBeGreaterThan(100)
+    await expectImageSnapshot(buffer, 'gravatar-email-proxy')
+  })
+
+  it('proxy returns valid image for hash lookup', {
+    timeout: 15000,
+  }, async () => {
+    // SHA256 of "test@example.com"
+    const hash = '973dfe463ec85785f5f95af5ba3906eedb2d931c24e69824a89ea65dba4e813b'
+    const response = await fetch(url(`/_scripts/proxy/gravatar?hash=${hash}&s=80&d=identicon&r=g`))
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toContain('image/')
+
+    const buffer = Buffer.from(await response.arrayBuffer())
+    expect(buffer.length).toBeGreaterThan(100)
+    await expectImageSnapshot(buffer, 'gravatar-hash-proxy')
+  })
+
+  it('email and hash proxy return identical images', {
+    timeout: 15000,
+  }, async () => {
+    const hash = '973dfe463ec85785f5f95af5ba3906eedb2d931c24e69824a89ea65dba4e813b'
+    const [emailRes, hashRes] = await Promise.all([
+      fetch(url('/_scripts/proxy/gravatar?email=test@example.com&s=80&d=identicon&r=g')),
+      fetch(url(`/_scripts/proxy/gravatar?hash=${hash}&s=80&d=identicon&r=g`)),
+    ])
+
+    const emailBuffer = Buffer.from(await emailRes.arrayBuffer())
+    const hashBuffer = Buffer.from(await hashRes.arrayBuffer())
+
+    // Same email hashed server-side should produce identical image to pre-computed hash
+    expect(emailBuffer.equals(hashBuffer)).toBe(true)
+  })
+})
+
 describe('third-party-capital', () => {
   it('expect GA to collect data', {
     timeout: 10000,

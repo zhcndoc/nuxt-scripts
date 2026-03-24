@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
+import { normalizeRegistryConfig } from '../../src/normalize'
 import { resolveTriggerForTemplate, templatePlugin } from '../../src/templates'
+
+/** Normalize registry config before passing to templatePlugin (mirrors module.ts behavior) */
+function templatePluginNormalized(config: Parameters<typeof templatePlugin>[0], registry: Parameters<typeof templatePlugin>[1]) {
+  if (config.registry)
+    normalizeRegistryConfig(config.registry as Record<string, any>)
+  return templatePlugin(config, registry)
+}
 
 describe('template plugin file', () => {
   // global
@@ -102,8 +110,8 @@ describe('template plugin file', () => {
     `)
   })
   // registry
-  it('registry object', async () => {
-    const res = templatePlugin({
+  it('registry object without trigger (infrastructure only, no composable call)', async () => {
+    const res = templatePluginNormalized({
       globals: {},
       registry: {
         stripe: {
@@ -117,10 +125,28 @@ describe('template plugin file', () => {
         },
       },
     ])
-    expect(res).toContain('useScriptStripe({"id":"test"})')
+    expect(res).not.toContain('useScriptStripe')
   })
-  it('registry array', async () => {
-    const res = templatePlugin({
+  it('registry object with trigger (auto-loads globally)', async () => {
+    const res = templatePluginNormalized({
+      globals: {},
+      registry: {
+        stripe: {
+          id: 'test',
+          trigger: 'onNuxtReady',
+        },
+      },
+    }, [
+      {
+        import: {
+          name: 'useScriptStripe',
+        },
+      },
+    ])
+    expect(res).toContain('useScriptStripe({"id":"test","scriptOptions":{"trigger":"onNuxtReady"}})')
+  })
+  it('registry array with trigger', async () => {
+    const res = templatePluginNormalized({
       globals: {},
       registry: {
         stripe: [
@@ -142,8 +168,8 @@ describe('template plugin file', () => {
     expect(res).toContain('useScriptStripe({"id":"test","scriptOptions":{"trigger":"onNuxtReady"}})')
   })
 
-  it('registry with partytown option', async () => {
-    const res = templatePlugin({
+  it('registry with partytown but no trigger (no composable call)', async () => {
+    const res = templatePluginNormalized({
       globals: {},
       registry: {
         googleAnalytics: [
@@ -158,7 +184,26 @@ describe('template plugin file', () => {
         },
       },
     ])
-    expect(res).toContain('useScriptGoogleAnalytics({"id":"G-XXXXX","scriptOptions":{"partytown":true}})')
+    expect(res).not.toContain('useScriptGoogleAnalytics')
+  })
+
+  it('registry with partytown and trigger', async () => {
+    const res = templatePluginNormalized({
+      globals: {},
+      registry: {
+        googleAnalytics: [
+          { id: 'G-XXXXX' },
+          { partytown: true, trigger: 'onNuxtReady' },
+        ],
+      },
+    }, [
+      {
+        import: {
+          name: 'useScriptGoogleAnalytics',
+        },
+      },
+    ])
+    expect(res).toContain('useScriptGoogleAnalytics({"id":"G-XXXXX","scriptOptions":{"partytown":true,"trigger":"onNuxtReady"}})')
   })
 
   // Test idleTimeout trigger in globals
@@ -189,7 +234,7 @@ describe('template plugin file', () => {
 
   // Test registry with idleTimeout trigger
   it('registry with idleTimeout trigger', async () => {
-    const res = templatePlugin({
+    const res = templatePluginNormalized({
       registry: {
         googleAnalytics: [
           { id: 'GA_MEASUREMENT_ID' },

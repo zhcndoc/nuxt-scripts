@@ -1,39 +1,24 @@
 ---
 title: X 嵌入
-description: 服务器端渲染的 X（Twitter）嵌入，无需任何客户端 API 调用。
+description: 服务端渲染的 X（Twitter）嵌入，零客户端 API 调用。
 links:
   - label: ScriptXEmbed
     icon: i-simple-icons-github
     to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptXEmbed.vue
     size: xs
-
 ---
 
 [X（前身为 Twitter）](https://x.com) 是一个用于分享帖子的社交媒体平台。
 
-Nuxt Scripts 提供了一个 [`<ScriptXEmbed>`{lang="html"}](/scripts/x-embed){lang="html"} 组件，它在服务器端获取推文数据，并通过插槽暴露出来，实现完全的样式控制。所有数据均通过你的服务器代理 —— 不进行任何客户端对 X 的 API 调用。
+Nuxt Scripts 提供了 [`<ScriptXEmbed>`{lang="html"}](/scripts/x-embed){lang="html"} 组件，它在服务器端获取推文数据，并通过插槽暴露出来，实现完全的样式控制。所有数据均通过你的服务器代理 —— 不进行任何客户端对 X 的 API 调用。
 
 ::script-stats
 ::
 
-::script-types
+::script-docs{embed}
 ::
 
-## 安装配置
-
-要使用 X 嵌入组件，必须在你的 `nuxt.config` 中启用它：
-
-```ts [nuxt.config.ts]
-export default defineNuxtConfig({
-  scripts: {
-    registry: {
-      xEmbed: true,
-    },
-  },
-})
-```
-
-这将注册所需的服务器 API 路由（`/_scripts/embed/x` 和 `/_scripts/embed/x-image`），用于处理获取推文数据和代理图片。
+这会注册所需的服务器 API 路由（`/_scripts/embed/x` 和 `/_scripts/embed/x-image`），用于获取推文数据和代理图片。
 
 ## [`<ScriptXEmbed>`{lang="html"}](/scripts/x-embed){lang="html"}
 
@@ -192,7 +177,10 @@ interface SlotProps {
 ## 隐私优势
 
 - 不加载第三方 JavaScript
-- X 不设置任何 Cookies
-- 无浏览器到 X 的直接通信
-- 用户 IP 不会泄露给 X
+- X 不设置 Cookie
+- 浏览器与 X 无直接通信
+- 用户 IP 地址不会与 X 共享
 - 所有内容均从你的域名提供
+
+::script-types
+::

@@ -10,7 +10,6 @@ links:
     icon: i-simple-icons-github
     to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptYouTubePlayer.vue
     size: xs
-
 ---
 
 [YouTube](https://youtube.com/) 是一个视频托管平台，允许您上传和分享视频。
@@ -20,7 +19,7 @@ Nuxt Scripts 提供了 `useScriptYouTubePlayer` 组合函数和无头（headless
 ::script-stats
 ::
 
-::script-types
+::script-docs
 ::
 
 ## 类型
@@ -35,8 +34,7 @@ pnpm add -D @types/youtube
 
 `ScriptYouTubePlayer` 组件是基于 `useScriptYouTubePlayer` 组合函数的封装。它提供了一种简单的方法来在您的 Nuxt 应用中嵌入 YouTube 视频。
 
-它通过利用 [元素事件触发器](/docs/guides/script-triggers#element-event-triggers) 进行性能优化，仅在特定元素发生事件时加载 YouTube 播放器。
-默认情况下，它会在 `mousedown` 事件时加载。
+它通过利用 [元素事件触发器](/docs/guides/script-triggers#element-event触发器) 进行性能优化，仅在特定元素发生事件时加载 YouTube 播放器。默认情况下，它会在 `mousedown` 事件时加载。
 
 ### 演示
 
@@ -84,7 +82,7 @@ function stateChange(event) {
 
 `ScriptYouTubePlayer` 组件接受以下 props：
 
-- `trigger`：加载 YouTube 播放器的触发事件。默认是 `mousedown`。欲了解更多信息，请参阅 [元素事件触发器](/docs/guides/script-triggers#element-event-triggers)。
+- `trigger`：加载 YouTube 播放器的触发事件。默认是 `mousedown`。欲了解更多信息，请参阅 [元素事件触发器](/docs/guides/script-triggers#element-event-触发器)。
 - `placeholderAttrs`：占位图片的属性。默认是 `{ loading: 'lazy' }`。
 - `aboveTheFold`：优化首屏内容的占位图片。默认是 `false`。
 - `placeholderObjectFit`：占位图片的 `object-fit` CSS 属性。默认是 `cover`。对非16:9视频（如 YouTube Shorts）很有用。
@@ -237,14 +235,8 @@ export function useScriptYouTubePlayer<T extends YouTubePlayerApi>(_options?: Yo
 
 请参阅 [注册脚本](/docs/guides/registry-scripts) 指南，了解更多高级用法。
 
-### YouTubePlayerApi
-
-```ts
-/// <reference types="youtube" />
-export interface YouTubePlayerApi {
-  YT: typeof YT
-}
-```
+::script-types
+::
 
 ## 示例
 

@@ -1,17 +1,15 @@
 ---
-
-title: Google Adsense  
-description: 在您的 Nuxt 应用中显示 Google Adsense 广告。  
-links:  
-  - label: useScriptGoogleAdsense  
-    icon: i-simple-icons-github  
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/google-adsense.ts  
-    size: xs  
-  - label: "<ScriptGoogleAdsense>"  
-    icon: i-simple-icons-github  
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptGoogleAdsense.vue  
-    size: xs  
-
+title: Google Adsense
+description: 在您的 Nuxt 应用中展示 Google AdSense 广告。
+links:
+  - label: useScriptGoogleAdsense
+    icon: i-simple-icons-github
+    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/google-adsense.ts
+    size: xs
+  - label: "<ScriptGoogleAdsense>"
+    icon: i-simple-icons-github
+    to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptGoogleAdsense.vue
+    size: xs
 ---
 
 [Google AdSense](https://www.google.com/adsense/start/) 允许您通过展示与内容相关的 Google 广告来实现网站的盈利。
@@ -23,22 +21,10 @@ Nuxt Scripts 提供：
 
 ## 全局配置
 
-您可以在 `nuxt.config.ts` 中全局配置 Google AdSense，这样脚本将在所有页面自动加载。
+::script-docs
+::
 
-```ts [nuxt.config.ts]
-export default defineNuxtConfig({
-  scripts: {
-    registry: {
-      googleAdsense: {
-        client: "ca-pub-<your-id>", // 您的 Google AdSense 发布者 ID
-        autoAds: true, // 启用自动广告
-      },
-    },
-  },
-})
-```
-
-## 如何找到 `<your-id>`（发布者 ID）
+## 在哪里找到 `<your-id>`{lang="html"}（发布者 ID）
 
 您的 **Google AdSense 发布者 ID**（也称为 `ca-pub-XXXXXXX`）可以在您的 **Google AdSense 账户**中找到：
 
@@ -210,4 +196,7 @@ export function useScriptGoogleAdsense<T extends GoogleAdsenseApi>(
 
 ::callout{icon="i-heroicons-light-bulb" to="https://support.google.com/adsense" target="_blank"}  
 需要更多帮助？请查看官方 **Google AdSense 指南**  
+::
+
+::script-types
 ::

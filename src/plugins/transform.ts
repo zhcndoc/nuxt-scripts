@@ -2,7 +2,7 @@ import type { RegistryScript } from '#nuxt-scripts/types'
 import type { FetchOptions } from 'ofetch'
 import type { SourceMapInput } from 'rollup'
 import type { InferInput } from 'valibot'
-import type { ProxyRewrite } from '../proxy-configs'
+import type { ProxyConfig, ProxyRewrite } from '../first-party'
 import { createHash } from 'node:crypto'
 import fsp from 'node:fs/promises'
 import { tryUseNuxt, useNuxt } from '@nuxt/kit'
@@ -16,7 +16,6 @@ import { hasProtocol, joinURL, parseURL } from 'ufo'
 import { createUnplugin } from 'unplugin'
 import { bundleStorage } from '../assets'
 import { logger } from '../logger'
-import { getProxyConfig } from '../proxy-configs'
 import { rewriteScriptUrlsAST } from './rewrite-ast'
 import { isJS, isVue } from './util'
 
@@ -68,13 +67,13 @@ export interface AssetBundlerTransformerOptions {
    */
   registryConfig?: Record<string, any>
   /**
-   * Whether first-party mode is enabled
+   * Pre-built proxy configs from setupFirstParty. Empty object if first-party is disabled.
    */
-  firstPartyEnabled?: boolean
+  proxyConfigs?: Record<string, ProxyConfig>
   /**
-   * Path prefix for collection proxy endpoints
+   * Proxy prefix for first-party mode. Used to derive rewrite targets from domains.
    */
-  firstPartyCollectPrefix?: string
+  proxyPrefix?: string
   fallbackOnSrcOnBundleFail?: boolean
   fetchOptions?: FetchOptions
   cacheMaxAge?: number
@@ -85,6 +84,12 @@ export interface AssetBundlerTransformerOptions {
    */
   integrity?: boolean | IntegrityAlgorithm
   renderedScript?: Map<string, RenderedScriptMeta | Error>
+  /**
+   * Set of registry script keys that use Partytown.
+   * Scripts in this set skip API call rewrites (__nuxtScripts.*) since Partytown's
+   * resolveUrl hook handles network interception in the web worker instead.
+   */
+  partytownScripts?: Set<string>
 }
 
 function normalizeScriptData(src: string, assetsBaseURL: string = '/_scripts/assets'): { url: string, filename?: string } {
@@ -109,9 +114,12 @@ async function downloadScript(opts: {
   filename?: string
   forceDownload?: boolean
   proxyRewrites?: ProxyRewrite[]
+  postProcess?: ProxyConfig['postProcess']
   integrity?: boolean | IntegrityAlgorithm
+  skipApiRewrites?: boolean
+  neutralizeCanvas?: boolean
 }, renderedScript: NonNullable<AssetBundlerTransformerOptions['renderedScript']>, fetchOptions?: FetchOptions, cacheMaxAge?: number) {
-  const { src, url, filename, forceDownload, integrity, proxyRewrites } = opts
+  const { src, url, filename, forceDownload, integrity, proxyRewrites, postProcess, skipApiRewrites, neutralizeCanvas } = opts
   if (src === url || !filename) {
     return
   }
@@ -121,7 +129,7 @@ async function downloadScript(opts: {
   if (!res) {
     // Use storage to cache the font data between builds
     // Include proxy in cache key to differentiate proxied vs non-proxied versions
-    // Also include a hash of proxyRewrites content to handle different collectPrefix values
+    // Also include a hash of proxyRewrites content to handle different proxyPrefix values
     const proxyRewritesHash = proxyRewrites?.length ? `-${ohash(proxyRewrites)}` : ''
     const cacheKey = proxyRewrites?.length ? `bundle-proxy:${filename.replace('.js', `${proxyRewritesHash}.js`)}` : `bundle:${filename}`
     const shouldUseCache = !forceDownload && await storage.hasItem(cacheKey) && !(await isCacheExpired(storage, filename, cacheMaxAge))
@@ -155,7 +163,7 @@ async function downloadScript(opts: {
     // Apply URL rewrites for proxy mode (AST-based at build time)
     if (proxyRewrites?.length && res) {
       const content = res.toString('utf-8')
-      const rewritten = rewriteScriptUrlsAST(content, filename || 'script.js', proxyRewrites)
+      const rewritten = rewriteScriptUrlsAST(content, filename || 'script.js', proxyRewrites, postProcess, { skipApiRewrites, neutralizeCanvas })
       res = Buffer.from(rewritten, 'utf-8')
       logger.debug(`Rewrote ${proxyRewrites.length} URL patterns in ${filename}`)
     }
@@ -390,48 +398,58 @@ export function NuxtScriptBundleTransformer(options: AssetBundlerTransformerOpti
                     canBundle = bundleValue === true || bundleValue === 'force' || String(bundleValue) === 'true'
                     forceDownload = bundleValue === 'force'
                   }
-                  // Check for per-script first-party opt-out (firstParty: false)
+                  // Check for per-script proxy opt-out
                   // Check in three locations:
-                  // 1. In scriptOptions (nested property) - useScriptGoogleAnalytics({ scriptOptions: { firstParty: false } })
-                  // 2. In the second argument for direct options - useScript('...', { firstParty: false })
-                  // 3. In the first argument's direct properties - useScript({ src: '...', firstParty: false })
+                  // 1. In scriptOptions (nested) - useScriptGA({ scriptOptions: { proxy: false } })
+                  // 2. In second argument (direct) - useScript('...', { proxy: false })
+                  // 3. In first argument's properties - useScript({ src: '...', proxy: false })
 
-                  // Check in scriptOptions (nested)
-                  const firstPartyOption = scriptOptions?.value.properties?.find((prop: any) => {
-                    return prop.type === 'Property' && prop.key?.name === 'firstParty' && prop.value.type === 'Literal'
+                  const rpiOption = scriptOptions?.value.properties?.find((prop: any) => {
+                    return prop.type === 'Property' && prop.key?.name === 'proxy' && prop.value.type === 'Literal'
                   })
-                  let firstPartyOptOut = firstPartyOption?.value.value === false
+                  let firstPartyOptOut = rpiOption?.value.value === false
 
-                  // Check in second argument (direct options)
                   if (!firstPartyOptOut && node.arguments[1]?.type === 'ObjectExpression') {
-                    const secondArgFirstPartyProp = node.arguments[1].properties.find(
-                      (p: any) => p.type === 'Property' && p.key?.name === 'firstParty' && p.value.type === 'Literal',
+                    const secondArgProp = node.arguments[1].properties.find(
+                      (p: any) => p.type === 'Property' && p.key?.name === 'proxy' && p.value.type === 'Literal',
                     )
-                    firstPartyOptOut = secondArgFirstPartyProp?.value.value === false
+                    firstPartyOptOut = secondArgProp?.value.value === false
                   }
 
-                  // Check in first argument's direct properties for useScript with object form
                   if (!firstPartyOptOut && node.arguments[0]?.type === 'ObjectExpression') {
-                    const firstArgFirstPartyProp = node.arguments[0].properties.find(
-                      (p: any) => p.type === 'Property' && p.key?.name === 'firstParty' && p.value.type === 'Literal',
+                    const firstArgProp = node.arguments[0].properties.find(
+                      (p: any) => p.type === 'Property' && p.key?.name === 'proxy' && p.value.type === 'Literal',
                     )
-                    firstPartyOptOut = firstArgFirstPartyProp?.value.value === false
+                    firstPartyOptOut = firstArgProp?.value.value === false
                   }
                   if (canBundle) {
                     const { url: _url, filename } = normalizeScriptData(src, options.assetsBaseURL)
                     // Get proxy rewrites if first-party is enabled, not opted out, and script supports it
-                    // Use script's proxy field if defined, otherwise fall back to registry key
+                    // Use script's proxyConfig alias if defined, otherwise fall back to registry key
                     const script = options.scripts?.find(s => s.import.name === fnName)
-                    const proxyConfigKey = script?.proxy !== false ? (script?.proxy || registryKey) : undefined
-                    const proxyRewrites = options.firstPartyEnabled && !firstPartyOptOut && proxyConfigKey && options.firstPartyCollectPrefix
-                      ? getProxyConfig(proxyConfigKey, options.firstPartyCollectPrefix)?.rewrite
+                    const hasReverseProxy = script?.capabilities?.proxy
+                    const proxyConfigKey = hasReverseProxy ? (script?.proxyConfig || registryKey) : undefined
+                    const proxyConfig = !firstPartyOptOut && proxyConfigKey
+                      ? options.proxyConfigs?.[proxyConfigKey]
                       : undefined
+                    // Derive rewrites from domains: { from: domain, to: proxyPrefix/domain }
+                    const proxyRewrites = proxyConfig?.domains?.map(domain => ({
+                      from: domain,
+                      to: `${options.proxyPrefix}/${domain}`,
+                    }))
+                    const postProcess = proxyConfig?.postProcess
+                    const skipApiRewrites = !!(registryKey && options.partytownScripts?.has(registryKey))
+                    // Gate canvas fingerprinting neutralization on the script's hardware privacy flag
+                    const neutralizeCanvas = proxyConfig?.privacy !== undefined
+                      && typeof proxyConfig.privacy === 'object'
+                      ? (proxyConfig.privacy.hardware ?? true)
+                      : true
 
                     // Defer async download + MagicString operations
                     deferredOps.push(async () => {
                       let url = _url
                       try {
-                        await downloadScript({ src: src as string, url, filename, forceDownload, proxyRewrites, integrity: options.integrity }, renderedScript, options.fetchOptions, options.cacheMaxAge)
+                        await downloadScript({ src: src as string, url, filename, forceDownload, proxyRewrites, postProcess, integrity: options.integrity, skipApiRewrites, neutralizeCanvas }, renderedScript, options.fetchOptions, options.cacheMaxAge)
                       }
                       catch (e: any) {
                         if (options.fallbackOnSrcOnBundleFail) {

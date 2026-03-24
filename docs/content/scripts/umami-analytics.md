@@ -1,5 +1,4 @@
 ---
-
 title: Umami 分析
 description: 在你的 Nuxt 应用中使用 Umami 分析。
 links:
@@ -7,7 +6,6 @@ links:
     icon: i-simple-icons-github
     to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/umami-analytics.ts
     size: xs
-
 ---
 
 [Umami](https://umami.is/) 收集你关注的所有指标，帮助你做出更好的决策。
@@ -29,9 +27,6 @@ useScriptUmamiAnalytics({
   }
 })
 ```
-
-::script-types
-::
 
 ## 高级功能
 
@@ -92,3 +87,6 @@ useScriptUmamiAnalytics({
   beforeSend: 'myBeforeSendHandler'
 })
 ```
+
+::script-types
+::

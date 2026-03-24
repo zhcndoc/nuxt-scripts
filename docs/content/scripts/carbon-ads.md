@@ -1,12 +1,11 @@
 ---
-title: Carbon Ads 碳广告
-description: 在您的 Nuxt 应用中使用 Vue 组件展示碳广告。
+title: Carbon 广告
+description: 使用 Vue 组件在您的 Nuxt 应用中展示 Carbon 广告。
 links:
   - label: "<ScriptCarbonAds>"
     icon: i-simple-icons-github
     to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptCarbonAds.vue
     size: xs
-
 ---
 
 [Carbon Ads](https://www.carbonads.net/) 是一种广告服务，提供对网站展示广告的性能友好型方案。
@@ -16,7 +15,8 @@ Nuxt Scripts 提供了一个无头（headless）`ScriptCarbonAds` 组件，用�
 ::script-stats
 ::
 
-`ScriptCarbonAds` 组件的工作方式与其他 Nuxt Scripts 组件不同，它不依赖于 `useScript`，而是在组件挂载时简单地将一个 script 标签插入组件的 div 中。
+::script-docs
+::
 
 默认情况下，组件使用 CarbonAds 的最佳实践，即在挂载时立即加载。如果您希望在特定事件触发时加载广告，可以使用[元素事件触发器](/docs/guides/script-triggers#element-event-triggers)。
 
@@ -32,7 +32,7 @@ Nuxt Scripts 提供了一个无头（headless）`ScriptCarbonAds` 组件，用�
 
 ### 处理广告拦截器
 
-当 CarbonAds 被拦截时，您可以使用这些插槽来添加备用内容。
+当 Carbon Ads 被拦截时，您可以使用这些插槽来添加备用内容。
 
 ```vue
 <template>
@@ -162,12 +162,7 @@ Nuxt Scripts 提供了一个无头（headless）`ScriptCarbonAds` 组件，用�
 
 完整的 props、事件和插槽请参阅[门面组件 API](/docs/guides/facade-components#facade-components-api)。
 
-注意：Carbon Ads 脚本**不**扩展 `useScript` 组合函数。访问该脚本会返回 `HTMLScriptElement`。
+注意：Carbon Ads 脚本**不**扩展 [`useScript()`{lang="ts"}](/docs/api/use-script){lang="ts"} 组合函数。访问该脚本会返回 `HTMLScriptElement`。
 
-### Props
-
-`ScriptCarbonAds` 组件接受以下属性：
-
-- `serve`：Carbon Ads 提供的服务 URL。
-- `placement`：Carbon Ads 提供的广告位 ID。
-- `format`：Carbon Ads 提供的格式。
+::script-types
+::

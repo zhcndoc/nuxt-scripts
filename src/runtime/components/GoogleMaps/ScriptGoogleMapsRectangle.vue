@@ -1,15 +1,67 @@
 <script setup lang="ts">
-import { whenever } from '@vueuse/core'
-import { inject, onUnmounted } from 'vue'
-import { MAP_INJECTION_KEY } from './ScriptGoogleMaps.vue'
+import { watch } from 'vue'
+import { bindGoogleMapsEvents } from './bindGoogleMapsEvents'
+import { useGoogleMapsResource } from './useGoogleMapsResource'
 
 const props = defineProps<{
+  /**
+   * Configuration options for the rectangle overlay.
+   * @see https://developers.google.com/maps/documentation/javascript/reference/polygon#RectangleOptions
+   */
   options?: Omit<google.maps.RectangleOptions, 'map'>
 }>()
 
 const emit = defineEmits<{
-  (event: typeof eventsWithoutPayload[number]): void
-  (event: typeof eventsWithMapMouseEventPayload[number], payload: google.maps.MapMouseEvent): void
+  /**
+   * Fired when the rectangle's bounds are changed.
+   * @see https://developers.google.com/maps/documentation/javascript/reference/polygon#Rectangle.bounds_changed
+   */
+  bounds_changed: []
+  /**
+   * Fired when the rectangle is clicked.
+   * @see https://developers.google.com/maps/documentation/javascript/reference/polygon#Rectangle.click
+   */
+  click: [payload: google.maps.MapMouseEvent]
+  /**
+   * Fired when the DOM contextmenu event is fired on the rectangle.
+   */
+  contextmenu: [payload: google.maps.MapMouseEvent]
+  /**
+   * Fired when the rectangle is double clicked.
+   */
+  dblclick: [payload: google.maps.MapMouseEvent]
+  /**
+   * Fired repeatedly while the user drags the rectangle.
+   */
+  drag: [payload: google.maps.MapMouseEvent]
+  /**
+   * Fired when the user stops dragging the rectangle.
+   */
+  dragend: [payload: google.maps.MapMouseEvent]
+  /**
+   * Fired when the user starts dragging the rectangle.
+   */
+  dragstart: [payload: google.maps.MapMouseEvent]
+  /**
+   * Fired when the DOM mousedown event is fired on the rectangle.
+   */
+  mousedown: [payload: google.maps.MapMouseEvent]
+  /**
+   * Fired when the DOM mousemove event is fired on the rectangle.
+   */
+  mousemove: [payload: google.maps.MapMouseEvent]
+  /**
+   * Fired when the mouse leaves the area of the rectangle.
+   */
+  mouseout: [payload: google.maps.MapMouseEvent]
+  /**
+   * Fired when the mouse enters the area of the rectangle.
+   */
+  mouseover: [payload: google.maps.MapMouseEvent]
+  /**
+   * Fired when the DOM mouseup event is fired on the rectangle.
+   */
+  mouseup: [payload: google.maps.MapMouseEvent]
 }>()
 
 const eventsWithoutPayload = [
@@ -30,47 +82,26 @@ const eventsWithMapMouseEventPayload = [
   'mouseup',
 ] as const
 
-const mapContext = inject(MAP_INJECTION_KEY, undefined)
-
-let rectangle: google.maps.Rectangle | undefined
-
-whenever(() => mapContext?.map.value && mapContext.mapsApi.value, () => {
-  rectangle = new mapContext!.mapsApi.value!.Rectangle({
-    map: mapContext!.map.value,
-    ...props.options,
-  })
-
-  setupRectangleEventListeners(rectangle)
-
-  whenever(() => props.options, (options) => {
-    rectangle?.setOptions(options)
-  }, {
-    deep: true,
-  })
-}, {
-  immediate: true,
-  once: true,
+const rectangle = useGoogleMapsResource<google.maps.Rectangle>({
+  create({ mapsApi, map }) {
+    const r = new mapsApi.Rectangle({ map, ...props.options })
+    bindGoogleMapsEvents(r, emit, {
+      noPayload: eventsWithoutPayload,
+      withPayload: eventsWithMapMouseEventPayload,
+    })
+    return r
+  },
+  cleanup(r, { mapsApi }) {
+    mapsApi.event.clearInstanceListeners(r)
+    r.setMap(null)
+  },
 })
 
-onUnmounted(() => {
-  if (!rectangle || !mapContext?.mapsApi.value) {
-    return
+watch(() => props.options, (options) => {
+  if (rectangle.value && options) {
+    rectangle.value.setOptions(options)
   }
-
-  mapContext.mapsApi.value.event.clearInstanceListeners(rectangle)
-
-  rectangle.setMap(null)
-})
-
-function setupRectangleEventListeners(rectangle: google.maps.Rectangle) {
-  eventsWithoutPayload.forEach((event) => {
-    rectangle.addListener(event, () => emit(event))
-  })
-
-  eventsWithMapMouseEventPayload.forEach((event) => {
-    rectangle.addListener(event, (payload: google.maps.MapMouseEvent) => emit(event, payload))
-  })
-}
+}, { deep: true })
 </script>
 
 <template>

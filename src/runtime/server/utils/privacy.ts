@@ -21,14 +21,14 @@ export interface ProxyPrivacy {
  * Privacy input: `true` = full anonymize, `false` = passthrough (still strips sensitive headers),
  * or a `ProxyPrivacy` object for granular control (unset flags default to `false` — opt-in).
  */
-export type ProxyPrivacyInput = boolean | ProxyPrivacy | null
+export type ProxyPrivacyInput = boolean | ProxyPrivacy
 
 /** Resolved privacy with all flags explicitly set. */
 export type ResolvedProxyPrivacy = Required<ProxyPrivacy>
 
-/** Full anonymization — all flags true. Used as fail-closed default. */
+/** Full anonymization — all flags true. Used as fail-closed default. Mirrors PRIVACY_FULL in proxy-configs.ts. */
 const FULL_PRIVACY: ResolvedProxyPrivacy = { ip: true, userAgent: true, language: true, screen: true, timezone: true, hardware: true }
-/** Passthrough — all flags false. */
+/** Passthrough — all flags false. Mirrors PRIVACY_NONE in proxy-configs.ts. */
 const NO_PRIVACY: ResolvedProxyPrivacy = { ip: false, userAgent: false, language: false, screen: false, timezone: false, hardware: false }
 
 const MAJOR_VERSION_RE = /^(\d+)/
@@ -50,7 +50,7 @@ const LANG_CODE_RE = /^[a-z]{2}(?:-[a-z]{2,})?$/i
 export function resolvePrivacy(input?: ProxyPrivacyInput): ResolvedProxyPrivacy {
   if (input === true)
     return { ...FULL_PRIVACY }
-  if (input === false || input === undefined || input === null)
+  if (input === false || input === undefined)
     return { ...NO_PRIVACY }
   return {
     ip: input.ip ?? false,
@@ -69,7 +69,7 @@ export function resolvePrivacy(input?: ProxyPrivacyInput): ResolvedProxyPrivacy 
  * When `override` is an object, only explicitly-set fields override.
  */
 export function mergePrivacy(base: ResolvedProxyPrivacy, override?: ProxyPrivacyInput): ResolvedProxyPrivacy {
-  if (override === undefined || override === null)
+  if (override === undefined)
     return base
   // Boolean fully replaces
   if (typeof override === 'boolean')
@@ -149,11 +149,13 @@ export const STRIP_PARAMS = {
   // Browser version lists — generalized to major versions (d_bvs = Snapchat, uafvl = GA Client Hints)
   browserVersion: ['d_bvs', 'uafvl'],
   // Browser data lists — replaced with empty value
-  browserData: ['plugins', 'fonts'],
+  browserData: ['plugins', 'fonts', 'audiofingerprint'],
   // Location/Timezone — generalized
   location: ['tz', 'timezone', 'timezoneoffset'],
-  // Canvas/WebGL/Audio fingerprints — replaced with empty value (pure fingerprints, no analytics value)
-  canvas: ['canvas', 'webgl', 'audiofingerprint'],
+  // Canvas/WebGL fingerprints — neutralized at build time via AST rewriting (rewrite-ast.ts).
+  // These params are no longer stripped at runtime; the source APIs (toDataURL, WEBGL_debug_renderer_info)
+  // are neutralized before the script ever runs.
+  // canvas: ['canvas', 'webgl'],
   // Combined device fingerprinting (X/Twitter dv param contains: timezone, locale, vendor, platform, screen, etc.)
   deviceInfo: ['dv', 'device_info', 'deviceinfo'],
 }
@@ -390,6 +392,14 @@ export function anonymizeDeviceInfo(value: string): string {
  * When `privacy` is provided, only categories with their flag set to `true` are processed.
  * Default (no arg) = all categories active, so existing callers work unchanged.
  */
+function matchesParam(key: string, params: string[]): boolean {
+  const lk = key.toLowerCase()
+  return params.some((pm) => {
+    const lp = pm.toLowerCase()
+    return lk === lp || lk.startsWith(`${lp}[`)
+  })
+}
+
 export function stripPayloadFingerprinting(
   payload: Record<string, unknown>,
   privacy?: ResolvedProxyPrivacy,
@@ -411,14 +421,6 @@ export function stripPayloadFingerprinting(
 
   for (const [key, value] of Object.entries(payload)) {
     const lowerKey = key.toLowerCase()
-
-    const matchesParam = (key: string, params: string[]) => {
-      const lk = key.toLowerCase()
-      return params.some((pm) => {
-        const lp = pm.toLowerCase()
-        return lk === lp || lk.startsWith(`${lp}[`)
-      })
-    }
 
     // Language params — controlled by language flag
     const isLanguageParam = NORMALIZE_PARAMS.language.some(pm => lowerKey === pm.toLowerCase())
@@ -468,17 +470,19 @@ export function stripPayloadFingerprinting(
       }
       continue
     }
-    // Generalize hardware to common bucket — screen flag (device capabilities)
+    // Generalize hardware capabilities (concurrency, memory) — hardware flag
     if (matchesParam(key, STRIP_PARAMS.hardware)) {
-      result[key] = p.screen ? generalizeHardware(value) : value
+      result[key] = p.hardware ? generalizeHardware(value) : value
       continue
     }
     // Generalize version strings to major version — hardware flag
+    // (OS/platform versions are hardware fingerprinting vectors: d_os, uapv)
     if (matchesParam(key, STRIP_PARAMS.version)) {
       result[key] = p.hardware ? generalizeVersion(value) : value
       continue
     }
     // Generalize browser version lists to major versions — hardware flag
+    // (full version lists enable cross-site fingerprinting: d_bvs, uafvl)
     if (matchesParam(key, STRIP_PARAMS.browserVersion)) {
       result[key] = p.hardware ? generalizeBrowserVersions(value) : value
       continue
@@ -490,12 +494,7 @@ export function stripPayloadFingerprinting(
     }
     // Replace browser data lists with empty value — hardware flag
     if (matchesParam(key, STRIP_PARAMS.browserData)) {
-      result[key] = p.hardware ? (Array.isArray(value) ? [] : '') : value
-      continue
-    }
-    // Replace canvas/webgl/audio fingerprints with empty value — hardware flag
-    if (matchesParam(key, STRIP_PARAMS.canvas)) {
-      result[key] = p.hardware ? (typeof value === 'number' ? 0 : typeof value === 'object' ? {} : '') : value
+      result[key] = p.hardware ? (Array.isArray(value) ? [] : typeof value === 'number' ? 0 : '') : value
       continue
     }
     // Anonymize combined device info (parse and generalize components) — hardware flag

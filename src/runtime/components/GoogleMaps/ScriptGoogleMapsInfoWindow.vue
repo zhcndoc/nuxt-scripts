@@ -1,16 +1,57 @@
 <script setup lang="ts">
-import { whenever } from '@vueuse/core'
-import { inject, onUnmounted, useTemplateRef } from 'vue'
-import { MAP_INJECTION_KEY } from './ScriptGoogleMaps.vue'
-import { ADVANCED_MARKER_ELEMENT_INJECTION_KEY } from './ScriptGoogleMapsAdvancedMarkerElement.vue'
-import { MARKER_INJECTION_KEY } from './ScriptGoogleMapsMarker.vue'
+import { inject, useTemplateRef, watch } from 'vue'
+import { bindGoogleMapsEvents } from './bindGoogleMapsEvents'
+import { ADVANCED_MARKER_ELEMENT_INJECTION_KEY, MAP_INJECTION_KEY, MARKER_INJECTION_KEY } from './injectionKeys'
+import { useGoogleMapsResource } from './useGoogleMapsResource'
 
 const props = defineProps<{
+  /**
+   * Configuration options for the info window.
+   * @see https://developers.google.com/maps/documentation/javascript/reference/info-window#InfoWindowOptions
+   */
   options?: google.maps.InfoWindowOptions
 }>()
 
 const emit = defineEmits<{
-  (event: typeof infoWindowEvents[number]): void
+  /**
+   * Fired when the info window is closed. Includes both user and programmatic close actions.
+   * @see https://developers.google.com/maps/documentation/javascript/reference/info-window#InfoWindow.close
+   */
+  close: []
+  /**
+   * Fired when the close button is clicked.
+   * @see https://developers.google.com/maps/documentation/javascript/reference/info-window#InfoWindow.closeclick
+   */
+  closeclick: []
+  /**
+   * Fired when the content of the info window changes.
+   */
+  content_changed: []
+  /**
+   * Fired when the info window's `<div>` is attached to the DOM. Useful for computing dynamic content sizing.
+   * @see https://developers.google.com/maps/documentation/javascript/reference/info-window#InfoWindow.domready
+   */
+  domready: []
+  /**
+   * Fired when the header content of the info window changes.
+   */
+  headercontent_changed: []
+  /**
+   * Fired when the header disabled state changes.
+   */
+  headerdisabled_changed: []
+  /**
+   * Fired when the info window position changes.
+   */
+  position_changed: []
+  /**
+   * Fired when the info window becomes visible.
+   */
+  visible: []
+  /**
+   * Fired when the z-index of the info window changes.
+   */
+  zindex_changed: []
 }>()
 
 const infoWindowEvents = [
@@ -31,69 +72,78 @@ const advancedMarkerElementContext = inject(ADVANCED_MARKER_ELEMENT_INJECTION_KE
 
 const infoWindowContainer = useTemplateRef('info-window-container')
 
-let infoWindow: google.maps.InfoWindow | undefined
+// Track click listener on parent marker so it can be removed on cleanup
+let markerClickListener: google.maps.MapsEventListener | undefined
+let gmpClickHandler: ((e: any) => void) | undefined
+let isOpen = false
 
-whenever(
-  () => mapContext?.map.value
-    && mapContext.mapsApi.value
-    && infoWindowContainer.value,
-  () => {
-    infoWindow = new mapContext!.mapsApi.value!.InfoWindow({
+const infoWindow = useGoogleMapsResource<google.maps.InfoWindow>({
+  ready: () => !!infoWindowContainer.value,
+  create({ mapsApi, map }) {
+    const iw = new mapsApi.InfoWindow({
       content: infoWindowContainer.value,
       ...props.options,
     })
 
-    setupInfoWindowEventListeners(infoWindow)
+    // Track open state for toggle behavior
+    iw.addListener('closeclick', () => {
+      isOpen = false
+    })
+    iw.addListener('close', () => {
+      isOpen = false
+    })
+
+    bindGoogleMapsEvents(iw, emit, { noPayload: infoWindowEvents })
+
+    const toggleOpen = (anchor: any) => {
+      if (isOpen) {
+        iw.close()
+        isOpen = false
+      }
+      else {
+        mapContext?.activateInfoWindow(iw)
+        iw.open({ anchor, map })
+        isOpen = true
+      }
+    }
 
     if (markerContext?.marker.value) {
-      markerContext.marker.value.addListener('click', () => {
-        infoWindow!.open({
-          anchor: markerContext.marker.value,
-          map: mapContext!.map.value,
-        })
+      markerClickListener = markerContext.marker.value.addListener('click', () => {
+        toggleOpen(markerContext.marker.value)
       })
     }
     else if (advancedMarkerElementContext?.advancedMarkerElement.value) {
-      advancedMarkerElementContext.advancedMarkerElement.value.addListener('click', () => {
-        infoWindow!.open({
-          anchor: advancedMarkerElementContext.advancedMarkerElement.value,
-          map: mapContext!.map.value,
-        })
-      })
+      const ame = advancedMarkerElementContext.advancedMarkerElement.value
+      ame.gmpClickable = true
+      gmpClickHandler = () => toggleOpen(ame)
+      ame.addEventListener('gmp-click', gmpClickHandler)
     }
     else {
-      infoWindow.setPosition(props.options?.position)
-
-      infoWindow.open(mapContext!.map.value)
+      iw.setPosition(props.options?.position)
+      iw.open(map)
+      isOpen = true
     }
 
-    whenever(() => props.options, (options) => {
-      infoWindow?.setOptions(options)
-    }, {
-      deep: true,
-    })
+    return iw
   },
-  {
-    immediate: true,
-    once: true,
+  cleanup(iw, { mapsApi }) {
+    markerClickListener?.remove()
+    markerClickListener = undefined
+    if (gmpClickHandler && advancedMarkerElementContext?.advancedMarkerElement.value) {
+      advancedMarkerElementContext.advancedMarkerElement.value.removeEventListener('gmp-click', gmpClickHandler)
+      gmpClickHandler = undefined
+    }
+    mapsApi.event.clearInstanceListeners(iw)
+    iw.close()
+    isOpen = false
   },
-)
-
-onUnmounted(() => {
-  if (!infoWindow || !mapContext?.mapsApi.value) {
-    return
-  }
-
-  mapContext.mapsApi.value.event.clearInstanceListeners(infoWindow)
-
-  infoWindow.close()
 })
 
-function setupInfoWindowEventListeners(infoWindow: google.maps.InfoWindow) {
-  infoWindowEvents.forEach((event) => {
-    infoWindow.addListener(event, () => emit(event))
-  })
-}
+watch(() => props.options, (options) => {
+  if (infoWindow.value && options) {
+    infoWindow.value.setOptions(options)
+  }
+}, { deep: true })
 </script>
 
 <template>

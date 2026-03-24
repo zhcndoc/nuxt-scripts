@@ -1,27 +1,25 @@
 ---
-
-title: Intercom  
-description: 在你的 Nuxt 应用中使用 Intercom。  
-links:  
-  - label: 源码  
-    icon: i-simple-icons-github  
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/intercom.ts  
-    size: xs  
-  - label: "<ScriptIntercom>"  
-    icon: i-simple-icons-github  
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptIntercom.vue  
-    size: xs  
-
+title: Intercom
+description: 在你的 Nuxt 应用中使用 Intercom。
+links:
+  - label: 源码
+    icon: i-simple-icons-github
+    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/intercom.ts
+    size: xs
+  - label: "<ScriptIntercom>"
+    icon: i-simple-icons-github
+    to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptIntercom.vue
+    size: xs
 ---
 
-[Intercom](https://www.intercom.com/) 是一个客户消息交流平台，帮助你建立更好的客户关系。
+[Intercom](https://www.intercom.com/) 是一个客户消息交流平台，帮助你与客户建立更好的关系。
 
 Nuxt Scripts 提供了一个 [`useScriptIntercom()`{lang="ts"}](#usescriptintercom){lang="ts"} 组合函数和一个无头的外观组件 [`<ScriptIntercom>`{lang="html"}](#scriptintercom){lang="html"} 组件用于与 Intercom 交互。
 
 ::script-stats
 ::
 
-::script-types
+::script-docs
 ::
 
 ## [`<ScriptIntercom>`{lang="html"}](/scripts/intercom){lang="html"}
@@ -205,7 +203,10 @@ proxy.Intercom('update', { name: '张三' })
 
 请参阅 [注册脚本](/docs/guides/registry-scripts) 指南了解更多高级用法。
 
-## 示例
+::script-types
+::
+
+## Example
 
 仅在生产环境中使用 Intercom。
 

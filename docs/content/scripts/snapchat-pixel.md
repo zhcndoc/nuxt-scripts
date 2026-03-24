@@ -1,5 +1,4 @@
 ---
-
 title: Snapchat 像素
 description: 在你的 Nuxt 应用中使用 Snapchat 像素。
 links:
@@ -7,7 +6,6 @@ links:
   icon: i-simple-icons-github
   to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/snapchat-pixel.ts
   size: xs
-
 ---
 
 [Snapchat 像素](https://businesshelp.snapchat.com/s/article/snap-pixel-about){:target="_blank"} 可帮助你衡量 Snapchat 广告活动在跨设备上的影响。

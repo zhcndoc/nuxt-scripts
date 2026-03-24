@@ -3,8 +3,9 @@ import type {
   Script,
 } from '@unhead/vue/types'
 import type { Import } from 'unimport'
-import type { InferInput, ObjectSchema, UnionSchema, ValiError } from 'valibot'
+import type { InferInput, ObjectEntries, ObjectSchema, UnionSchema, ValiError } from 'valibot'
 import type { ComputedRef, Ref } from 'vue'
+import type { BingUetInput } from './registry/bing-uet'
 import type { BlueskyEmbedInput } from './registry/bluesky-embed'
 import type { ClarityInput } from './registry/clarity'
 import type { CloudflareWebAnalyticsInput } from './registry/cloudflare-web-analytics'
@@ -19,10 +20,12 @@ import type { GoogleSignInInput } from './registry/google-sign-in'
 import type { GoogleTagManagerInput } from './registry/google-tag-manager'
 import type { GravatarInput } from './registry/gravatar'
 import type { HotjarInput } from './registry/hotjar'
+import type { InstagramEmbedInput } from './registry/instagram-embed'
 import type { IntercomInput } from './registry/intercom'
 import type { LemonSqueezyInput } from './registry/lemon-squeezy'
 import type { MatomoAnalyticsInput } from './registry/matomo-analytics'
 import type { MetaPixelInput } from './registry/meta-pixel'
+import type { MixpanelAnalyticsInput } from './registry/mixpanel-analytics'
 import type { NpmInput } from './registry/npm'
 import type { PayPalInput } from './registry/paypal'
 import type { PlausibleAnalyticsInput } from './registry/plausible-analytics'
@@ -36,9 +39,9 @@ import type { TikTokPixelInput } from './registry/tiktok-pixel'
 import type { UmamiAnalyticsInput } from './registry/umami-analytics'
 import type { VercelAnalyticsInput } from './registry/vercel-analytics'
 import type { VimeoPlayerInput } from './registry/vimeo-player'
+import type { XEmbedInput } from './registry/x-embed'
 import type { XPixelInput } from './registry/x-pixel'
 import type { YouTubePlayerInput } from './registry/youtube-player'
-import { object } from '#nuxt-scripts-validator'
 
 export type WarmupStrategy = false | 'preload' | 'preconnect' | 'dns-prefetch'
 
@@ -68,16 +71,16 @@ export type NuxtUseScriptOptions<T extends Record<symbol | string, any> = {}> = 
    *
    * Note: Using 'force' may significantly increase build time as scripts will be re-downloaded on every build.
    *
-   * @deprecated Use `scripts.firstParty: true` in nuxt.config instead for bundling and routing scripts through your domain.
+   * @deprecated Bundling is now auto-enabled per-script via capabilities. Set `bundle: false` per-script to disable.
    */
   bundle?: boolean | 'force'
   /**
-   * Opt-out of first-party routing for this specific script when global `scripts.firstParty` is enabled.
-   * Set to `false` to load this script directly from its original source instead of through your domain.
-   *
-   * Note: This option only works as an opt-out. To enable first-party routing, use the global `scripts.firstParty` option in nuxt.config.
+   * Control proxying for this script.
+   * When `false`, collection requests go directly to the third-party server.
+   * When `true`, collection requests are proxied through `/_scripts/p/`.
+   * Defaults to the script's `defaultCapability.proxy` from the registry.
    */
-  firstParty?: false
+  proxy?: boolean
   /**
    * Load the script in a web worker using Partytown.
    * When enabled, adds `type="text/partytown"` to the script tag.
@@ -161,13 +164,16 @@ export interface NuxtDevToolsScriptInstance {
 }
 
 export interface ScriptRegistry {
+  bingUet?: BingUetInput
   blueskyEmbed?: BlueskyEmbedInput
+  carbonAds?: true
   crisp?: CrispInput
   clarity?: ClarityInput
   cloudflareWebAnalytics?: CloudflareWebAnalyticsInput
   databuddyAnalytics?: DatabuddyAnalyticsInput
   metaPixel?: MetaPixelInput
   fathomAnalytics?: FathomAnalyticsInput
+  instagramEmbed?: InstagramEmbedInput
   plausibleAnalytics?: PlausibleAnalyticsInput
   googleAdsense?: GoogleAdsenseInput
   googleAnalytics?: GoogleAnalyticsInput
@@ -181,11 +187,13 @@ export interface ScriptRegistry {
   paypal?: PayPalInput
   posthog?: PostHogInput
   matomoAnalytics?: MatomoAnalyticsInput
+  mixpanelAnalytics?: MixpanelAnalyticsInput
   rybbitAnalytics?: RybbitAnalyticsInput
   redditPixel?: RedditPixelInput
   segment?: SegmentInput
   stripe?: StripeInput
   tiktokPixel?: TikTokPixelInput
+  xEmbed?: XEmbedInput
   xPixel?: XPixelInput
   snapchatPixel?: SnapTrPixelInput
   youtubePlayer?: YouTubePlayerInput
@@ -193,10 +201,33 @@ export interface ScriptRegistry {
   vimeoPlayer?: VimeoPlayerInput
   umamiAnalytics?: UmamiAnalyticsInput
   gravatar?: GravatarInput
+  npm?: NpmInput
   [key: `${string}-npm`]: NpmInput
 }
 
-export type NuxtConfigScriptRegistryEntry<T> = true | 'mock' | T | [T, NuxtUseScriptOptionsSerializable]
+/**
+ * Built-in registry script keys — not affected by module augmentation.
+ * Use this to type-check records that must enumerate all built-in scripts (logos, meta, etc.).
+ */
+export type BuiltInRegistryScriptKey
+  = | 'bingUet' | 'blueskyEmbed' | 'carbonAds' | 'crisp' | 'clarity' | 'cloudflareWebAnalytics'
+    | 'databuddyAnalytics' | 'metaPixel' | 'fathomAnalytics' | 'instagramEmbed'
+    | 'plausibleAnalytics' | 'googleAdsense' | 'googleAnalytics' | 'googleMaps'
+    | 'googleRecaptcha' | 'googleSignIn' | 'lemonSqueezy' | 'googleTagManager'
+    | 'hotjar' | 'intercom' | 'paypal' | 'posthog' | 'matomoAnalytics'
+    | 'mixpanelAnalytics' | 'rybbitAnalytics' | 'redditPixel' | 'segment' | 'stripe' | 'tiktokPixel'
+    | 'xEmbed' | 'xPixel' | 'snapchatPixel' | 'youtubePlayer' | 'vercelAnalytics'
+    | 'vimeoPlayer' | 'umamiAnalytics' | 'gravatar' | 'npm'
+
+/**
+ * Union of all explicit registry script keys (excludes npm pattern).
+ * Includes both built-in and augmented keys.
+ */
+export type RegistryScriptKey = Exclude<keyof ScriptRegistry, `${string}-npm`>
+
+type RegistryConfigInput<T> = [T] extends [true] ? Record<string, never> : T
+
+export type NuxtConfigScriptRegistryEntry<T> = true | false | 'mock' | (RegistryConfigInput<T> & { trigger?: NuxtUseScriptOptionsSerializable['trigger'], proxy?: boolean, bundle?: boolean, partytown?: boolean, scriptOptions?: Omit<NuxtUseScriptOptionsSerializable, 'trigger'> }) | [RegistryConfigInput<T>, NuxtUseScriptOptionsSerializable]
 export type NuxtConfigScriptRegistry<T extends keyof ScriptRegistry = keyof ScriptRegistry> = Partial<{
   [key in T]: NuxtConfigScriptRegistryEntry<ScriptRegistry[key]>
 }> & Record<string & {}, NuxtConfigScriptRegistryEntry<any>>
@@ -205,37 +236,25 @@ export type UseFunctionType<T, U> = T extends {
   use: infer V
 } ? V extends (...args: any) => any ? ReturnType<V> : U : U
 
-const _emptyOptions = object({})
-
-export type EmptyOptionsSchema = typeof _emptyOptions
+export type EmptyOptionsSchema = ObjectSchema<ObjectEntries, undefined>
 
 type ScriptInput = Script
 
 export type InferIfSchema<T> = T extends ObjectSchema<any, any> | UnionSchema<any, any> ? InferInput<T> : T
+export interface RegistryScriptInputExtras<Bundelable extends boolean = true, Usable extends boolean = false> {
+  /**
+   * A unique key to use for the script, this can be used to load multiple of the same script with different options.
+   */
+  key?: string
+  scriptInput?: ScriptInput
+  scriptOptions?: Omit<NuxtUseScriptOptions, Bundelable extends true ? '' : 'bundle' | Usable extends true ? '' : 'use'>
+}
+
 export type RegistryScriptInput<
   T = EmptyOptionsSchema,
   Bundelable extends boolean = true,
   Usable extends boolean = false,
-  CanBypassOptions extends boolean = true,
->
-  = (InferIfSchema<T>
-    & {
-      /**
-       * A unique key to use for the script, this can be used to load multiple of the same script with different options.
-       */
-      key?: string
-      scriptInput?: ScriptInput
-      scriptOptions?: Omit<NuxtUseScriptOptions, Bundelable extends true ? '' : 'bundle' | Usable extends true ? '' : 'use'>
-    })
-    | Partial<InferIfSchema<T>> & (
-    CanBypassOptions extends true ? {
-      /**
-       * A unique key to use for the script, this can be used to load multiple of the same script with different options.
-       */
-      key?: string
-      scriptInput: Required<Pick<ScriptInput, 'src'>> & ScriptInput
-      scriptOptions?: Omit<NuxtUseScriptOptions, Bundelable extends true ? '' : 'bundle' | Usable extends true ? '' : 'use'>
-    } : never)
+> = Partial<InferIfSchema<T>> & RegistryScriptInputExtras<Bundelable, Usable>
 
 export interface RegistryScriptServerHandler {
   route: string
@@ -243,25 +262,83 @@ export interface RegistryScriptServerHandler {
   middleware?: boolean
 }
 
+/**
+ * Declares what optimization modes a script supports and what's active by default.
+ * Each flag is an independent capability that must be explicitly opted into.
+ */
+export interface ScriptCapabilities {
+  /** Script can be downloaded at build time and served from `/_scripts/assets/`. */
+  bundle?: boolean
+  /**
+   * Collection requests can be proxied through `/_scripts/p/`.
+   * When combined with `bundle`: AST URL rewriting + runtime intercept.
+   * Without `bundle` (npm mode): autoInject sets SDK endpoint to proxy URL.
+   */
+  proxy?: boolean
+  /** Script can run in a web worker via Partytown. */
+  partytown?: boolean
+}
+
+/**
+ * A third-party domain the script communicates with.
+ * Used for proxy routing, AST rewriting, and connection warming (dns-prefetch/preconnect).
+ */
+export interface ScriptDomain {
+  /** The domain hostname (e.g., 'www.google-analytics.com') */
+  domain: string
+  /**
+   * Whether this domain is used lazily (e.g., only after user interaction or SDK initialization).
+   * When `true`, connection warming uses `dns-prefetch` instead of `preconnect`.
+   * @default false
+   */
+  lazy?: boolean
+}
+
 export interface RegistryScript {
   /**
    * The config key used in `scripts.registry` in nuxt.config (e.g., 'googleAnalytics', 'plausibleAnalytics').
    * Used for direct lookup from config to script — avoids fragile import name convention matching.
    */
-  registryKey?: string
+  registryKey?: RegistryScriptKey
   import?: Import // might just be a component
   scriptBundling?: false | ((options?: any) => string | false)
   /**
-   * First-party routing configuration for this script.
-   * - `string` - The proxy config key to use (e.g., 'googleAnalytics', 'metaPixel')
-   * - `false` - Explicitly disable first-party routing for this script
-   * - `undefined` - Use the default key derived from the function name
-   *
-   * When set to a string, the script's URLs will be rewritten and collection
-   * endpoints will be routed through your server when `scripts.firstParty` is enabled.
-   * @internal
+   * What optimization modes this script supports (the ceiling).
+   * Each capability must be explicitly opted in. Omitted flags default to false.
    */
-  proxy?: string | false
+  capabilities?: ScriptCapabilities
+  /**
+   * What capabilities are active by default for users (subset of capabilities).
+   * Users inherit these and can toggle individual flags via scriptOptions.
+   * Omitted flags are not active by default (e.g., partytown requires user opt-in).
+   */
+  defaultCapability?: ScriptCapabilities
+  /**
+   * Third-party domains this script communicates with.
+   * Used for: proxy routing, AST URL rewriting, connection warming (dns-prefetch/preconnect).
+   * Domains marked `lazy: true` use dns-prefetch; others use preconnect for immediate scripts.
+   */
+  domains?: (string | ScriptDomain)[]
+  /**
+   * Privacy controls for proxied requests to this script's domains.
+   * Only relevant when proxy capability is active.
+   */
+  privacy?: import('../runtime/server/utils/privacy').ProxyPrivacyInput
+  /**
+   * Auto-inject proxy endpoint config into the script's SDK options.
+   * For scripts that let you configure the collection endpoint (PostHog, Plausible, etc.).
+   */
+  autoInject?: import('../first-party/types').ProxyAutoInject
+  /**
+   * SDK-specific post-processing applied after AST URL rewriting.
+   * Used for regex patches that can't be handled by the generic AST rewriter.
+   */
+  postProcess?: (output: string, rewrites: import('../runtime/utils/pure').ProxyRewrite[]) => string
+  /**
+   * Proxy config alias. When set, inherits domains/privacy/autoInject/postProcess
+   * from another script (e.g., googleAdsense → 'googleAnalytics').
+   */
+  proxyConfig?: RegistryScriptKey
   label?: string
   src?: string | false
   category?: string
@@ -270,6 +347,11 @@ export interface RegistryScript {
    * Server handlers (routes/middleware) to register when this script is enabled via registry config.
    */
   serverHandlers?: RegistryScriptServerHandler[]
+  /**
+   * Valibot schema for the script's input options.
+   * Used for build-time validation (extracting required fields) and runtime validation in dev mode.
+   */
+  schema?: ObjectSchema<ObjectEntries, any>
 }
 
 export type ElementScriptTrigger = 'immediate' | 'visible' | string | string[] | false

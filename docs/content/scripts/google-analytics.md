@@ -1,13 +1,11 @@
 ---
-
-title: Google Analytics  
-description: 在你的 Nuxt 应用中使用 Google Analytics。  
-links:  
-  - label: 源码  
-    icon: i-simple-icons-github  
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/google-analytics.ts  
-    size: xs  
-
+title: Google Analytics
+description: 在 Nuxt 应用中使用 Google Analytics。
+links:
+  - label: 源码
+    icon: i-simple-icons-github
+    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/google-analytics.ts
+    size: xs
 ---
 
 [Google Analytics](https://marketingplatform.google.com/about/analytics/) 是适用于 Nuxt 应用的分析解决方案。
@@ -31,9 +29,6 @@ proxy.gtag('event', 'page_view')
 ```
 
 proxy 暴露了 `gtag` 和 `dataLayer` 属性，你应当按照 Google Analytics 的最佳实践使用它们。
-
-::script-types
-::
 
 ### 客户/消费者 ID 追踪
 
@@ -115,7 +110,7 @@ proxy 会将所有 `gtag` 调用排队，直到脚本加载完成。调用是 SS
 ```ts
 const { proxy, onLoaded } = useScriptGoogleAnalytics()
 
-// 火并忘（排队直到 GA 加载）
+// 发后即忘（排队直到 GA 加载）
 proxy.gtag('event', 'cta_click', { button_id: 'hero-signup' })
 
 // 需要返回值？等待加载完成
@@ -155,4 +150,7 @@ proxy.gtag('config', 'G-XXXXXXXX', { debug_mode: true })
 
 在 GA4 查看事件：**管理 > DebugView**。安装 [GA Debugger 扩展](https://chrome.google.com/webstore/detail/google-analytics-debugger/jnkmfdileelhofjcijamephohjechhna) 以在控制台中查看日志。
 
-有关同意模式的设置，请参阅 [同意指南](/docs/guides/consent)。
+关于同意模式设置，请参阅 [同意指南](/docs/guides/consent)。
+
+::script-types
+::

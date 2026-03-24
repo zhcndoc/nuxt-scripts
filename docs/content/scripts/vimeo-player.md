@@ -1,5 +1,5 @@
 ---
-title: Vimeo 播放器
+title: Vimeo Player
 description: 在你的 Nuxt 应用中展示性能优化的 Vimeo 视频。
 links:
   - label: useScriptVimeoPlayer
@@ -10,7 +10,6 @@ links:
     icon: i-simple-icons-github
     to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptVimeoPlayer.vue
     size: xs
-
 ---
 
 [Vimeo](https://vimeo.com/) 是一个视频托管平台，允许你上传和分享视频。
@@ -20,7 +19,7 @@ Nuxt Scripts 提供了一个 `useScriptVimeoPlayer` 组合式函数和一个无 
 ::script-stats
 ::
 
-::script-types
+::script-docs
 ::
 
 ## 类型
@@ -253,7 +252,10 @@ export function useScriptVimeoPlayer<T extends VimeoPlayerApi>(_options?: VimeoP
 
 请参考 [Registry Scripts](/docs/guides/registry-scripts) 指南以获取更多高级用法。
 
-### VimeoPlayerApi
+::script-types
+::
+
+## 示例
 
 ```ts
 export interface VimeoPlayerApi {
@@ -262,8 +264,6 @@ export interface VimeoPlayerApi {
   }
 }
 ```
-
-## 示例
 
 加载 Vimeo 播放器 SDK 并以编程方式进行交互。
 

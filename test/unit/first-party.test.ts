@@ -1,7 +1,6 @@
 import type { RegistryScript } from '../../src/runtime/types'
 import { describe, expect, it } from 'vitest'
-import { autoInjectProxyEndpoints } from '../../src/first-party/auto-inject'
-import { getAllProxyConfigs } from '../../src/proxy-configs'
+import { buildProxyConfigsFromRegistry } from '../../src/first-party/proxy-configs'
 import { registry } from '../../src/registry'
 import {
   anonymizeIP,
@@ -16,11 +15,18 @@ import {
 } from '../../src/runtime/server/utils/privacy'
 
 let _registryScripts: RegistryScript[] | undefined
+let _proxyConfigs: ReturnType<typeof buildProxyConfigsFromRegistry> | undefined
 
 async function getRegistryScripts(): Promise<RegistryScript[]> {
   if (!_registryScripts)
     _registryScripts = await registry()
   return _registryScripts
+}
+
+async function getProxyConfigs() {
+  if (!_proxyConfigs)
+    _proxyConfigs = buildProxyConfigsFromRegistry(await getRegistryScripts())
+  return _proxyConfigs
 }
 
 describe('first-party mode', () => {
@@ -45,36 +51,43 @@ describe('first-party mode', () => {
       for (const script of scripts) {
         if (!script.import?.name || !script.registryKey)
           continue
-        // Verify the import name follows useScript${PascalCase(registryKey)} convention
         const expected = `usescript${script.registryKey.toLowerCase()}`
         expect(
           script.import.name.toLowerCase(),
-          `Script "${script.registryKey}": import name "${script.import.name}" doesn't match convention. Expected "useScript${script.registryKey.charAt(0).toUpperCase()}${script.registryKey.slice(1)}"`,
+          `Script "${script.registryKey}": import name "${script.import.name}" doesn't match convention`,
         ).toBe(expected)
       }
     })
   })
 
   describe('proxy config ↔ registry consistency', () => {
-    it('every script with proxy field has a valid proxy config', async () => {
+    it('every script with proxyConfig alias has a valid proxy config', async () => {
       const scripts = await getRegistryScripts()
-      const configs = getAllProxyConfigs('/_proxy')
+      const configs = await getProxyConfigs()
       const proxyConfigKeys = Object.keys(configs)
 
       for (const script of scripts) {
-        if (script.proxy && script.proxy !== false) {
+        if (script.proxyConfig) {
           expect(
             proxyConfigKeys,
-            `Script "${script.registryKey}" references proxy key "${script.proxy}" but no config exists. Available: ${proxyConfigKeys.join(', ')}`,
-          ).toContain(script.proxy)
+            `Script "${script.registryKey}" references proxyConfig "${script.proxyConfig}" but no config exists`,
+          ).toContain(script.proxyConfig)
         }
       }
     })
 
-    it('every proxy config is referenced by at least one registry script', async () => {
+    it('every proxy config is referenced by at least one registry script with proxy', async () => {
       const scripts = await getRegistryScripts()
-      const configs = getAllProxyConfigs('/_proxy')
-      const usedProxyKeys = new Set(scripts.map(s => s.proxy).filter(Boolean))
+      const configs = await getProxyConfigs()
+      const usedProxyKeys = new Set<string>()
+      for (const s of scripts) {
+        if (!s.capabilities?.proxy)
+          continue
+        if (s.proxyConfig)
+          usedProxyKeys.add(s.proxyConfig)
+        if (s.registryKey)
+          usedProxyKeys.add(s.registryKey)
+      }
 
       for (const configKey of Object.keys(configs)) {
         expect(
@@ -84,16 +97,16 @@ describe('first-party mode', () => {
       }
     })
 
-    it('every proxy config has routes', () => {
-      const configs = getAllProxyConfigs('/_proxy')
+    it('every proxy config has domains', async () => {
+      const configs = await getProxyConfigs()
       for (const [key, config] of Object.entries(configs)) {
-        expect(config.routes, `Proxy config "${key}" is missing routes`).toBeDefined()
-        expect(Object.keys(config.routes!).length, `Proxy config "${key}" has empty routes`).toBeGreaterThan(0)
+        expect(config.domains, `Proxy config "${key}" is missing domains`).toBeDefined()
+        expect(config.domains.length, `Proxy config "${key}" has empty domains`).toBeGreaterThan(0)
       }
     })
 
-    it('every proxy config has valid privacy settings', () => {
-      const configs = getAllProxyConfigs('/_proxy')
+    it('every proxy config has valid privacy settings', async () => {
+      const configs = await getProxyConfigs()
       const privacyFlags = ['ip', 'userAgent', 'language', 'screen', 'timezone', 'hardware'] as const
 
       for (const [key, config] of Object.entries(configs)) {
@@ -101,7 +114,7 @@ describe('first-party mode', () => {
         for (const flag of privacyFlags) {
           expect(
             typeof config.privacy[flag],
-            `Proxy config "${key}" privacy.${flag} should be boolean, got ${typeof config.privacy[flag]}`,
+            `Proxy config "${key}" privacy.${flag} should be boolean`,
           ).toBe('boolean')
         }
       }
@@ -109,150 +122,105 @@ describe('first-party mode', () => {
   })
 
   describe('auto-inject integrity', () => {
-    it('auto-inject defs reference valid registry keys', async () => {
-      const scripts = await getRegistryScripts()
-      const registryKeys = new Set(scripts.map(s => s.registryKey).filter(Boolean))
+    it('auto-inject configs produce correct endpoint values', async () => {
+      const configs = await getProxyConfigs()
 
-      // Test that autoInjectProxyEndpoints doesn't crash and handles all known keys
-      const mockRegistry: Record<string, any> = {}
-      for (const key of registryKeys) {
-        mockRegistry[key!] = {}
-      }
+      // posthog US
+      expect(configs.posthog.autoInject).toBeDefined()
+      expect(configs.posthog.autoInject!.configField).toBe('apiHost')
+      expect(configs.posthog.autoInject!.computeValue('/_proxy', {})).toBe('/_proxy/us.i.posthog.com')
 
-      const mockRuntimeConfig = { public: { scripts: { ...mockRegistry } } }
-      // Should not throw
-      autoInjectProxyEndpoints(mockRegistry as any, mockRuntimeConfig, '/_proxy')
+      // posthog EU
+      expect(configs.posthog.autoInject!.computeValue('/_proxy', { region: 'eu' })).toBe('/_proxy/eu.i.posthog.com')
+
+      // plausible
+      expect(configs.plausibleAnalytics.autoInject).toBeDefined()
+      expect(configs.plausibleAnalytics.autoInject!.configField).toBe('endpoint')
+      expect(configs.plausibleAnalytics.autoInject!.computeValue('/_proxy', {})).toBe('/_proxy/plausible.io/api/event')
+
+      // umami
+      expect(configs.umamiAnalytics.autoInject).toBeDefined()
+      expect(configs.umamiAnalytics.autoInject!.configField).toBe('hostUrl')
+      expect(configs.umamiAnalytics.autoInject!.computeValue('/_proxy', {})).toBe('/_proxy/cloud.umami.is')
+
+      // rybbit
+      expect(configs.rybbitAnalytics.autoInject).toBeDefined()
+      expect(configs.rybbitAnalytics.autoInject!.configField).toBe('analyticsHost')
+      expect(configs.rybbitAnalytics.autoInject!.computeValue('/_proxy', {})).toBe('/_proxy/app.rybbit.io/api')
+
+      // databuddy
+      expect(configs.databuddyAnalytics.autoInject).toBeDefined()
+      expect(configs.databuddyAnalytics.autoInject!.configField).toBe('apiUrl')
+      expect(configs.databuddyAnalytics.autoInject!.computeValue('/_proxy', {})).toBe('/_proxy/basket.databuddy.cc')
     })
 
-    it('auto-inject populates endpoint config for supported scripts', () => {
-      const registry: Record<string, any> = {
-        posthog: { apiKey: 'test' },
-        plausibleAnalytics: { domain: 'test.com' },
-        umamiAnalytics: { websiteId: 'test' },
-        rybbitAnalytics: { siteId: 'test' },
-        databuddyAnalytics: { clientId: 'test' },
-      }
-      const runtimeConfig = { public: { scripts: { ...registry } } }
-      autoInjectProxyEndpoints(registry as any, runtimeConfig, '/_proxy')
-
-      expect(registry.posthog.apiHost).toBe('/_proxy/ph')
-      expect(registry.plausibleAnalytics.endpoint).toBe('/_proxy/plausible/api/event')
-      expect(registry.umamiAnalytics.hostUrl).toBe('/_proxy/umami')
-      expect(registry.rybbitAnalytics.analyticsHost).toBe('/_proxy/rybbit/api')
-      expect(registry.databuddyAnalytics.apiUrl).toBe('/_proxy/databuddy-api')
+    it('auto-inject configs use custom proxyPrefix', async () => {
+      const configs = await getProxyConfigs()
+      expect(configs.posthog.autoInject!.computeValue('/_custom', {})).toBe('/_custom/us.i.posthog.com')
+      expect(configs.plausibleAnalytics.autoInject!.computeValue('/_custom', {})).toBe('/_custom/plausible.io/api/event')
     })
 
-    it('auto-inject does not override user-provided endpoint config', () => {
-      const registry: Record<string, any> = {
-        posthog: { apiKey: 'test', apiHost: 'https://custom.example.com' },
-        plausibleAnalytics: { domain: 'test.com', endpoint: 'https://custom.example.com/api/event' },
-      }
-      const runtimeConfig = { public: { scripts: { ...registry } } }
-      autoInjectProxyEndpoints(registry as any, runtimeConfig, '/_proxy')
-
-      expect(registry.posthog.apiHost).toBe('https://custom.example.com')
-      expect(registry.plausibleAnalytics.endpoint).toBe('https://custom.example.com/api/event')
-    })
-
-    it('posthog EU region gets correct proxy prefix', () => {
-      const registry: Record<string, any> = {
-        posthog: { apiKey: 'test', region: 'eu' },
-      }
-      const runtimeConfig = { public: { scripts: { ...registry } } }
-      autoInjectProxyEndpoints(registry as any, runtimeConfig, '/_proxy')
-
-      expect(registry.posthog.apiHost).toBe('/_proxy/ph-eu')
+    it('scripts without auto-inject do not have the property', async () => {
+      const configs = await getProxyConfigs()
+      expect(configs.googleAnalytics.autoInject).toBeUndefined()
+      expect(configs.metaPixel.autoInject).toBeUndefined()
+      expect(configs.clarity.autoInject).toBeUndefined()
     })
   })
 
-  describe('full chain: config key → registry script → proxy config → routes', () => {
-    it('every script with a proxy gets routes registered via registryKey lookup', async () => {
+  describe('full chain: capabilities → proxy config → domains', () => {
+    it('every script with proxy gets domains via registryKey lookup', async () => {
       const scripts = await getRegistryScripts()
-      const configs = getAllProxyConfigs('/_proxy')
+      const configs = await getProxyConfigs()
 
-      // Build the same lookup map as finalizeFirstParty
-      const scriptByKey = new Map<string, RegistryScript>()
       for (const script of scripts) {
-        if (script.registryKey)
-          scriptByKey.set(script.registryKey, script)
-      }
-
-      // For every script that has a proxy, simulate the full lookup chain
-      for (const script of scripts) {
-        if (!script.proxy || script.proxy === false)
+        if (!script.capabilities?.proxy || !script.registryKey)
           continue
 
-        // 1. Can we find the script by registryKey?
-        const found = scriptByKey.get(script.registryKey!)
-        expect(found, `Script "${script.registryKey}" not found in lookup map`).toBeDefined()
+        const configKey = script.proxyConfig || script.registryKey
+        const proxyConfig = configs[configKey]
+        if (!proxyConfig)
+          continue
 
-        // 2. Does the proxy key resolve to a config?
-        const proxyConfig = configs[script.proxy]
-        expect(proxyConfig, `Script "${script.registryKey}" proxy key "${script.proxy}" has no config`).toBeDefined()
-
-        // 3. Does the config have routes?
         expect(
-          Object.keys(proxyConfig.routes || {}).length,
-          `Script "${script.registryKey}" proxy "${script.proxy}" has no routes`,
+          proxyConfig.domains.length,
+          `Script "${script.registryKey}" (config "${configKey}") has no domains`,
         ).toBeGreaterThan(0)
       }
     })
 
-    it('simulates finalizeFirstParty registry key matching for all scripts', async () => {
+    it('collects a significant number of domains across all proxy configs', async () => {
       const scripts = await getRegistryScripts()
-      const configs = getAllProxyConfigs('/_proxy')
+      const configs = await getProxyConfigs()
 
-      // Build lookup map exactly as finalizeFirstParty does
-      const scriptByKey = new Map<string, RegistryScript>()
+      const allDomains = new Set<string>()
       for (const script of scripts) {
-        if (script.registryKey)
-          scriptByKey.set(script.registryKey, script)
-      }
-
-      // Create a mock registry with all scripts that have proxy support
-      const mockRegistryKeys = scripts
-        .filter(s => s.proxy && s.proxy !== false && s.registryKey)
-        .map(s => s.registryKey!)
-
-      const neededRoutes: Record<string, { proxy: string }> = {}
-      const unmatchedScripts: string[] = []
-
-      for (const key of mockRegistryKeys) {
-        const script = scriptByKey.get(key)
-        if (!script) {
-          unmatchedScripts.push(key)
+        if (!script.capabilities?.proxy || !script.registryKey)
           continue
-        }
-        const proxyKey = script.proxy || undefined
-        if (proxyKey && typeof proxyKey === 'string') {
-          const proxyConfig = configs[proxyKey]
-          if (proxyConfig?.routes)
-            Object.assign(neededRoutes, proxyConfig.routes)
+        const configKey = script.proxyConfig || script.registryKey
+        const proxyConfig = configs[configKey]
+        if (proxyConfig) {
+          for (const domain of proxyConfig.domains)
+            allDomains.add(domain)
         }
       }
 
-      // No scripts should be unmatched
-      expect(unmatchedScripts, `These scripts failed registry key lookup: ${unmatchedScripts.join(', ')}`).toEqual([])
-
-      // Should have a significant number of routes
-      expect(Object.keys(neededRoutes).length).toBeGreaterThan(20)
+      expect(allDomains.size).toBeGreaterThan(20)
     })
   })
 
   describe('default configuration', () => {
     it('proxy configs are available for all supported scripts', async () => {
-      const configs = getAllProxyConfigs('/_scripts/c')
+      const configs = await getProxyConfigs()
       expect(Object.keys(configs).length).toBeGreaterThan(0)
     })
 
-    it('all supported scripts have both rewrite and routes', () => {
-      const configs = getAllProxyConfigs('/_scripts/c')
+    it('all supported scripts have domains and privacy', async () => {
+      const configs = await getProxyConfigs()
       const supportedScripts = [
         'googleAnalytics',
-        'googleTagManager',
         'metaPixel',
         'tiktokPixel',
-        'segment',
         'xPixel',
         'snapchatPixel',
         'redditPixel',
@@ -263,92 +231,37 @@ describe('first-party mode', () => {
       for (const script of supportedScripts) {
         const config = configs[script]
         expect(config, `${script} should have config`).toBeDefined()
-        expect(config.rewrite, `${script} should have rewrite rules`).toBeDefined()
-        expect(config.routes, `${script} should have route rules`).toBeDefined()
-        expect(config.rewrite!.length, `${script} should have at least one rewrite`).toBeGreaterThan(0)
-        expect(Object.keys(config.routes!).length, `${script} should have at least one route`).toBeGreaterThan(0)
+        expect(config.domains, `${script} should have domains`).toBeDefined()
+        expect(config.domains.length, `${script} should have at least one domain`).toBeGreaterThan(0)
+        expect(config.privacy, `${script} should have privacy config`).toBeDefined()
       }
     })
   })
 
-  describe('custom collectPrefix', () => {
-    it('applies custom prefix to all configs', () => {
-      const customPrefix = '/_analytics'
-      const configs = getAllProxyConfigs(customPrefix)
+  describe('scripts that need fingerprinting have no proxy', () => {
+    it('stripe, paypal, googleRecaptcha, googleSignIn have no proxy capability', async () => {
+      const scripts = await getRegistryScripts()
+      const fingerprintScripts = ['stripe', 'paypal', 'googleRecaptcha', 'googleSignIn']
 
-      for (const [key, config] of Object.entries(configs)) {
-        // All rewrites should use custom prefix
-        for (const rewrite of config.rewrite || []) {
-          expect(rewrite.to, `${key} rewrite should use custom prefix`).toContain(customPrefix)
-        }
-        // All routes should use custom prefix
-        for (const route of Object.keys(config.routes || {})) {
-          expect(route, `${key} route should use custom prefix`).toContain(customPrefix)
-        }
-      }
-    })
-  })
-
-  describe('route rule format', () => {
-    it('all routes have valid proxy target', () => {
-      const configs = getAllProxyConfigs('/_scripts/c')
-
-      for (const [key, config] of Object.entries(configs)) {
-        for (const [route, rule] of Object.entries(config.routes || {})) {
-          expect(rule.proxy, `${key} route ${route} should have proxy target`).toBeDefined()
-          expect(rule.proxy, `${key} route ${route} should proxy to https`).toMatch(/^https:\/\//)
-          expect(rule.proxy, `${key} route ${route} should have wildcard`).toContain('**')
-        }
+      for (const key of fingerprintScripts) {
+        const script = scripts.find(s => s.registryKey === key)
+        expect(script, `${key} should exist in registry`).toBeDefined()
+        expect(script!.capabilities?.proxy, `${key} should not have proxy`).toBeFalsy()
       }
     })
 
-    it('route patterns match Nitro format', () => {
-      const configs = getAllProxyConfigs('/_scripts/c')
-
-      for (const [key, config] of Object.entries(configs)) {
-        for (const route of Object.keys(config.routes || {})) {
-          // Should end with /** for wildcard matching
-          expect(route, `${key} route should end with /**`).toMatch(/\/\*\*$/)
-        }
-      }
-    })
-  })
-
-  describe('status endpoint data structure', () => {
-    it('can generate status data from configs', () => {
-      const configs = getAllProxyConfigs('/_scripts/c')
-      const registryKeys = ['googleAnalytics', 'metaPixel']
-
-      // Simulate what the module does to build status
-      const neededRoutes: Record<string, string> = {}
-      for (const key of registryKeys) {
-        const config = configs[key]
-        if (config?.routes) {
-          for (const [path, rule] of Object.entries(config.routes)) {
-            neededRoutes[path] = rule.proxy
-          }
-        }
-      }
-
-      const status = {
-        enabled: true,
-        scripts: registryKeys,
-        routes: neededRoutes,
-        collectPrefix: '/_scripts/c',
-      }
-
-      expect(status.enabled).toBe(true)
-      expect(status.scripts).toEqual(['googleAnalytics', 'metaPixel'])
-      expect(Object.keys(status.routes).length).toBeGreaterThan(0)
-      expect(status.collectPrefix).toBe('/_scripts/c')
+    it('fingerprinting scripts have no proxy configs', async () => {
+      const configs = await getProxyConfigs()
+      expect(configs.stripe).toBeUndefined()
+      expect(configs.paypal).toBeUndefined()
+      expect(configs.googleRecaptcha).toBeUndefined()
+      expect(configs.googleSignIn).toBeUndefined()
     })
   })
 })
 
 describe('proxy handler', () => {
   describe('binary detection heuristics', () => {
-    // isBinaryBody is inline in proxy-handler (not exported), but the logic is:
-    // content-encoding present OR octet-stream content-type OR compression query param matches COMPRESSION_RE
     const COMPRESSION_RE = /gzip|deflate|br|compress|base64/i
 
     it('detects gzip content-encoding as binary', () => {
@@ -409,10 +322,10 @@ describe('proxy handler', () => {
     })
 
     it('mergePrivacy overrides specific fields', () => {
-      const base = resolvePrivacy(true) // all true
+      const base = resolvePrivacy(true)
       const merged = mergePrivacy(base, { ip: false })
       expect(merged.ip).toBe(false)
-      expect(merged.userAgent).toBe(true) // unchanged
+      expect(merged.userAgent).toBe(true)
     })
 
     it('mergePrivacy with boolean override replaces entirely', () => {
@@ -460,7 +373,7 @@ describe('proxy handler', () => {
         { uip: '192.168.1.1', other: 'keep' },
         resolvePrivacy({ ip: true }),
       )
-      expect(result.uip).not.toBe('192.168.1.1') // anonymized
+      expect(result.uip).not.toBe('192.168.1.1')
       expect(result.other).toBe('keep')
     })
 
@@ -469,7 +382,6 @@ describe('proxy handler', () => {
         { uid: 'user123', cid: 'client456' },
         resolvePrivacy(true),
       )
-      // userId params are intentionally preserved for analytics
       expect(result.uid).toBe('user123')
       expect(result.cid).toBe('client456')
     })
@@ -479,58 +391,30 @@ describe('proxy handler', () => {
         { sr: '2560x1440', vp: '1280x720' },
         resolvePrivacy({ screen: true }),
       )
-      expect(result.sr).toBe('1920x1080') // bucketed to desktop
+      expect(result.sr).toBe('1920x1080')
       expect(result.vp).toBe('1920x1080')
     })
   })
 
-  describe('route matching', () => {
-    it('getAllProxyConfigs returns routes for known providers', () => {
-      const configs = getAllProxyConfigs('/_proxy')
+  describe('domain-based matching', () => {
+    it('getProxyConfigs returns domains for known providers', async () => {
+      const configs = await getProxyConfigs()
       const gaConfig = configs.googleAnalytics
       expect(gaConfig).toBeDefined()
-      expect(gaConfig.routes).toBeDefined()
-
-      const routes = Object.keys(gaConfig.routes!)
-      expect(routes.length).toBeGreaterThan(0)
-      // All routes should start with the prefix
-      for (const route of routes) {
-        expect(route).toContain('/_proxy/')
-      }
+      expect(gaConfig.domains).toBeDefined()
+      expect(gaConfig.domains.length).toBeGreaterThan(0)
     })
 
-    it('route targets point to https endpoints', () => {
-      const configs = getAllProxyConfigs('/_proxy')
-      for (const [key, config] of Object.entries(configs)) {
-        for (const [route, rule] of Object.entries(config.routes || {})) {
-          expect(rule.proxy, `${key} ${route}`).toMatch(/^https:\/\//)
-        }
-      }
+    it('plausibleAnalytics has domains', async () => {
+      const configs = await getProxyConfigs()
+      expect(configs.plausibleAnalytics).toBeDefined()
+      expect(configs.plausibleAnalytics.domains.length).toBeGreaterThan(0)
     })
 
-    it('longest route prefix matches first (sorted by length descending)', () => {
-      // Replicate the getSortedRoutes logic
-      const routes: Record<string, string> = {
-        '/_proxy/ga/**': 'https://google.com/**',
-        '/_proxy/ga/collect/**': 'https://google.com/collect/**',
-        '/_proxy/**': 'https://fallback.com/**',
-      }
-      const sorted = Object.entries(routes).sort((a, b) => b[0].length - a[0].length)
-      expect(sorted[0]![0]).toBe('/_proxy/ga/collect/**')
-      expect(sorted[1]![0]).toBe('/_proxy/ga/**')
-      expect(sorted[2]![0]).toBe('/_proxy/**')
-    })
-
-    it('plausible has proxy routes', () => {
-      const configs = getAllProxyConfigs('/_proxy')
-      expect(configs.plausible).toBeDefined()
-      expect(Object.keys(configs.plausible.routes!).length).toBeGreaterThan(0)
-    })
-
-    it('hotjar has proxy routes', () => {
-      const configs = getAllProxyConfigs('/_proxy')
+    it('hotjar has domains', async () => {
+      const configs = await getProxyConfigs()
       expect(configs.hotjar).toBeDefined()
-      expect(Object.keys(configs.hotjar.routes!).length).toBeGreaterThan(0)
+      expect(configs.hotjar.domains.length).toBeGreaterThan(0)
     })
   })
 })

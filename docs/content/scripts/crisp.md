@@ -1,5 +1,4 @@
 ---
-
 title: Crisp
 description: 在你的 Nuxt 应用中展示性能优化的 Crisp。
 links:
@@ -11,7 +10,6 @@ links:
     icon: i-simple-icons-github
     to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptCrisp.vue
     size: xs
-
 ---
 
 [Crisp](https://crisp.chat/) 是一个客户消息平台，让你可以通过聊天、电子邮件等方式与客户沟通。
@@ -21,7 +19,7 @@ Nuxt Scripts 提供了一个 [`useScriptCrisp()`{lang="ts"}](#usescriptcrisp){la
 ::script-stats
 ::
 
-::script-types
+::script-docs
 ::
 
 ## [`<ScriptCrisp>`{lang="html"}](/scripts/crisp){lang="html"}
@@ -198,6 +196,9 @@ export function useScriptCrisp<T extends CrispApi>(_options?: CrispInput) {}
 请参阅[脚本注册指南](/docs/guides/registry-scripts)以了解更多高级用法。
 
 更多信息请参考 [Crisp API 文档](https://docs.crisp.chat/guides/chatbox-sdks/web-sdk/dollar-crisp/)。
+
+::script-types
+::
 
 ## 示例
 

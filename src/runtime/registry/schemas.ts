@@ -1,4 +1,4 @@
-import { any, array, boolean, custom, literal, minLength, number, object, optional, pipe, record, string, union } from '#nuxt-scripts-validator'
+import { any, array, boolean, custom, literal, minLength, number, object, optional, pipe, record, string, union } from 'valibot'
 
 export const BlueskyEmbedOptions = object({
   /**
@@ -738,6 +738,27 @@ export const RybbitAnalyticsOptions = object({
    * from the script src, so this changes the script src to `${analyticsHost}/script.js`.
    */
   analyticsHost: optional(string()),
+})
+
+export const MixpanelAnalyticsOptions = object({
+  /**
+   * Your Mixpanel project token.
+   * @see https://docs.mixpanel.com/docs/tracking-methods/sdks/javascript#1-initialize-the-library
+   */
+  token: string(),
+})
+
+export const BingUetOptions = object({
+  /**
+   * Your Bing UET tag ID.
+   * @see https://help.ads.microsoft.com/#apex/ads/en/56682/2-500
+   */
+  id: string(),
+  /**
+   * Enable automatic SPA page tracking.
+   * @default true
+   */
+  enableAutoSpaTracking: optional(boolean()),
 })
 
 export const SegmentOptions = object({

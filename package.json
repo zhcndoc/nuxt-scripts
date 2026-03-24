@@ -1,7 +1,7 @@
 {
   "name": "@nuxt/scripts",
   "type": "module",
-  "version": "1.0.0-beta.23",
+  "version": "1.0.0-beta.32",
   "packageManager": "pnpm@10.32.1",
   "description": "Load third-party scripts with better performance, privacy and DX in Nuxt Apps.",
   "author": {
@@ -78,7 +78,6 @@
       "esbuild",
       "unimport",
       "#nuxt-scripts/types",
-      "#nuxt-scripts-validator",
       "posthog-js"
     ]
   },
@@ -145,6 +144,7 @@
     "@nuxt/test-utils": "catalog:",
     "@nuxtjs/partytown": "catalog:",
     "@paypal/paypal-js": "catalog:",
+    "@types/jest-image-snapshot": "catalog:",
     "@types/semver": "catalog:",
     "@types/youtube": "catalog:",
     "@typescript-eslint/typescript-estree": "catalog:",
@@ -153,6 +153,7 @@
     "eslint": "catalog:",
     "eslint-plugin-harlanzw": "catalog:",
     "happy-dom": "catalog:",
+    "jest-image-snapshot": "catalog:",
     "knitwork": "catalog:",
     "nuxt": "catalog:",
     "playwright-core": "catalog:",

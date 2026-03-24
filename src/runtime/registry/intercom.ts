@@ -1,12 +1,12 @@
-import type { InferInput } from '#nuxt-scripts-validator'
 import type { RegistryScriptInput } from '#nuxt-scripts/types'
+import type { InferInput } from 'valibot'
 import { joinURL } from 'ufo'
 import { useRegistryScript } from '../utils'
 import { IntercomOptions } from './schemas'
 
 export { IntercomOptions }
 
-export type IntercomInput = RegistryScriptInput<typeof IntercomOptions, true, false, false>
+export type IntercomInput = RegistryScriptInput<typeof IntercomOptions, true, false>
 
 export interface IntercomApi {
   Intercom: ((event: 'boot', data?: InferInput<typeof IntercomOptions>) => void)

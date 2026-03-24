@@ -52,7 +52,6 @@ export default defineNuxtConfig({
   },
 
   scripts: {
-    firstParty: true,
     registry: {
       googleAnalytics: [{ id: 'G-TR58L0EF8P' }, manual],
       googleTagManager: [{ id: 'GTM-MWW974PF' }, manual],
@@ -73,7 +72,7 @@ export default defineNuxtConfig({
       posthog: [{ apiKey: 'phc_CkMaDU6dr11eJoQdAiSJb1rC324dogk3T952gJ6fD9W' }, manual],
       intercom: [{ app_id: 'akg5rmxb' }, manual],
       crisp: [{ id: 'b1021910-7ace-425a-9ef5-07f49e5ce417' }, manual],
-      vercelAnalytics: [true, manual],
+      vercelAnalytics: [{}, manual],
     },
   },
 })

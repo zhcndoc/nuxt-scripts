@@ -1,13 +1,11 @@
 ---
-
-title: Matomo 分析  
-description: 在你的 Nuxt 应用中使用 Matomo 分析。  
-links:  
-  - label: 源码  
-    icon: i-simple-icons-github  
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/matomo-analytics.ts  
-    size: xs  
-
+title: Matomo 分析
+description: 在你的 Nuxt 应用中使用 Matomo 分析。
+links:
+  - label: 源码
+    icon: i-simple-icons-github
+    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/matomo-analytics.ts
+    size: xs
 ---
 
 [Matomo 分析](https://matomo.org/) 是一个非常适合 Nuxt 应用的分析解决方案。
@@ -20,10 +18,7 @@ links:
 ::script-docs  
 ::  
 
-::script-types  
-::  
-
-默认情况下，Nuxt 使用 `siteId` 为 `1`，并且通过 `watch` 选项自动启用页面跟踪。
+默认情况下，Nuxt 使用 `siteId` 为 `1`，并通过 `watch` 选项自动启用页面跟踪。
 
 ```ts
 useScriptMatomoAnalytics({
@@ -100,3 +95,6 @@ useScriptMatomoAnalytics({
   },
 })
 ```
+
+::script-types
+::

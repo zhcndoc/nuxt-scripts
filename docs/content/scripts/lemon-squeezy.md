@@ -1,5 +1,4 @@
 ---
-
 title: Lemon Squeezy
 description: 在你的 Nuxt 应用中使用 Lemon Squeezy。
 links:
@@ -11,18 +10,16 @@ links:
     icon: i-simple-icons-github
     to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptLemonSqueezy.vue
     size: xs
-
 ---
 
 [Lemon Squeezy](https://www.lemonsqueezy.com/) 是一个流行的支付网关，允许你在线接受付款。
 
 Nuxt Scripts 提供了一个 [`useScriptLemonSqueezy()`{lang="ts"}](#usescriptlemonsqueezy){lang="ts"} 组合函数和一个无头的外观组件 [`<ScriptLemonSqueezy>`{lang="html"}](#scriptlemonsqueezy){lang="html"} 组件，用于与 Lemon Squeezy 交互。
 
-
 ::script-stats
 ::
 
-::script-types
+::script-docs
 ::
 
 ## [`<ScriptLemonSqueezy>`{lang="html"}](/scripts/lemon-squeezy){lang="html"}
@@ -113,6 +110,9 @@ export function useScriptLemonSqueezy<T extends LemonSqueezyApi>(_options?: Lemo
 ```
 
 请参阅 [注册脚本](/docs/guides/registry-scripts) 指南，了解更多关于高级用法的信息。
+
+::script-types
+::
 
 ## 示例
 

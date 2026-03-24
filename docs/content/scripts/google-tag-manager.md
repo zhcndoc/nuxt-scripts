@@ -1,13 +1,11 @@
 ---
-
-title: Google 标签管理器  
-description: 在你的 Nuxt 应用中使用 Google 标签管理器。  
-links:  
-  - label: 源码  
-    icon: i-simple-icons-github  
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/google-tag-manager.ts  
-    size: xs  
-
+title: Google Tag Manager
+description: 在你的 Nuxt 应用中使用 Google 标签管理器。
+links:
+  - label: 源码
+    icon: i-simple-icons-github
+    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/google-tag-manager.ts
+    size: xs
 ---
 
 [Google 标签管理器](https://marketingplatform.google.com/about/tag-manager/) 是一个标签管理系统，允许你快速且轻松地更新网站或移动应用上的标签和代码片段，例如用于流量分析和营销优化的标签。
@@ -43,52 +41,7 @@ useScriptEventPage(({ title, path }) => {
 })
 ```
 
-::script-types  
-::  
-
-## 示例
-
-### 服务器端 GTM 设置
-
-服务器端 GTM 将标签执行搬到你的服务器，提高隐私性、性能（约快 500ms）及绕过广告拦截器。
-
-**前提条件：** [服务器端 GTM 容器](https://tagmanager.google.com)、托管环境（[Cloud Run](https://developers.google.com/tag-platform/tag-manager/server-side/cloud-run-setup-guide) / [Docker](https://developers.google.com/tag-platform/tag-manager/server-side/manual-setup-guide)）以及自定义域名。
-
-#### 配置
-
-用你的自定义域名覆盖脚本源：
-
-```ts
-// nuxt.config.ts
-export default defineNuxtConfig({
-  scripts: {
-    registry: {
-      googleTagManager: {
-        id: 'GTM-XXXXXX',
-        scriptInput: {
-          src: 'https://gtm.example.com/gtm.js'
-        }
-      }
-    }
-  }
-})
-```
-
-环境变量（`auth`、`preview`）可在 GTM 中找到：管理 > 环境 > 获取代码片段。
-
-#### 故障排查
-
-| 问题                         | 原因                         | 解决方案                                   |
-|------------------------------|------------------------------|--------------------------------------------|
-| 脚本被广告拦截器阻止           | 自定义域名被识别为跟踪器       | 使用不明显的子域名（避免使用 `gtm`、`analytics`、`tracking`） |
-| Safari 中 Cookie 7 天后过期    | ITP 视子域为第三方            | 使用同源设置或实现 Cookie 持续器             |
-| 预览模式无法使用               | 缺失或错误的 auth/preview 令牌 | 从 GTM：管理 > 环境 > 获取代码片段 获取正确令牌 |
-| CORS 错误                    | 服务器容器配置错误             | 确保服务器容器允许你的域名请求               |
-| `gtm.js` 返回 404             | 路径映射错误                   | 验证 CDN / 代理是否将 `/gtm.js` 路由到容器    |
-
-有关基础设施设置，请参见 [Cloud Run](https://developers.google.com/tag-platform/tag-manager/server-side/cloud-run-setup-guide) 或 [Docker](https://developers.google.com/tag-platform/tag-manager/server-side/manual-setup-guide) 指南。
-
-## 在 GTM 启动前配置
+## 在 GTM 启动前进行配置
 
 [`useScriptGoogleTagManager()`{lang="ts"}](/scripts/google-tag-manager){lang="ts"} 会自动初始化 Google 标签管理器，也会自动推送 `js`、`config` 和 `gtm.start` 事件。
 
@@ -107,7 +60,7 @@ export default defineNuxtConfig({
 ::  
 
 ::callout{icon="i-heroicons-play" to="https://stackblitz.com/github/nuxt/scripts/tree/main/examples/cookie-consent" target="_blank"}  
-在 [StackBlitz](https://stackblitz.com) 上试试实时的[Cookie 同意示例](https://stackblitz.com/github/nuxt/scripts/tree/main/examples/cookie-consent)或[细粒度同意示例](https://stackblitz.com/github/nuxt/scripts/tree/main/examples/granular-consent)。  
+在 [StackBlitz](https://stackblitz.com) 上试试实时的 [Cookie 同意示例](https://stackblitz.com/github/nuxt/scripts/tree/main/examples/cookie-consent) 或 [细粒度同意示例](https://stackblitz.com/github/nuxt/scripts/tree/main/examples/granular-consent)。  
 ::  
 
 #### 同意模式 v2 信号
@@ -173,3 +126,48 @@ useScriptEventPage(({ title, path }) => {
 })
 </script>
 ```
+
+::script-types
+::
+
+## 示例
+
+### 服务器端 GTM 设置
+
+服务器端 GTM 将标签执行转移到你的服务器，以获得更好的隐私性、性能（快约 500 毫秒）并绕过广告拦截器。
+
+**前提条件：** [服务器端 GTM 容器](https://tagmanager.google.com)、托管服务（[Cloud Run](https://developers.google.com/tag-platform/tag-manager/server-side/cloud-run-setup-guide) / [Docker](https://developers.google.com/tag-platform/tag-manager/server-side/manual-setup-guide)）以及自定义域名。
+
+#### 配置
+
+使用你的自定义域名覆盖脚本源：
+
+```ts
+// nuxt.config.ts
+export default defineNuxtConfig({
+  scripts: {
+    registry: {
+      googleTagManager: {
+        id: 'GTM-XXXXXX',
+        scriptInput: {
+          src: 'https://gtm.example.com/gtm.js'
+        }
+      }
+    }
+  }
+})
+```
+
+对于环境令牌（`auth`、`preview`），请在 GTM 中查找：管理 > 环境 > 获取代码片段。
+
+#### 故障排除
+
+| 问题 | 原因 | 解决方案 |
+|-------|-------|----------|
+| 脚本被广告拦截器阻止 | 自定义域名被检测为跟踪器 | 使用不显眼的子域名（避免使用 `gtm`、`analytics`、`tracking`） |
+| Safari 中 Cookie 在 7 天后过期 | ITP 将子域名视为第三方 | 使用同源设置或实施 Cookie 保持器 |
+| 预览模式不工作 | 缺少或错误的 auth/preview 令牌 | 从 GTM 复制令牌：管理 > 环境 > 获取代码片段 |
+| CORS 错误 | 服务器容器配置错误 | 确保你的服务器容器允许来自你域名的请求 |
+| `gtm.js` 返回 404 | 路径映射错误 | 验证你的 CDN/代理是否将 `/gtm.js` 路由到容器 |
+
+有关基础设施设置，请参阅 [Cloud Run](https://developers.google.com/tag-platform/tag-manager/server-side/cloud-run-setup-guide) 或 [Docker](https://developers.google.com/tag-platform/tag-manager/server-side/manual-setup-guide) 指南。

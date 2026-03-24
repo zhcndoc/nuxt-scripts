@@ -1,111 +1,130 @@
 <script lang="ts">
-import type { InjectionKey, ShallowRef } from 'vue'
-import { whenever } from '@vueuse/core'
-import { inject, onUnmounted, provide, shallowRef } from 'vue'
-import { MAP_INJECTION_KEY } from './ScriptGoogleMaps.vue'
+import { inject, provide, useSlots, useTemplateRef, watch } from 'vue'
+import { bindGoogleMapsEvents } from './bindGoogleMapsEvents'
+import { ADVANCED_MARKER_ELEMENT_INJECTION_KEY } from './injectionKeys'
 import { MARKER_CLUSTERER_INJECTION_KEY } from './ScriptGoogleMapsMarkerClusterer.vue'
+import { useGoogleMapsResource } from './useGoogleMapsResource'
 
-export const ADVANCED_MARKER_ELEMENT_INJECTION_KEY = Symbol('marker') as InjectionKey<{
-  advancedMarkerElement: ShallowRef<google.maps.marker.AdvancedMarkerElement | undefined>
-}>
+export { ADVANCED_MARKER_ELEMENT_INJECTION_KEY } from './injectionKeys'
 </script>
 
 <script setup lang="ts">
 const props = defineProps<{
+  /**
+   * The position of the marker on the map.
+   * @see https://developers.google.com/maps/documentation/javascript/reference/advanced-markers#AdvancedMarkerElementOptions.position
+   */
+  position?: google.maps.LatLngLiteral | google.maps.LatLng
+  /**
+   * Configuration options for the advanced marker.
+   * @see https://developers.google.com/maps/documentation/javascript/reference/advanced-markers#AdvancedMarkerElementOptions
+   */
   options?: Omit<google.maps.marker.AdvancedMarkerElementOptions, 'map'>
 }>()
 
 const emit = defineEmits<{
-  (event: typeof eventsWithoutPayload[number]): void
-  (event: typeof eventsWithMapMouseEventPayload[number], payload: google.maps.MapMouseEvent): void
+  /**
+   * Fired when the marker is clicked.
+   * @see https://developers.google.com/maps/documentation/javascript/reference/advanced-markers#AdvancedMarkerElement.click
+   */
+  click: [payload: google.maps.MapMouseEvent]
+  /**
+   * Fired repeatedly while the user drags the marker.
+   * @see https://developers.google.com/maps/documentation/javascript/reference/advanced-markers#AdvancedMarkerElement.drag
+   */
+  drag: [payload: google.maps.MapMouseEvent]
+  /**
+   * Fired when the user stops dragging the marker.
+   * @see https://developers.google.com/maps/documentation/javascript/reference/advanced-markers#AdvancedMarkerElement.dragend
+   */
+  dragend: [payload: google.maps.MapMouseEvent]
+  /**
+   * Fired when the user starts dragging the marker.
+   * @see https://developers.google.com/maps/documentation/javascript/reference/advanced-markers#AdvancedMarkerElement.dragstart
+   */
+  dragstart: [payload: google.maps.MapMouseEvent]
 }>()
-
-const eventsWithoutPayload = [
-  'animation_changed',
-  'clickable_changed',
-  'cursor_changed',
-  'draggable_changed',
-  'flat_changed',
-  'icon_changed',
-  'position_changed',
-  'shape_changed',
-  'title_changed',
-  'visible_changed',
-  'zindex_changed',
-] as const
-
-const eventsWithMapMouseEventPayload = [
-  'click',
-  'contextmenu',
-  'dblclick',
-  'drag',
-  'dragend',
-  'dragstart',
-  'mousedown',
-  'mouseout',
-  'mouseover',
-  'mouseup',
-] as const
-
-const mapContext = inject(MAP_INJECTION_KEY, undefined)
+const dragEvents = ['drag', 'dragend', 'dragstart'] as const
+const slots = useSlots()
+const markerContent = useTemplateRef('marker-content')
 const markerClustererContext = inject(MARKER_CLUSTERER_INJECTION_KEY, undefined)
 
-const advancedMarkerElement = shallowRef<google.maps.marker.AdvancedMarkerElement | undefined>(undefined)
+// gmp-click handler for cleanup (AdvancedMarkerElement uses DOM gmp-click instead of Maps addListener click)
+let gmpClickHandler: ((e: any) => void) | undefined
 
-whenever(() => mapContext?.map.value && mapContext.mapsApi.value, async () => {
-  await mapContext!.mapsApi.value!.importLibrary('marker')
+const advancedMarkerElement = useGoogleMapsResource<google.maps.marker.AdvancedMarkerElement>({
+  ready: () => !slots.content || !!markerContent.value,
+  async create({ mapsApi, map }) {
+    await mapsApi.importLibrary('marker')
+    const marker = new mapsApi.marker.AdvancedMarkerElement({
+      ...props.options,
+      gmpClickable: true,
+      ...(props.position ? { position: props.position } : {}),
+    })
 
-  advancedMarkerElement.value = new mapContext!.mapsApi.value!.marker.AdvancedMarkerElement(props.options)
-
-  setupAdvancedMarkerElementEventListeners(advancedMarkerElement.value)
-
-  if (markerClustererContext?.markerClusterer.value) {
-    markerClustererContext.markerClusterer.value.addMarker(advancedMarkerElement.value)
-  }
-  else {
-    advancedMarkerElement.value.map = mapContext!.map.value
-  }
-
-  whenever(() => props.options, (options) => {
-    if (advancedMarkerElement.value && options) {
-      Object.assign(advancedMarkerElement.value, options)
+    // Use #content slot as marker visual if provided
+    if (markerContent.value) {
+      marker.content = markerContent.value
     }
-  }, {
-    deep: true,
-  })
-}, {
-  immediate: true,
-  once: true,
+
+    if (markerClustererContext?.markerClusterer.value) {
+      markerClustererContext.markerClusterer.value.addMarker(marker, true)
+      markerClustererContext.requestRerender()
+    }
+    else {
+      marker.map = map
+    }
+
+    // AdvancedMarkerElement: use gmp-click DOM event (addListener('click') is deprecated)
+    gmpClickHandler = (e: any) => emit('click', e)
+    marker.addEventListener('gmp-click', gmpClickHandler)
+
+    // Drag events still use Maps API addListener
+    bindGoogleMapsEvents(marker, emit, {
+      withPayload: dragEvents,
+    })
+
+    return marker
+  },
+  cleanup(marker, { mapsApi }) {
+    if (gmpClickHandler) {
+      marker.removeEventListener('gmp-click', gmpClickHandler)
+      gmpClickHandler = undefined
+    }
+    mapsApi.event.clearInstanceListeners(marker)
+    if (markerClustererContext?.markerClusterer.value) {
+      markerClustererContext.markerClusterer.value.removeMarker(marker, true)
+      markerClustererContext.requestRerender()
+    }
+    else {
+      marker.map = null
+    }
+  },
 })
 
-onUnmounted(() => {
-  if (!advancedMarkerElement.value || !mapContext?.mapsApi.value) {
-    return
-  }
+watch(
+  () => [props.position, props.options],
+  () => {
+    if (!advancedMarkerElement.value)
+      return
 
-  mapContext.mapsApi.value.event.clearInstanceListeners(advancedMarkerElement.value)
-
-  if (markerClustererContext) {
-    markerClustererContext.markerClusterer.value?.removeMarker(advancedMarkerElement.value)
-  }
-  else {
-    advancedMarkerElement.value.map = null
-  }
-})
+    if (props.options)
+      Object.assign(advancedMarkerElement.value, props.options)
+    advancedMarkerElement.value.position = props.position ?? props.options?.position
+  },
+  { deep: true },
+)
 
 provide(ADVANCED_MARKER_ELEMENT_INJECTION_KEY, { advancedMarkerElement })
-
-function setupAdvancedMarkerElementEventListeners(advancedMarkerElement: google.maps.marker.AdvancedMarkerElement) {
-  eventsWithoutPayload.forEach((event) => {
-    advancedMarkerElement.addListener(event, () => emit(event))
-  })
-
-  eventsWithMapMouseEventPayload.forEach((event) => {
-    advancedMarkerElement.addListener(event, (payload: google.maps.MapMouseEvent) => emit(event, payload))
-  })
-}
 </script>
 
 <template>
+  <!-- Hidden container for #content slot — becomes the marker visual -->
+  <div v-if="$slots.content" style="display: none;">
+    <div ref="marker-content">
+      <slot name="content" />
+    </div>
+  </div>
+  <!-- Default slot for child components (InfoWindow, OverlayView, etc.) -->
   <slot v-if="advancedMarkerElement" />
 </template>

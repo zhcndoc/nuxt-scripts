@@ -1,12 +1,12 @@
 import type { ProxyRewrite } from '../runtime/utils/pure'
 import MagicString from 'magic-string'
-import { parseAndWalk, ScopeTracker, ScopeTrackerFunctionParam, ScopeTrackerVariable, walk } from 'oxc-walker'
+import { parseAndWalk, ScopeTracker, ScopeTrackerFunction, ScopeTrackerFunctionParam, ScopeTrackerIdentifier, ScopeTrackerVariable, walk } from 'oxc-walker'
 import { joinURL, parseURL } from 'ufo'
 
 const WORD_OR_DOLLAR_RE = /[\w$]/
-const GA_COLLECT_RE = /([\w$])?"https:\/\/"\+\(.*?\)\+"\.google-analytics\.com\/g\/collect"/g
-const GA_ANALYTICS_COLLECT_RE = /([\w$])?"https:\/\/"\+\(.*?\)\+"\.analytics\.google\.com\/g\/collect"/g
-const FATHOM_SELF_HOSTED_RE = /\.src\.indexOf\("cdn\.usefathom\.com"\)\s*<\s*0/
+// Static blank 1x1 transparent PNG — every user gets the same value, defeating canvas fingerprinting
+// while returning a valid data URL that won't break scripts checking format/truthiness.
+const BLANK_CANVAS_DATA_URL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVQIHWNgAAIABQABNjN9GQAAAAlwSFlzAAAWJQAAFiUBSVIk8AAAAA0lEQVQI12NgYGBgAAAABQABXvMqOgAAAABJRU5ErkJggg=='
 
 /**
  * Check if a string literal node is in a "key" position (object property key or switch-case test).
@@ -123,14 +123,19 @@ function resolveToGlobal(name: string, scopeTracker: ScopeTracker, depth = 0): s
       if (init.type === 'Identifier')
         return resolveToGlobal(init.name, scopeTracker, depth + 1)
 
-      // var n = w.navigator → resolve w, then append .navigator
-      if (init.type === 'MemberExpression' && !init.computed && init.object?.type === 'Identifier' && init.property?.type === 'Identifier') {
+      // var n = w.navigator / var n = w['navigator'] → resolve w, then append property
+      if (init.type === 'MemberExpression' && init.object?.type === 'Identifier') {
+        const memberProp = init.computed
+          ? (init.property?.type === 'Literal' && typeof init.property.value === 'string' ? init.property.value : null)
+          : init.property?.type === 'Identifier' ? init.property.name : null
+        if (!memberProp)
+          return null
         const objGlobal = resolveToGlobal(init.object.name, scopeTracker, depth + 1)
         if (!objGlobal)
           return null
         // window.navigator → "navigator", window.fetch stays as compound
         if (WINDOW_GLOBALS.has(objGlobal) || objGlobal === 'document')
-          return init.property.name
+          return memberProp
         return null
       }
 
@@ -190,7 +195,7 @@ function resolveCalleeTarget(callee: any, scopeTracker: ScopeTracker): string | 
  * Uses oxc-walker with ScopeTracker to precisely identify string literals,
  * resolve aliased globals, and rewrite API calls through the proxy.
  */
-export function rewriteScriptUrlsAST(content: string, filename: string, rewrites: ProxyRewrite[]): string {
+export function rewriteScriptUrlsAST(content: string, filename: string, rewrites: ProxyRewrite[], postProcess?: (output: string, rewrites: ProxyRewrite[]) => string, options?: { skipApiRewrites?: boolean, neutralizeCanvas?: boolean }): string {
   const s = new MagicString(content)
 
   // In minified JS, keywords like `return` can directly precede string literals
@@ -227,10 +232,13 @@ export function rewriteScriptUrlsAST(content: string, filename: string, rewrites
         }
       }
 
-      // Template literals with no expressions (static strings)
-      if (node.type === 'TemplateLiteral' && (node as any).expressions?.length === 0) {
+      // Template literals — static (no expressions) and dynamic (with expressions)
+      if (node.type === 'TemplateLiteral') {
         const quasis = (node as any).quasis
-        if (quasis?.length === 1) {
+        const expressions = (node as any).expressions
+
+        if (expressions?.length === 0 && quasis?.length === 1) {
+          // Static template literal — rewrite the whole thing
           const value = quasis[0].value?.cooked ?? quasis[0].value?.raw
           if (typeof value !== 'string')
             return
@@ -245,11 +253,69 @@ export function rewriteScriptUrlsAST(content: string, filename: string, rewrites
             s.overwrite(node.start, node.end, `${needsLeadingSpace(node.start)}self.location.origin+\`${rewritten}\``)
           }
         }
+        else if (expressions?.length > 0 && quasis?.length > 0) {
+          // Template literal with expressions — check if first quasi contains a URL to rewrite.
+          // e.g. `https://analytics.tiktok.com/api?id=${id}` → self.location.origin+`/_proxy/tiktok/api?id=${id}`
+          const firstQuasi = quasis[0]
+          const value = firstQuasi.value?.cooked ?? firstQuasi.value?.raw
+          if (typeof value !== 'string' || isPropertyKeyAST(parent, ctx))
+            return
+          const rewritten = matchAndRewrite(value, rewrites)
+          if (rewritten === null)
+            return
+
+          // Overwrite just the first quasi and prepend self.location.origin+
+          // Template: `{quasi0}${expr0}{quasi1}...`
+          // We rewrite quasi0 content and add prefix before the opening backtick
+          s.overwrite(node.start, firstQuasi.end, `${needsLeadingSpace(node.start)}self.location.origin+\`${rewritten}`)
+        }
       }
 
-      // API call rewriting
-      if (node.type === 'CallExpression') {
+      // API call rewriting — skip for partytown scripts (they use resolveUrl instead)
+      if (node.type === 'CallExpression' && !options?.skipApiRewrites) {
         const callee = (node as any).callee
+
+        // Canvas fingerprinting neutralization — gated on hardware privacy flag.
+        // Only scripts with hardware anonymization enabled get canvas neutralized.
+        // Scripts without hardware anonymization skip this since they don't
+        // canvas fingerprint and may use canvas APIs legitimately.
+        const shouldNeutralizeCanvas = options?.neutralizeCanvas !== false
+        const canvasPropName = shouldNeutralizeCanvas && callee?.type === 'MemberExpression'
+          ? (callee.computed
+              ? (callee.property?.type === 'Literal' && typeof callee.property.value === 'string' ? callee.property.value : null)
+              : callee.property?.name)
+          : null
+
+        // .toDataURL() → static blank canvas (prevents canvas fingerprint extraction)
+        if (canvasPropName === 'toDataURL' && callee.object) {
+          const blankCanvas = `"${BLANK_CANVAS_DATA_URL}"`
+          // Skip if the object resolves to a locally declared function/class (not a DOM element)
+          if (callee.object.type === 'Identifier') {
+            const decl = scopeTracker.getDeclaration(callee.object.name)
+            // If declared as a function or class, it's not a canvas element — skip
+            if (decl instanceof ScopeTrackerFunction || decl instanceof ScopeTrackerIdentifier) {
+              // fall through to other checks
+              ;
+            }
+            else {
+              s.overwrite(node.start, node.end, blankCanvas)
+              return
+            }
+          }
+          else {
+            // Chained access (e.g. ctx.canvas.toDataURL()) — always neutralize
+            s.overwrite(node.start, node.end, blankCanvas)
+            return
+          }
+        }
+        // .getExtension('WEBGL_debug_renderer_info') → null (prevents GPU fingerprinting)
+        if (canvasPropName === 'getExtension') {
+          const args = (node as any).arguments
+          if (args?.length === 1 && args[0]?.type === 'Literal' && args[0].value === 'WEBGL_debug_renderer_info') {
+            s.overwrite(node.start, node.end, 'null')
+            return
+          }
+        }
 
         // fetch(url) → check it's truly global (not locally declared)
         if (callee?.type === 'Identifier' && callee.name === 'fetch') {
@@ -278,7 +344,7 @@ export function rewriteScriptUrlsAST(content: string, filename: string, rewrites
       }
 
       // new XMLHttpRequest / new Image / new x.XMLHttpRequest / new x.Image
-      if (node.type === 'NewExpression') {
+      if (node.type === 'NewExpression' && !options?.skipApiRewrites) {
         const callee = (node as any).callee
 
         // new XMLHttpRequest — check it's truly global
@@ -318,29 +384,10 @@ export function rewriteScriptUrlsAST(content: string, filename: string, rewrites
     },
   })
 
-  // GA dynamic URL construction pattern — keep as regex post-pass
+  // Apply SDK-specific post-processing from the proxy config
   let output = s.toString()
-  const gaRewrite = rewrites.find(r => r.from.includes('google-analytics.com/g/collect'))
-  if (gaRewrite) {
-    output = output.replace(
-      GA_COLLECT_RE,
-      (_, prevChar) => `${prevChar ? `${prevChar} ` : ''}self.location.origin+"${gaRewrite.to}"`,
-    )
-    output = output.replace(
-      GA_ANALYTICS_COLLECT_RE,
-      (_, prevChar) => `${prevChar ? `${prevChar} ` : ''}self.location.origin+"${gaRewrite.to}"`,
-    )
-  }
-
-  // Fathom self-hosted detection: the SDK checks if its src contains
-  // "cdn.usefathom.com" and overrides trackerUrl with the script host's root.
-  // After AST rewrite already set trackerUrl to the correct proxy URL,
-  // neutralize this check so it doesn't override it.
-  if (rewrites.some(r => r.from === 'cdn.usefathom.com')) {
-    output = output.replace(
-      FATHOM_SELF_HOSTED_RE,
-      '.src.indexOf("cdn.usefathom.com")<-1',
-    )
+  if (postProcess) {
+    output = postProcess(output, rewrites)
   }
 
   return output

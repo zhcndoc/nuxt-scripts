@@ -1,10 +1,24 @@
+import type { ProxyRewrite } from '../../src/first-party'
 import { $fetch } from 'ofetch'
 import { describe, expect, it } from 'vitest'
+import { buildProxyConfigsFromRegistry } from '../../src/first-party/proxy-configs'
 import { rewriteScriptUrlsAST } from '../../src/plugins/rewrite-ast'
-import { getAllProxyConfigs } from '../../src/proxy-configs'
+import { registry } from '../../src/registry'
 import { stripFingerprintingFromPayload } from '../utils/proxy-privacy'
 
+let _proxyConfigs: ReturnType<typeof buildProxyConfigsFromRegistry> | undefined
+async function getProxyConfigs() {
+  if (!_proxyConfigs)
+    _proxyConfigs = buildProxyConfigsFromRegistry(await registry())
+  return _proxyConfigs
+}
+
 const COLLECT_PREFIX = '/_scripts/c'
+
+/** Derive rewrites from proxy config domains, same as transform plugin */
+function deriveRewrites(domains: string[], proxyPrefix: string): ProxyRewrite[] {
+  return domains.map(domain => ({ from: domain, to: `${proxyPrefix}/${domain}` }))
+}
 
 interface ScriptTestCase {
   name: string
@@ -23,13 +37,7 @@ const testCases: ScriptTestCase[] = [
     expectedPatterns: ['www.google.com/g/collect', 'googletagmanager.com'],
     forbiddenAfterRewrite: ['www.google.com/g/collect'],
   },
-  {
-    name: 'Google Tag Manager',
-    url: 'https://www.googletagmanager.com/gtm.js?id=GTM-XXXXXXX',
-    registryKey: 'googleTagManager',
-    expectedPatterns: ['googletagmanager.com'],
-    forbiddenAfterRewrite: ['www.googletagmanager.com'],
-  },
+  // GTM removed: proxy not supported (dynamic script loading)
   {
     name: 'Meta Pixel (fbevents.js)',
     url: 'https://connect.facebook.net/en_US/fbevents.js',
@@ -58,28 +66,22 @@ const testCases: ScriptTestCase[] = [
     expectedPatterns: ['hotjar'],
     forbiddenAfterRewrite: ['static.hotjar.com', 'vars.hotjar.com'],
   },
-  {
-    name: 'Segment Analytics.js',
-    url: 'https://cdn.segment.com/analytics.js/v1/XXXXXXX/analytics.min.js',
-    registryKey: 'segment',
-    expectedPatterns: ['segment'],
-    forbiddenAfterRewrite: ['api.segment.io', 'cdn.segment.com'],
-  },
+  // Segment removed: proxy not supported (dynamic API URL construction)
 ]
 
 describe('third-party script proxy replacements', () => {
-  const proxyConfigs = getAllProxyConfigs(COLLECT_PREFIX)
-
   describe.each(testCases)('$name', ({ name, url, registryKey, expectedPatterns, forbiddenAfterRewrite }) => {
-    const proxyConfig = proxyConfigs[registryKey]
-
-    it('has proxy config defined', () => {
+    it('has proxy config defined', async () => {
+      const proxyConfigs = await getProxyConfigs()
+      const proxyConfig = proxyConfigs[registryKey]
       expect(proxyConfig, `Missing proxy config for ${registryKey}`).toBeDefined()
-      expect(proxyConfig.rewrite, `Missing rewrite rules for ${registryKey}`).toBeDefined()
-      expect(proxyConfig.rewrite!.length, `Empty rewrite rules for ${registryKey}`).toBeGreaterThan(0)
+      expect(proxyConfig.domains, `Missing domains for ${registryKey}`).toBeDefined()
+      expect(proxyConfig.domains.length, `Empty domains for ${registryKey}`).toBeGreaterThan(0)
     })
 
     it('downloads and rewrites script correctly', async () => {
+      const proxyConfigs = await getProxyConfigs()
+      const proxyConfig = proxyConfigs[registryKey]
       let content: string
       try {
         content = await $fetch(url, {
@@ -106,7 +108,8 @@ describe('third-party script proxy replacements', () => {
       }
 
       // Apply rewrites
-      const rewritten = rewriteScriptUrlsAST(content, 'script.js', proxyConfig.rewrite!)
+      const rewrites = deriveRewrites(proxyConfig.domains, COLLECT_PREFIX)
+      const rewritten = rewriteScriptUrlsAST(content, 'script.js', rewrites)
 
       // Check that forbidden domains are replaced
       for (const forbidden of forbiddenAfterRewrite) {
@@ -137,23 +140,13 @@ describe('third-party script proxy replacements', () => {
     }, 15000)
   })
 
-  describe('rewrite completeness', () => {
-    it('all proxy configs have matching route rules', () => {
+  describe('config completeness', () => {
+    it('all proxy configs have domains and privacy', async () => {
+      const proxyConfigs = await getProxyConfigs()
       for (const [key, config] of Object.entries(proxyConfigs)) {
-        expect(config.routes, `${key} missing routes`).toBeDefined()
-        expect(Object.keys(config.routes!).length, `${key} has empty routes`).toBeGreaterThan(0)
-
-        // Each rewrite target should have a corresponding route
-        for (const rewrite of config.rewrite || []) {
-          const hasMatchingRoute = Object.keys(config.routes!).some((route) => {
-            const routeBase = route.replace('/**', '')
-            return rewrite.to.startsWith(routeBase.replace('/_scripts/c', COLLECT_PREFIX))
-          })
-          expect(
-            hasMatchingRoute,
-            `${key}: rewrite target "${rewrite.to}" has no matching route`,
-          ).toBe(true)
-        }
+        expect(config.domains, `${key} missing domains`).toBeDefined()
+        expect(config.domains.length, `${key} has empty domains`).toBeGreaterThan(0)
+        expect(config.privacy, `${key} missing privacy`).toBeDefined()
       }
     })
   })
@@ -168,12 +161,6 @@ describe('third-party script proxy replacements', () => {
           // Legacy endpoints
           var ga2 = 'https://www.google-analytics.com/collect';
           fetch("//analytics.google.com/analytics.js");
-        })();
-      `,
-      googleTagManager: `
-        (function() {
-          var gtm = "https://www.googletagmanager.com/gtm.js";
-          iframe.src = 'https://www.googletagmanager.com/ns.html';
         })();
       `,
       metaPixel: `
@@ -200,24 +187,17 @@ describe('third-party script proxy replacements', () => {
           r.src="https://vars.hotjar.com/vars/123.js";
         })();
       `,
-      segment: `
-        (function() {
-          analytics.load = function(key) {
-            var script = document.createElement("script");
-            script.src = "https://cdn.segment.com/analytics.js/v1/" + key + "/analytics.min.js";
-            var apiHost = "https://api.segment.io/v1";
-          };
-        })();
-      `,
     }
 
-    it('does not merge keywords with self.location.origin in minified code', () => {
+    it('does not merge keywords with self.location.origin in minified code', async () => {
       // In minified JS, `return"url"` is valid because `"` is not an identifier char.
       // But replacing the string with `self.location.origin+...` would create `returnself`
       // which is parsed as an identifier, not `return self`.
       const minified = `function f(x){switch(x){case 1:return"https://www.google-analytics.com/collect";case 2:return"https://stats.g.doubleclick.net/g/collect"}}`
+      const proxyConfigs = await getProxyConfigs()
       const config = proxyConfigs.googleAnalytics
-      const rewritten = rewriteScriptUrlsAST(minified, 'script.js', config.rewrite!)
+      const rewrites = deriveRewrites(config.domains, COLLECT_PREFIX)
+      const rewritten = rewriteScriptUrlsAST(minified, 'script.js', rewrites)
 
       // Must have a space between `return` and `self`
       expect(rewritten).not.toContain('returnself')
@@ -227,17 +207,19 @@ describe('third-party script proxy replacements', () => {
       expect(() => new Function(rewritten)).not.toThrow()
     })
 
-    it.each(Object.entries(syntheticScripts))('%s synthetic script rewrites correctly', (key, content) => {
+    it.each(Object.entries(syntheticScripts))('%s synthetic script rewrites correctly', async (key, content) => {
+      const proxyConfigs = await getProxyConfigs()
       const config = proxyConfigs[key]
       expect(config, `Missing config for ${key}`).toBeDefined()
 
-      const rewritten = rewriteScriptUrlsAST(content, 'script.js', config.rewrite!)
+      const rewrites = deriveRewrites(config.domains, COLLECT_PREFIX)
+      const rewritten = rewriteScriptUrlsAST(content, 'script.js', rewrites)
 
       // Should have proxy paths
       expect(rewritten).toContain(COLLECT_PREFIX)
 
       // Should not have original domains in quoted strings
-      for (const { from } of config.rewrite!) {
+      for (const { from } of rewrites) {
         expect(rewritten).not.toContain(`"https://${from}`)
         expect(rewritten).not.toContain(`'https://${from}`)
         expect(rewritten).not.toContain(`"//${from}`)
@@ -483,9 +465,10 @@ describe('privacy stripping snapshots', () => {
   describe('session recording payload (Clarity/Hotjar)', () => {
     it('anonymize mode - snapshot', () => {
       const result = stripFingerprintingFromPayload(sessionPayload)
+      // canvas and webgl pass through — neutralized at build time via AST rewriting, not at runtime
       expect(result).toMatchInlineSnapshot(`
         {
-          "canvas": "",
+          "canvas": "fp_canvas_abc123",
           "deviceMemory": 16,
           "fonts": [],
           "hardwareConcurrency": 8,
@@ -502,7 +485,10 @@ describe('privacy stripping snapshots', () => {
           "uid": "user-xyz-789",
           "url": "https://example.com/dashboard",
           "vp": "1920x1080",
-          "webgl": {},
+          "webgl": {
+            "renderer": "ANGLE (NVIDIA GeForce RTX 3080)",
+            "vendor": "Google Inc. (NVIDIA)",
+          },
         }
       `)
     })
@@ -538,8 +524,9 @@ describe('privacy stripping snapshots', () => {
       expect(result.deviceMemory).toBe(16) // Generalized to bucket
       expect(result.plugins).toEqual([]) // Replaced with empty
       expect(result.fonts).toEqual([]) // Replaced with empty
-      expect(result.canvas).toBe('') // Replaced with empty
-      expect(result.webgl).toEqual({}) // Replaced with empty
+      // canvas and webgl pass through at runtime — neutralized at build time via AST rewriting
+      expect(result.canvas).toBe(sessionPayload.canvas)
+      expect(result.webgl).toEqual(sessionPayload.webgl)
       expect(result.timezone).toBe('UTC') // Generalized to UTC
       expect(result.timezoneOffset).toBe(360) // Bucketed to 3-hour interval
 

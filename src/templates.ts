@@ -107,7 +107,7 @@ export function templatePlugin(config: Partial<ModuleOptions>, registry: Require
   if (Array.isArray(config.globals)) {
     // convert to object
     config.globals = Object.fromEntries(config.globals.map(i => [hash(i), i]))
-    logger.warn('The `globals` array option is deprecated, please convert to an object.')
+    logger.warn('The `globals` array option is deprecated. Convert to an object: `globals: { myScript: \'https://example.com/script.js\' }`')
   }
   const imports = []
   const inits = []
@@ -117,39 +117,36 @@ export function templatePlugin(config: Partial<ModuleOptions>, registry: Require
 
   let needsServiceWorkerImport = false
 
-  // for global scripts, we can initialise them script away
+  // Registry entries are pre-normalized to [input, scriptOptions?] tuple form.
+  // Only generate a global composable call when scriptOptions.trigger is present;
+  // entries without a trigger are infrastructure only (proxy routes, types, bundling).
   for (const [k, c] of Object.entries(config.registry || {})) {
+    if (c === false)
+      continue
+    const [, scriptOptions] = c as [Record<string, any>, any?]
+    if (!scriptOptions?.trigger)
+      continue
     const importDefinition = registry.find(i => i.import.name.toLowerCase() === `usescript${k.toLowerCase()}`)
     if (importDefinition) {
       resolvedRegistryKeys.push(k)
       imports.unshift(`import { ${importDefinition.import.name} } from '${importDefinition.import.from}'`)
-      if (c === 'mock') {
-        inits.push(`const ${k} = ${importDefinition.import.name}({ scriptOptions: { trigger: 'manual', skipValidation: true } })`)
+      const [input] = c as [Record<string, any>, any?]
+      const opts = { ...scriptOptions }
+      const triggerResolved = resolveTriggerForTemplate(opts.trigger)
+      if (triggerResolved) {
+        opts.trigger = '__TRIGGER_PLACEHOLDER__' as any
+        if (triggerResolved.includes('useScriptTriggerIdleTimeout'))
+          needsIdleTimeoutImport = true
+        if (triggerResolved.includes('useScriptTriggerInteraction'))
+          needsInteractionImport = true
+        if (triggerResolved.includes('useScriptTriggerServiceWorker'))
+          needsServiceWorkerImport = true
       }
-      else if (Array.isArray(c) && c.length === 2) {
-        // [input, options] format - unpack properly
-        const input = c[0] || {}
-        const scriptOptions = { ...c[1] }
-        const triggerResolved = resolveTriggerForTemplate(scriptOptions?.trigger)
-        if (triggerResolved) {
-          scriptOptions.trigger = '__TRIGGER_PLACEHOLDER__' as any
-          if (triggerResolved.includes('useScriptTriggerIdleTimeout'))
-            needsIdleTimeoutImport = true
-          if (triggerResolved.includes('useScriptTriggerInteraction'))
-            needsInteractionImport = true
-          if (triggerResolved.includes('useScriptTriggerServiceWorker'))
-            needsServiceWorkerImport = true
-        }
-        const args = { ...input, scriptOptions }
-        const argsJson = triggerResolved
-          ? JSON.stringify(args).replace(TRIGGER_PLACEHOLDER_RE, triggerResolved)
-          : JSON.stringify(args)
-        inits.push(`const ${k} = ${importDefinition.import.name}(${argsJson})`)
-      }
-      else {
-        const args = (typeof c !== 'object' ? {} : c) || {}
-        inits.push(`const ${k} = ${importDefinition.import.name}(${JSON.stringify(args)})`)
-      }
+      const args = { ...input, scriptOptions: opts }
+      const argsJson = triggerResolved
+        ? JSON.stringify(args).replace(TRIGGER_PLACEHOLDER_RE, triggerResolved)
+        : JSON.stringify(args)
+      inits.push(`const ${k} = ${importDefinition.import.name}(${argsJson})`)
     }
   }
   for (const [k, c] of Object.entries(config.globals || {})) {

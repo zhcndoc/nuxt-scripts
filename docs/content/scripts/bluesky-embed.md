@@ -1,13 +1,11 @@
 ---
-
 title: Bluesky 嵌入
-description: 服务器端渲染的 Bluesky 嵌入，无需客户端 API 调用。
+description: 服务器端渲染的 Bluesky 嵌入，零客户端 API 调用。
 links:
   - label: ScriptBlueskyEmbed
     icon: i-simple-icons-github
     to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptBlueskyEmbed.vue
     size: xs
-
 ---
 
 [Bluesky](https://bsky.app) 是一个基于 AT Protocol 构建的去中心化社交媒体平台。
@@ -17,24 +15,10 @@ Nuxt Scripts 提供了一个 [`<ScriptBlueskyEmbed>`{lang="html"}](/scripts/blue
 ::script-stats
 ::
 
-::script-types
+::script-docs{embed}
 ::
 
-## 安装配置
-
-要使用 Bluesky 嵌入组件，必须在你的 `nuxt.config` 中启用它：
-
-```ts [nuxt.config.ts]
-export default defineNuxtConfig({
-  scripts: {
-    registry: {
-      blueskyEmbed: true,
-    },
-  },
-})
-```
-
-这会注册所需的服务器 API 路由（`/_scripts/embed/bluesky` 和 `/_scripts/embed/bluesky-image`），用于处理帖子数据获取及图片代理。
+这会注册所需的服务器 API 路由（`/_scripts/embed/bluesky` 和 `/_scripts/embed/bluesky-image`），用于处理帖子数据获取和图片代理。
 
 ## [`<ScriptBlueskyEmbed>`{lang="html"}](/scripts/bluesky-embed){lang="html"}
 
@@ -50,7 +34,9 @@ export default defineNuxtConfig({
 
 ::code-group
 
-```vue [基本用法]
+:bluesky-embed-demo{label="输出"}
+
+```vue [基础用法]
 <template>
   <ScriptBlueskyEmbed post-url="https://bsky.app/profile/bsky.app/post/3mgnwwvj3u22a">
     <template #default="{ displayName, handle, text, datetime, likesFormatted }">
@@ -284,4 +270,7 @@ interface SlotProps {
 
 ## 作者选择退出
 
-该组件尊重 Bluesky 的 `!no-unauthenticated` 标签。如果帖子作者选择不允许外部嵌入，API 会返回 403 错误，组件显示错误插槽。
+该组件尊重 Bluesky 的 `!no-unauthenticated` 标签。如果帖子作者选择退出外部嵌入，API 会返回 403 错误，组件会显示错误插槽。
+
+::script-types
+::

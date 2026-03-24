@@ -1,21 +1,19 @@
 ---
-
-title: PayPal  
-description: 在你的 Nuxt 应用中使用 PayPal。  
-links:  
-  - label: useScriptPayPal  
-    icon: i-simple-icons-github  
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/paypal.ts  
-    size: xs  
-  - label: "<ScriptPayPalButtons>"  
-    icon: i-simple-icons-github  
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptPayPalButtons.vue  
-    size: xs  
-  - label: "<ScriptPayPalMessages>"  
-    icon: i-simple-icons-github  
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptPayPalMessages.vue  
-    size: xs  
-
+title: PayPal
+description: 在你的 Nuxt 应用中使用 PayPal。
+links:
+  - label: useScriptPayPal
+    icon: i-simple-icons-github
+    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/paypal.ts
+    size: xs
+  - label: "<ScriptPayPalButtons>"
+    icon: i-simple-icons-github
+    to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptPayPalButtons.vue
+    size: xs
+  - label: "<ScriptPayPalMessages>"
+    icon: i-simple-icons-github
+    to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptPayPalMessages.vue
+    size: xs
 ---
 
 [PayPal](https://www.paypal.com) 是一个流行的支付网关，允许你在线接受付款。
@@ -28,8 +26,8 @@ Nuxt Scripts 提供了 PayPal SDK v6 的集成：
 ::script-stats  
 ::  
 
-::script-types  
-::  
+::script-docs
+::
 
 ## 类型
 
@@ -47,7 +45,7 @@ v6 类型定义可从 `@paypal/paypal-js/sdk-v6` 获取。
 
 :pay-pal-demo{label="输出"}
 
-```vue [Input]
+```vue [输入]
 <script setup lang="ts">
 import type { Components, SdkInstance } from '@paypal/paypal-js/sdk-v6'
 
@@ -126,3 +124,14 @@ export default defineNuxtConfig({
 ```text [.env]
 NUXT_PUBLIC_SCRIPTS_PAYPAL_CLIENT_ID=<YOUR_CLIENT_ID>
 ```
+
+### 组合式函数
+
+```ts
+export function useScriptPayPal<T extends PayPalApi>(_options?: PayPalInput) {}
+```
+
+请遵循 [Registry Scripts](/docs/guides/registry-scripts) 指南以了解更多高级用法。
+
+::script-types
+::

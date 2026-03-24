@@ -1,53 +1,40 @@
 <script setup lang="ts">
-import { whenever } from '@vueuse/core'
-import { inject, onUnmounted, shallowRef } from 'vue'
-import { MAP_INJECTION_KEY } from './ScriptGoogleMaps.vue'
-import { ADVANCED_MARKER_ELEMENT_INJECTION_KEY } from './ScriptGoogleMapsAdvancedMarkerElement.vue'
+import { inject, watch } from 'vue'
+import { ADVANCED_MARKER_ELEMENT_INJECTION_KEY } from './injectionKeys'
+import { useGoogleMapsResource } from './useGoogleMapsResource'
 
 const props = defineProps<{
+  /**
+   * Configuration options for the pin element that customizes the visual appearance of the marker.
+   * @see https://developers.google.com/maps/documentation/javascript/reference/advanced-markers#PinElementOptions
+   */
   options?: Omit<google.maps.marker.PinElementOptions, 'map'>
 }>()
 
-const mapContext = inject(MAP_INJECTION_KEY, undefined)
 const advancedMarkerElementContext = inject(ADVANCED_MARKER_ELEMENT_INJECTION_KEY, undefined)
 
-const pinElement = shallowRef<google.maps.marker.PinElement | undefined>(undefined)
-
-whenever(
-  () =>
-    mapContext?.map.value
-    && mapContext.mapsApi.value
-    && advancedMarkerElementContext?.advancedMarkerElement.value,
-  async () => {
-    await mapContext!.mapsApi.value!.importLibrary('marker')
-
-    pinElement.value = new mapContext!.mapsApi.value!.marker.PinElement(props.options)
-
+const pinElement = useGoogleMapsResource<google.maps.marker.PinElement>({
+  ready: () => !!advancedMarkerElementContext?.advancedMarkerElement.value,
+  async create({ mapsApi }) {
+    await mapsApi.importLibrary('marker')
+    const pin = new mapsApi.marker.PinElement(props.options)
     if (advancedMarkerElementContext?.advancedMarkerElement.value) {
-      advancedMarkerElementContext.advancedMarkerElement.value.content = pinElement.value.element
+      advancedMarkerElementContext.advancedMarkerElement.value.content = pin.element
     }
-
-    whenever(() => props.options, (options) => {
-      if (pinElement.value && options) {
-        Object.assign(pinElement.value, options)
-      }
-    }, {
-      deep: true,
-    })
+    return pin
   },
-  {
-    immediate: true,
-    once: true,
+  cleanup() {
+    if (advancedMarkerElementContext?.advancedMarkerElement.value) {
+      advancedMarkerElementContext.advancedMarkerElement.value.content = null
+    }
   },
-)
-
-onUnmounted(() => {
-  if (advancedMarkerElementContext?.advancedMarkerElement.value && pinElement.value) {
-    // Clear the content from the parent marker
-    advancedMarkerElementContext.advancedMarkerElement.value.content = null
-  }
-  pinElement.value = undefined
 })
+
+watch(() => props.options, (options) => {
+  if (pinElement.value && options) {
+    Object.assign(pinElement.value, options)
+  }
+}, { deep: true })
 </script>
 
 <template>

@@ -1,8 +1,9 @@
 <script lang="ts">
 import type { InjectionKey, ShallowRef } from 'vue'
-import { whenever } from '@vueuse/core'
-import { inject, onUnmounted, provide, shallowRef } from 'vue'
-import { MAP_INJECTION_KEY } from './ScriptGoogleMaps.vue'
+import { inject, provide, shallowRef, watch } from 'vue'
+import { bindGoogleMapsEvents } from './bindGoogleMapsEvents'
+import { MAP_INJECTION_KEY } from './injectionKeys'
+import { useGoogleMapsResource } from './useGoogleMapsResource'
 
 // Inline types to avoid requiring @googlemaps/markerclusterer as a build-time dependency
 export interface MarkerClustererInstance {
@@ -20,19 +21,38 @@ export interface MarkerClustererOptions {
   onClusterClick?: unknown
 }
 
-export const MARKER_CLUSTERER_INJECTION_KEY = Symbol('marker-clusterer') as InjectionKey<{
+export interface MarkerClustererContext {
   markerClusterer: ShallowRef<MarkerClustererInstance | undefined>
   requestRerender: () => void
-}>
+  /** Increments after each clustering cycle; watch to detect cluster membership changes */
+  clusteringVersion: ShallowRef<number>
+}
+
+export const MARKER_CLUSTERER_INJECTION_KEY = Symbol('marker-clusterer') as InjectionKey<MarkerClustererContext>
 </script>
 
 <script setup lang="ts">
 const props = defineProps<{
+  /**
+   * Configuration options for the marker clusterer.
+   * @see https://googlemaps.github.io/js-markerclusterer/interfaces/MarkerClustererOptions.html
+   */
   options?: Omit<MarkerClustererOptions, 'map'>
 }>()
 
 const emit = defineEmits<{
-  (event: typeof markerClustererEvents[number], payload: MarkerClustererInstance): void
+  /**
+   * Fired when a cluster is clicked.
+   */
+  click: [payload: MarkerClustererInstance]
+  /**
+   * Fired when the clusterer begins clustering markers.
+   */
+  clusteringbegin: [payload: MarkerClustererInstance]
+  /**
+   * Fired when the clusterer finishes clustering markers.
+   */
+  clusteringend: [payload: MarkerClustererInstance]
 }>()
 
 const markerClustererEvents = [
@@ -42,57 +62,63 @@ const markerClustererEvents = [
 ] as const
 
 const mapContext = inject(MAP_INJECTION_KEY, undefined)
+const clusteringVersion = shallowRef(0)
 
-const markerClusterer = shallowRef<MarkerClustererInstance | undefined>(undefined)
-
-whenever(() => mapContext?.map.value, async (map) => {
-  const { MarkerClusterer } = await import('@googlemaps/markerclusterer')
-  markerClusterer.value = new MarkerClusterer({
-    map,
-    ...props.options,
-  } as any) as MarkerClustererInstance
-
-  setupMarkerClustererEventListeners(markerClusterer.value)
-}, {
-  immediate: true,
-  once: true,
+const markerClusterer = useGoogleMapsResource<MarkerClustererInstance>({
+  async create({ map }) {
+    const { MarkerClusterer } = await import('@googlemaps/markerclusterer')
+    const clusterer = new MarkerClusterer({
+      map,
+      ...props.options,
+    } as any) as MarkerClustererInstance
+    bindGoogleMapsEvents(clusterer, emit, { withPayload: markerClustererEvents })
+    clusterer.addListener('clusteringend', () => {
+      clusteringVersion.value++
+    })
+    return clusterer
+  },
+  cleanup(clusterer, { mapsApi }) {
+    mapsApi.event.clearInstanceListeners(clusterer)
+    clusterer.setMap(null)
+  },
 })
 
-const markerClustererNeedsRerender = shallowRef(false)
+const rerenderPending = shallowRef(false)
 
 function requestRerender() {
-  markerClustererNeedsRerender.value = true
+  rerenderPending.value = true
 }
 
-whenever(() => markerClustererNeedsRerender.value && markerClusterer.value, () => {
-  markerClusterer.value!.render()
-
-  markerClustererNeedsRerender.value = false
-})
-
-onUnmounted(() => {
-  if (!markerClusterer.value || !mapContext?.mapsApi.value) {
-    return
-  }
-
-  mapContext.mapsApi.value.event.clearInstanceListeners(markerClusterer.value)
-
-  markerClusterer.value.setMap(null)
-})
+watch(
+  () => rerenderPending.value && markerClusterer.value,
+  (ready) => {
+    if (!ready)
+      return
+    // Guard: map projection must be ready, otherwise MarkerClusterer.render()
+    // throws "Cannot read properties of null (reading 'fromLatLngToDivPixel')"
+    // Keep rerenderPending true so the request isn't lost
+    if (!mapContext?.map.value?.getProjection())
+      return
+    rerenderPending.value = false
+    try {
+      markerClusterer.value!.render()
+    }
+    catch (err) {
+      if (import.meta.dev) {
+        console.error('[nuxt-scripts] MarkerClusterer render failed:', err)
+      }
+    }
+  },
+)
 
 provide(
   MARKER_CLUSTERER_INJECTION_KEY,
   {
     markerClusterer,
     requestRerender,
+    clusteringVersion,
   },
 )
-
-function setupMarkerClustererEventListeners(clusterer: MarkerClustererInstance) {
-  markerClustererEvents.forEach((event) => {
-    clusterer.addListener(event, () => emit(event, clusterer))
-  })
-}
 </script>
 
 <template>

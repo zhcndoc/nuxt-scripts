@@ -1,13 +1,11 @@
 ---
-
-title: Google reCAPTCHA  
-description: 在你的 Nuxt 应用中使用 Google reCAPTCHA v3。  
-links:  
-  - label: 源码  
-    icon: i-simple-icons-github  
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/google-recaptcha.ts  
-    size: xs  
-
+title: Google reCAPTCHA
+description: 在你的 Nuxt 应用中使用 Google reCAPTCHA v3。
+links:
+  - label: Source
+    icon: i-simple-icons-github
+    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/google-recaptcha.ts
+    size: xs
 ---
 
 [Google reCAPTCHA](https://www.google.com/recaptcha/about/) 利用先进的风险分析技术保护你的网站免受垃圾信息和滥用。
@@ -22,144 +20,6 @@ Nuxt Scripts 提供了一个注册脚本组合式函数 `useScriptGoogleRecaptch
 ::
 
 ::script-docs{:sections='["setup", "composable"]'}  
-::
-
-`useScriptGoogleRecaptcha` 组合式函数让你可以精细控制 reCAPTCHA 在你网站上的加载时机和方式。
-
-```ts
-const { proxy } = useScriptGoogleRecaptcha({
-  siteKey: 'YOUR_SITE_KEY'
-})
-
-// 执行 reCAPTCHA 并获取令牌
-proxy.grecaptcha.ready(async () => {
-  const token = await proxy.grecaptcha.execute('YOUR_SITE_KEY', { action: 'submit' })
-  // 将令牌发送到你的服务器进行验证
-})
-```
-
-请参照[注册脚本](/docs/guides/registry-scripts)指南了解更多高级用法。
-
-### GoogleRecaptchaApi
-
-```ts
-export interface GoogleRecaptchaApi {
-  grecaptcha: {
-    ready: (callback: () => void) => void
-    execute: (siteKey: string, options: { action: string }) => Promise<string>
-    enterprise?: {
-      ready: (callback: () => void) => void
-      execute: (siteKey: string, options: { action: string }) => Promise<string>
-    }
-  }
-}
-```
-
-### 配置模式
-
-首次设置脚本时必须提供以下选项。
-
-```ts
-export const GoogleRecaptchaOptions = object({
-  /**
-   * 你的 reCAPTCHA 网站密钥，来自 Google reCAPTCHA 管理控制台。
-   */
-  siteKey: string(),
-  /**
-   * 使用 reCAPTCHA Enterprise 而非标准的 reCAPTCHA。
-   */
-  enterprise: optional(boolean()),
-  /**
-   * 通过 recaptcha.net 而非 google.com 加载（适用于中国）。
-   */
-  recaptchaNet: optional(boolean()),
-  /**
-   * reCAPTCHA 小部件的语言代码。
-   */
-  hl: optional(string()),
-})
-```
-
-## 示例
-
-使用 reCAPTCHA v3 保护表单提交，并做服务器端验证。
-
-::code-group
-
-```vue [ContactForm.vue]
-<script setup lang="ts">
-const { onLoaded } = useScriptGoogleRecaptcha()
-
-const name = ref('')
-const email = ref('')
-const message = ref('')
-const status = ref<'idle' | 'loading' | 'success' | 'error'>('idle')
-
-async function onSubmit() {
-  status.value = 'loading'
-
-  onLoaded(async ({ grecaptcha }) => {
-    // 获取 reCAPTCHA 令牌
-    const token = await grecaptcha.execute('YOUR_SITE_KEY', { action: 'contact' })
-
-    // 将表单数据和令牌发送到 API 进行验证
-    const result = await $fetch('/api/contact', {
-      method: 'POST',
-      body: {
-        token,
-        name: name.value,
-        email: email.value,
-        message: message.value
-      }
-    }).catch(() => null)
-
-    status.value = result ? 'success' : 'error'
-  })
-}
-</script>
-
-<template>
-  <form @submit.prevent="onSubmit">
-    <input v-model="name" placeholder="姓名" required />
-    <input v-model="email" type="email" placeholder="邮箱" required />
-    <textarea v-model="message" placeholder="消息" required />
-    <button type="submit" :disabled="status === 'loading'">
-      {{ status === 'loading' ? '发送中...' : '提交' }}
-    </button>
-    <p v-if="status === 'success'">消息已发送！</p>
-    <p v-if="status === 'error'">发送失败。请重试。</p>
-  </form>
-</template>
-```
-
-```ts [server/api/contact.post.ts]
-export default defineEventHandler(async (event) => {
-  const { token, name, email, message } = await readBody(event)
-
-  // 验证 reCAPTCHA 令牌
-  const secretKey = process.env.RECAPTCHA_SECRET_KEY
-  const verification = await $fetch('https://www.google.com/recaptcha/api/siteverify', {
-    method: 'POST',
-    body: new URLSearchParams({
-      secret: secretKey,
-      response: token,
-    }),
-  })
-
-  if (!verification.success || verification.score < 0.5) {
-    throw createError({
-      statusCode: 400,
-      message: 'reCAPTCHA 验证失败',
-    })
-  }
-
-  // 处理联系表单（发送邮件、存入数据库等）
-  console.log('联系表单提交信息:', { name, email, message, score: verification.score })
-
-  return { success: true }
-})
-```
-
 ::
 
 ## 企业版
@@ -301,3 +161,92 @@ export default defineNuxtConfig({
   }
 })
 ```
+
+::script-types
+::
+
+## 示例
+
+Using reCAPTCHA v3 to protect a form submission with server-side verification.
+
+::code-group
+
+```vue [ContactForm.vue]
+<script setup lang="ts">
+const { onLoaded } = useScriptGoogleRecaptcha()
+
+const name = ref('')
+const email = ref('')
+const message = ref('')
+const status = ref<'idle' | 'loading' | 'success' | 'error'>('idle')
+
+async function onSubmit() {
+  status.value = 'loading'
+
+  onLoaded(async ({ grecaptcha }) => {
+    // 获取 reCAPTCHA 令牌
+    const token = await grecaptcha.execute('YOUR_SITE_KEY', { action: 'contact' })
+
+    // 发送表单数据和令牌到你的 API 进行验证
+    const result = await $fetch('/api/contact', {
+      method: 'POST',
+      body: {
+        token,
+        name: name.value,
+        email: email.value,
+        message: message.value
+      }
+    }).catch(() => null)
+
+    status.value = result ? 'success' : 'error'
+  })
+}
+</script>
+
+<template>
+  <form @submit.prevent="onSubmit">
+    <input v-model="name" placeholder="姓名" required>
+    <input v-model="email" type="email" placeholder="邮箱" required>
+    <textarea v-model="message" placeholder="留言" required />
+    <button type="submit" :disabled="status === 'loading'">
+      {{ status === 'loading' ? '发送中...' : '提交' }}
+    </button>
+    <p v-if="status === 'success'">
+      消息已发送！
+    </p>
+    <p v-if="status === 'error'">
+      发送失败，请重试。
+    </p>
+  </form>
+</template>
+```
+
+```ts [server/api/contact.post.ts]
+export default defineEventHandler(async (event) => {
+  const { token, name, email, message } = await readBody(event)
+
+  // 验证 reCAPTCHA 令牌
+  const secretKey = process.env.RECAPTCHA_SECRET_KEY
+  const verification = await $fetch('https://www.google.com/recaptcha/api/siteverify', {
+    method: 'POST',
+    body: new URLSearchParams({
+      secret: secretKey,
+      response: token,
+    }),
+  })
+
+  if (!verification.success || verification.score < 0.5) {
+    throw createError({
+      statusCode: 400,
+      message: 'reCAPTCHA 验证失败',
+    })
+  }
+
+  // 处理联系表单（发送邮件、保存到数据库等）
+  console.log('联系表单已提交：', { name, email, message, score: verification.score })
+
+  return { success: true }
+})
+```
+
+::

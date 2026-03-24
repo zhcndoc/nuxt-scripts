@@ -2,7 +2,7 @@
 /// <reference types="google.maps" />
 import type { ElementScriptTrigger } from '#nuxt-scripts/types'
 import type { QueryObject } from 'ufo'
-import type { HTMLAttributes, ImgHTMLAttributes, InjectionKey, Ref, ReservedProps, ShallowRef } from 'vue'
+import type { HTMLAttributes, ImgHTMLAttributes, Ref, ReservedProps, ShallowRef } from 'vue'
 import { useScriptTriggerElement } from '#nuxt-scripts/composables/useScriptTriggerElement'
 import { useScriptGoogleMaps } from '#nuxt-scripts/registry/google-maps'
 import { scriptRuntimeConfig } from '#nuxt-scripts/utils'
@@ -13,10 +13,9 @@ import { withQuery } from 'ufo'
 import { computed, onBeforeUnmount, onMounted, provide, ref, shallowRef, toRaw, watch } from 'vue'
 import ScriptAriaLoadingIndicator from '../ScriptAriaLoadingIndicator.vue'
 
-export const MAP_INJECTION_KEY = Symbol('map') as InjectionKey<{
-  map: ShallowRef<google.maps.Map | undefined>
-  mapsApi: Ref<typeof google.maps | undefined>
-}>
+import { MAP_INJECTION_KEY } from './injectionKeys'
+
+export { MAP_INJECTION_KEY } from './injectionKeys'
 </script>
 
 <script lang="ts" setup>
@@ -58,6 +57,11 @@ const props = withDefaults(defineProps<{
    * A latitude / longitude of where to focus the map.
    */
   center?: google.maps.LatLng | google.maps.LatLngLiteral | `${string},${string}`
+  /**
+   * Zoom level for the map (0-21). Reactive: changing this will update the map.
+   * Takes precedence over mapOptions.zoom when provided.
+   */
+  zoom?: number
   /**
    * Should a marker be displayed on the map where the centre is.
    */
@@ -124,8 +128,13 @@ const props = withDefaults(defineProps<{
 })
 
 const emits = defineEmits<{
-  // our emit
+  /**
+   * Fired when the Google Maps instance is fully loaded and ready to use. Provides access to the maps API.
+   */
   ready: [e: typeof googleMaps]
+  /**
+   * Fired when the Google Maps script fails to load.
+   */
   error: []
 }>()
 
@@ -153,8 +162,12 @@ const currentMapId = computed(() => {
 
 const mapsApi = ref<typeof google.maps | undefined>()
 
-if (import.meta.dev && !apiKey)
-  throw new Error('GoogleMaps requires an API key. Please provide `apiKey` on the <ScriptGoogleMaps> or globally via `runtimeConfig.public.scripts.googleMaps.apiKey`.')
+if (import.meta.dev) {
+  if (!apiKey)
+    throw new Error('GoogleMaps requires an API key. Enable it in your nuxt.config:\n\n  scripts: {\n    registry: {\n      googleMaps: true\n    }\n  }\n\nThen set NUXT_PUBLIC_SCRIPTS_GOOGLE_MAPS_API_KEY in your .env file.\n\nAlternatively, pass `api-key` directly on the <ScriptGoogleMaps> component (note: this exposes the key client-side).')
+  if (!proxyConfig?.enabled && !props.apiKey)
+    console.warn('[nuxt-scripts] Google Maps proxy is not enabled. Enable `googleMaps` in your nuxt.config registry to keep your API key server-side. See: https://scripts.nuxt.com/scripts/google-maps#setup')
+}
 
 // TODO allow a null center may need to be resolved via an API function
 
@@ -176,7 +189,7 @@ const { load, status, onLoaded } = useScriptGoogleMaps({
 
 const options = computed(() => {
   const mapId = props.mapOptions?.styles ? undefined : (currentMapId.value || 'map')
-  return defu({ center: centerOverride.value, mapId }, props.mapOptions, {
+  return defu({ center: centerOverride.value, mapId, zoom: props.zoom }, props.mapOptions, {
     center: props.center,
     zoom: 15,
   })
@@ -190,16 +203,12 @@ function isLocationQuery(s: string | any) {
   return typeof s === 'string' && (s.split(',').length > 2 || s.includes('+'))
 }
 
-function resetMapMarkerMap(_marker: google.maps.marker.AdvancedMarkerElement | Promise<google.maps.marker.AdvancedMarkerElement>) {
-  // eslint-disable-next-line no-async-promise-executor
-  return new Promise<void>(async (resolve) => {
-    const marker = _marker instanceof Promise ? await _marker : _marker
-    if (marker) {
-      // @ts-expect-error broken type
-      marker.setMap(null)
-    }
-    resolve()
-  })
+async function resetMapMarkerMap(_marker: google.maps.marker.AdvancedMarkerElement | Promise<google.maps.marker.AdvancedMarkerElement>) {
+  const marker = _marker instanceof Promise ? await _marker : _marker
+  if (marker) {
+    // @ts-expect-error broken type
+    marker.setMap(null)
+  }
 }
 
 function normalizeAdvancedMapMarkerOptions(_options?: google.maps.marker.AdvancedMarkerElementOptions | `${string},${string}`) {
@@ -228,14 +237,12 @@ async function createAdvancedMapMarker(_options?: google.maps.marker.AdvancedMar
   const key = hash({ position: normalizedOptions.position })
   if (mapMarkers.value.has(key))
     return mapMarkers.value.get(key)
-  // eslint-disable-next-line no-async-promise-executor
-  const p = new Promise<google.maps.marker.AdvancedMarkerElement>(async (resolve) => {
-    const lib = await importLibrary('marker')
+  const p = importLibrary('marker').then((lib) => {
     const mapMarkerOptions = {
       ...toRaw(normalizedOptions),
       map: toRaw(map.value!),
     }
-    resolve(new lib.AdvancedMarkerElement(mapMarkerOptions))
+    return new lib.AdvancedMarkerElement(mapMarkerOptions)
   })
   mapMarkers.value.set(key, p)
   return p
@@ -243,7 +250,7 @@ async function createAdvancedMapMarker(_options?: google.maps.marker.AdvancedMar
 
 const queryToLatLngCache = new Map<string, google.maps.LatLng | google.maps.LatLngLiteral>()
 
-async function resolveQueryToLatLang(query: string) {
+async function resolveQueryToLatLng(query: string) {
   if (query && typeof query === 'object')
     return Promise.resolve(query)
   if (queryToLatLngCache.has(query)) {
@@ -326,13 +333,24 @@ const googleMaps = {
   googleMaps: mapsApi,
   map,
   createAdvancedMapMarker,
-  resolveQueryToLatLang,
+  resolveQueryToLatLng,
   importLibrary,
 } as const
 
 defineExpose(googleMaps)
 
-provide(MAP_INJECTION_KEY, { map, mapsApi })
+// Shared InfoWindow group: only one InfoWindow open at a time within this map
+let activeInfoWindow: google.maps.InfoWindow | undefined
+provide(MAP_INJECTION_KEY, {
+  map,
+  mapsApi,
+  activateInfoWindow(iw: google.maps.InfoWindow) {
+    if (activeInfoWindow && activeInfoWindow !== iw) {
+      activeInfoWindow.close()
+    }
+    activeInfoWindow = iw
+  },
+})
 
 onMounted(() => {
   watch(ready, (v) => {
@@ -390,7 +408,7 @@ onMounted(() => {
     if (center) {
       if (isLocationQuery(center) && ready.value) {
         // need to resolve center from query
-        center = await resolveQueryToLatLang(center as string)
+        center = await resolveQueryToLatLng(center as string)
       }
       map.value!.setCenter(center as google.maps.LatLng)
       if (props.centerMarker) {
@@ -425,7 +443,7 @@ onMounted(() => {
     map.value = new mapsApi.value!.Map(mapEl.value!, _options)
     if (center && isLocationQuery(center)) {
       // need to resolve center
-      centerOverride.value = await resolveQueryToLatLang(center)
+      centerOverride.value = await resolveQueryToLatLng(center)
       map.value?.setCenter(centerOverride.value)
     }
     ready.value = true
@@ -536,12 +554,20 @@ const rootAttrs = computed(() => {
   }) as HTMLAttributes
 })
 
-onBeforeUnmount(async () => {
-  await Promise.all(Array.from(mapMarkers.value.entries(), ([,marker]) => resetMapMarkerMap(marker)))
-  mapMarkers.value.clear()
+onBeforeUnmount(() => {
+  // Synchronous cleanup — Vue does not await async lifecycle hooks,
+  // so anything after an `await` runs as a detached microtask.
+  // Note: do NOT null mapsApi here — children unmount AFTER onBeforeUnmount
+  // and need mapsApi.value for clearInstanceListeners in their cleanup.
   map.value?.unbindAll()
   map.value = undefined
   mapEl.value?.firstChild?.remove()
+  libraries.clear()
+  queryToLatLngCache.clear()
+
+  // Async marker cleanup (fire-and-forget — markers are already detached from the nulled map)
+  Promise.all(Array.from(mapMarkers.value.entries(), ([, marker]) => resetMapMarkerMap(marker)))
+  mapMarkers.value.clear()
 })
 </script>
 

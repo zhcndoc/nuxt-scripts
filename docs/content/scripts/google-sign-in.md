@@ -1,6 +1,6 @@
 ---
 title: Google 登录
-description: 在您的 Nuxt 应用中添加支持 One Tap 和个性化按钮的 Google 登录。
+description: 为您的 Nuxt 应用添加 Google 登录，支持 One Tap 和个性化按钮。
 links:
 - label: 源代码
   icon: i-simple-icons-github
@@ -10,94 +10,24 @@ links:
   icon: i-simple-icons-google
   to: https://developers.google.com/identity/gsi/web/guides/overview
   size: xs
-
 ---
 
 [Google 登录](https://developers.google.com/identity/gsi/web) 提供了一种安全且便捷的方式，让用户使用他们的 Google 账号通过 One Tap、个性化按钮及自动登录进入您的应用。
 
-Nuxt Scripts 提供了一个注册脚本组合式函数 `useScriptGoogleSignIn`，可让您轻松地在 Nuxt 应用中集成 Google 登录，并实现最佳性能。
+Nuxt Scripts 提供了一个注册表脚本组合式函数 [`useScriptGoogleSignIn()`{lang="ts"}](/scripts/google-sign-in){lang="ts"}，可轻松集成 Google 登录到您的 Nuxt 应用中，并具备最佳性能。
+
+::script-stats
+::
 
 ::script-docs{:sections='["setup", "composable"]'}
 ::
 
-::script-types
+## 实时演示
+
+::google-sign-in-demo
 ::
-  
-## 示例
 
-### One Tap 登录
-
-The One Tap prompt provides a simplified sign-in experience:
-
-```vue
-<script setup lang="ts">
-const { onLoaded } = useScriptGoogleSignIn()
-
-function handleCredentialResponse(response: CredentialResponse) {
-  // 将凭证发送到后端进行验证
-  await $fetch('/api/auth/google', {
-    method: 'POST',
-    body: { credential: response.credential }
-  })
-}
-
-onMounted(() => {
-  onLoaded(({ accounts }) => {
-    accounts.id.initialize({
-      client_id: 'YOUR_CLIENT_ID',
-      callback: handleCredentialResponse,
-      context: 'signin',
-      ux_mode: 'popup',
-      use_fedcm_for_prompt: true // 使用隐私沙箱 FedCM API
-    })
-
-    // 显示 One Tap
-    accounts.id.prompt()
-  })
-})
-</script>
-```
-
-### 个性化按钮
-
-渲染 Google 的个性化 “使用 Google 登录” 按钮：
-
-```vue
-<script setup lang="ts">
-const { onLoaded } = useScriptGoogleSignIn()
-
-function handleCredentialResponse(response: CredentialResponse) {
-  console.log('登录成功！', response.credential)
-}
-
-onMounted(() => {
-  onLoaded(({ accounts }) => {
-    accounts.id.initialize({
-      client_id: 'YOUR_CLIENT_ID',
-      callback: handleCredentialResponse
-    })
-
-    const buttonDiv = document.getElementById('g-signin-button')
-    if (buttonDiv) {
-      accounts.id.renderButton(buttonDiv, {
-        type: 'standard',
-        theme: 'outline',
-        size: 'large',
-        text: 'signin_with',
-        shape: 'rectangular',
-        logo_alignment: 'left'
-      })
-    }
-  })
-})
-</script>
-
-<template>
-  <div id="g-signin-button" />
-</template>
-```
-
-## 状态通知
+## 时刻通知
 
 跟踪 One Tap 的显示状态：
 
@@ -260,3 +190,80 @@ NUXT_PUBLIC_SCRIPTS_GOOGLE_SIGN_IN_CLIENT_ID=your-client-id.apps.googleuserconte
 ::note
 有关如何获取 Google 客户端 ID 及配置 OAuth 同意屏幕的详细信息，请参阅官方 [Google 身份服务文档](https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid)。
 ::
+
+::script-types
+::
+
+## 示例
+
+### One Tap 登录
+
+One Tap 提示提供了一种简化的登录体验：
+
+```vue
+<script setup lang="ts">
+const { onLoaded } = useScriptGoogleSignIn()
+
+function handleCredentialResponse(response: CredentialResponse) {
+  // 将凭证发送到您的后端进行验证
+  await $fetch('/api/auth/google', {
+    method: 'POST',
+    body: { credential: response.credential }
+  })
+}
+
+onMounted(() => {
+  onLoaded(({ accounts }) => {
+    accounts.id.initialize({
+      client_id: 'YOUR_CLIENT_ID',
+      callback: handleCredentialResponse,
+      context: 'signin',
+      ux_mode: 'popup',
+      use_fedcm_for_prompt: true // 使用隐私沙箱 FedCM API
+    })
+
+    // 显示 One Tap
+    accounts.id.prompt()
+  })
+})
+</script>
+```
+
+### 个性化按钮
+
+渲染 Google 的个性化"使用 Google 登录"按钮：
+
+```vue
+<script setup lang="ts">
+const { onLoaded } = useScriptGoogleSignIn()
+
+function handleCredentialResponse(response: CredentialResponse) {
+  console.log('Signed in!', response.credential)
+}
+
+onMounted(() => {
+  onLoaded(({ accounts }) => {
+    accounts.id.initialize({
+      client_id: 'YOUR_CLIENT_ID',
+      callback: handleCredentialResponse
+    })
+
+    const buttonDiv = document.getElementById('g-signin-button')
+    if (buttonDiv) {
+      accounts.id.renderButton(buttonDiv, {
+        type: 'standard',
+        theme: 'outline',
+        size: 'large',
+        text: 'signin_with',
+        shape: 'rectangular',
+        logo_alignment: 'left'
+      })
+    }
+  })
+})
+</script>
+
+<template>
+  <div id="g-signin-button" />
+</template>
+```

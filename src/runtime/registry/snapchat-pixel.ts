@@ -1,5 +1,5 @@
-import type { InferInput } from '#nuxt-scripts-validator'
 import type { RegistryScriptInput } from '#nuxt-scripts/types'
+import type { InferInput } from 'valibot'
 import { useRegistryScript } from '../utils'
 import { InitObjectPropertiesSchema, SnapTrPixelOptions } from './schemas'
 
@@ -49,7 +49,7 @@ export interface SnapPixelApi {
 declare global {
   interface Window extends SnapPixelApi {}
 }
-export type SnapTrPixelInput = RegistryScriptInput<typeof SnapTrPixelOptions, true, false, false>
+export type SnapTrPixelInput = RegistryScriptInput<typeof SnapTrPixelOptions, true, false>
 
 export function useScriptSnapchatPixel<T extends SnapPixelApi>(_options?: SnapTrPixelInput) {
   return useRegistryScript<T, typeof SnapTrPixelOptions>('snapchatPixel', options => ({

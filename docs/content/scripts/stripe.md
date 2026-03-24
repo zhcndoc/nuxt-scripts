@@ -1,17 +1,15 @@
 ---
-
-title: Stripe  
-description: 在你的 Nuxt 应用中使用 Stripe。  
-links:  
-  - label: useScriptStripe  
-    icon: i-simple-icons-github  
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/stripe.ts  
-    size: xs  
-  - label: "<ScriptStripePricingTable>"  
-    icon: i-simple-icons-github  
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptStripePricingTable.vue  
-    size: xs  
-
+title: Stripe
+description: 在 Nuxt 应用中使用 Stripe。
+links:
+  - label: useScriptStripe
+    icon: i-simple-icons-github
+    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/stripe.ts
+    size: xs
+  - label: "<ScriptStripePricingTable>"
+    icon: i-simple-icons-github
+    to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptStripePricingTable.vue
+    size: xs
 ---
 
 [Stripe](https://stripe.com) 是一个流行的支付网关，允许你在线接受付款。
@@ -22,7 +20,12 @@ Nuxt Scripts 提供了两个 Stripe 功能：
 
 ## 类型
 
-为了在使用 Stripe 时获得完整的 TypeScript 支持，你需要安装 `@stripe/stripe-js` 依赖。
+::script-docs
+::
+
+## 类型
+
+要在你的 Stripe 中使用完整的 TypeScript 支持，你需要安装 `@stripe/stripe-js` 依赖。
 
 ```bash
 pnpm add -D @stripe/stripe-js
@@ -110,7 +113,10 @@ export function useScriptStripe<T extends StripeApi>(_options?: StripeInput) {}
 
 请参考 [注册表脚本](/docs/guides/registry-scripts) 指南了解更多高级用法。
 
-### 选项
+::script-types
+::
+
+## 示例
 
 ```ts
 export const StripeOptions = object({

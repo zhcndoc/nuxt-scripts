@@ -1,12 +1,11 @@
 ---
 title: Instagram 嵌入
-description: 服务器端渲染的 Instagram 嵌入，无需客户端 API 调用。
+description: 服务端渲染的 Instagram 嵌入，零客户端 API 调用。
 links:
   - label: ScriptInstagramEmbed
     icon: i-simple-icons-github
     to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptInstagramEmbed.vue
     size: xs
-
 ---
 
 [Instagram](https://instagram.com) 是一个照片和视频分享的社交媒体平台。
@@ -16,32 +15,18 @@ Nuxt Scripts 提供了一个 [`<ScriptInstagramEmbed>`{lang="html"}](/scripts/in
 ::script-stats
 ::
 
-::script-types
+::script-docs{embed}
 ::
 
-## Setup
-
-要使用 Instagram 嵌入组件，必须在你的 `nuxt.config` 中启用它：
-
-```ts [nuxt.config.ts]
-export default defineNuxtConfig({
-  scripts: {
-    registry: {
-      instagramEmbed: true,
-    },
-  },
-})
-```
-
-这将注册所需的服务器 API 路由（`/_scripts/embed/instagram`、`/_scripts/embed/instagram-image` 和 `/_scripts/embed/instagram-asset`），用于处理获取嵌入 HTML 和代理图片/资源。
+这会注册所需的服务器 API 路由（`/_scripts/embed/instagram`、`/_scripts/embed/instagram-image` 和 `/_scripts/embed/instagram-asset`），用于处理嵌入 HTML 的获取以及图片/资源的代理。
 
 ## [`<ScriptInstagramEmbed>`{lang="html"}](/scripts/instagram-embed){lang="html"}
 
-`<ScriptInstagramEmbed>` 组件特点：  
-- 服务器端获取官方 Instagram 嵌入 HTML  
-- 重写所有图片和资源 URL，通过你的服务器代理  
-- 移除 Instagram 的 embed.js 脚本（不需要）  
-- 缓存响应 10 分钟  
+`<ScriptInstagramEmbed>` 组件特点：
+- 服务器端获取官方 Instagram 嵌入 HTML
+- 重写所有图片和资源 URL，通过你的服务器代理
+- 移除 Instagram 的 embed.js 脚本（不需要）
+- 缓存响应 10 分钟
 
 ### 示例
 
@@ -101,12 +86,12 @@ export default defineNuxtConfig({
 
 `ScriptInstagramEmbed` 组件接受以下属性：
 
-| 属性          | 类型              | 默认值                              | 说明                                         |
-| ------------- | ----------------- | --------------------------------- | -------------------------------------------- |
-| `postUrl`     | `string`          | 必填                              | Instagram 帖子链接 (例如 `https://www.instagram.com/p/ABC123/`) |
-| `captions`    | `boolean`         | `true`                            | 是否在嵌入中包含字幕                         |
-| `apiEndpoint` | `string`          | `/api/_scripts/instagram-embed`   | 用于获取嵌入 HTML 的自定义 API 端点          |
-| `rootAttrs`   | `HTMLAttributes`  | `{}`                              | 根元素属性                                   |
+| 属性 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `postUrl` | `string` | 必填 | Instagram 帖子链接（例如 `https://www.instagram.com/p/ABC123/`） |
+| `captions` | `boolean` | `true` | 是否在嵌入中包含字幕 |
+| `apiEndpoint` | `string` | `/api/_scripts/instagram-embed` | 用于获取嵌入 HTML 的自定义 API 端点 |
+| `rootAttrs` | `HTMLAttributes` | `{}` | 根元素属性 |
 
 ### 插槽 Props
 
@@ -115,44 +100,47 @@ export default defineNuxtConfig({
 ```ts
 interface SlotProps {
   html: string      // 处理后的嵌入 HTML
-  shortcode: string // 帖子短码 (例如 "C3Sk6d2MTjI")
+  shortcode: string // 帖子短码（例如 "C3Sk6d2MTjI"）
   postUrl: string   // 原始帖子链接
 }
 ```
 
 ### 命名插槽
 
-| 插槽      | 说明                                   |
-| --------- | -------------------------------------- |
+| 插槽 | 说明 |
+| --- | --- |
 | `default` | 主要内容，接收 `{ html, shortcode, postUrl }`。默认渲染 HTML。 |
-| `loading` | 获取嵌入 HTML 时显示                   |
-| `error`   | 嵌入获取失败时显示，接收 `{ error }`  |
+| `loading` | 获取嵌入 HTML 时显示 |
+| `error` | 嵌入获取失败时显示，接收 `{ error }` |
 
 ## 支持的 URL 格式
 
-- 帖子: `https://www.instagram.com/p/ABC123/`
-- Reels: `https://www.instagram.com/reel/ABC123/`
-- TV: `https://www.instagram.com/tv/ABC123/`
+- 帖子：`https://www.instagram.com/p/ABC123/`
+- Reels：`https://www.instagram.com/reel/ABC123/`
+- TV：`https://www.instagram.com/tv/ABC123/`
 
 ## 工作原理
 
-1. **服务器端抓取**：从 `{postUrl}/embed/` 获取 Instagram 嵌入 HTML  
-2. **资源代理**：将来自 `scontent.cdninstagram.com` 的所有图片和来自 `static.cdninstagram.com` 的资源重写为通过你的服务器代理  
-3. **脚本移除**：移除 Instagram 的 `embed.js` （静态渲染不需要）  
-4. **缓存**：服务器级别缓存响应 10 分钟  
+1. **服务器端抓取**：从 `{postUrl}/embed/` 获取 Instagram 嵌入 HTML
+2. **资源代理**：将来自 `scontent.cdninstagram.com` 的所有图片和来自 `static.cdninstagram.com` 的资源重写为通过你的服务器代理
+3. **脚本移除**：移除 Instagram 的 `embed.js`（静态渲染不需要）
+4. **缓存**：服务器级别缓存响应 10 分钟
 
 该方案启发自 [Cloudflare Zaraz 的嵌入实现](https://blog.cloudflare.com/zaraz-supports-server-side-rendering-of-embeds/)。
 
 ## 隐私优势
 
-- 不加载第三方 JavaScript  
-- Instagram/Meta 不设置任何 Cookies  
-- 浏览器不会直接与 Instagram 通信  
-- 不会向 Instagram 共享用户 IP 地址  
-- 所有内容均由你的域名提供  
+- 不加载第三方 JavaScript
+- Instagram/Meta 不设置任何 Cookies
+- 浏览器不会直接与 Instagram 通信
+- 不会向 Instagram 共享用户 IP 地址
+- 所有内容均由你的域名提供
 
 ## 限制
 
-- 仅支持单图帖子（图集只显示第一张图片）  
-- 视频以静态封面图展示  
-- 一些交互功能不可用（点赞、评论）
+- 仅支持单图帖子（图集仅显示第一张图片）
+- 视频显示为静态封面图
+- 部分交互功能不可用（点赞、评论）
+
+::script-types
+::

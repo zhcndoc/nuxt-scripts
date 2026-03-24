@@ -1,18 +1,22 @@
 ---
-
-title: PostHog  
-description: 在您的 Nuxt 应用中使用 PostHog。  
-links:  
-- label: 源码  
-  icon: i-simple-icons-github  
-  to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/posthog.ts  
-  size: xs  
-
+title: PostHog
+description: 在您的 Nuxt 应用中使用 PostHog。
+links:
+- label: 源码
+  icon: i-simple-icons-github
+  to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/posthog.ts
+  size: xs
 ---
 
 [PostHog](https://posthog.com) 是一个开源的产品分析平台，提供分析、会话回放、功能标志、A/B 测试等功能。
 
 Nuxt Scripts 提供了一个注册脚本组合式函数 [`useScriptPostHog()`{lang="ts"}](/scripts/posthog){lang="ts"}，方便您在 Nuxt 应用中集成 PostHog。
+
+::script-stats
+::
+
+::script-docs
+::
 
 ## 安装
 
@@ -21,15 +25,6 @@ Nuxt Scripts 提供了一个注册脚本组合式函数 [`useScriptPostHog()`{la
 ```bash
 pnpm add posthog-js
 ```
-
-::script-stats
-::
-
-::script-docs
-::
-
-::script-types
-::
 
 ## 欧盟托管
 
@@ -50,18 +45,17 @@ export default defineNuxtConfig({
 
 ## 第一方代理
 
-当您启用 [第一方模式](/docs/guides/first-party) 时，您的服务器会自动代理 PostHog 请求。通过避免广告拦截器，提高事件捕获的可靠性。Nuxt 不会应用任何隐私匿名化——PostHog 是一个值得信赖的开源工具，需要全量数据来实现 GeoIP 增强、功能标志和会话回放。
+当[第一方模式](/docs/guides/first-party)处于活动状态时（为支持的脚本自动启用），您的服务器会自动代理 PostHog 请求。这通过避免广告拦截器来提高事件捕获的可靠性。Nuxt 不会应用隐私匿名化；PostHog 是一个受信任的开源工具，需要完整保真度的数据来进行 GeoIP 丰富、功能标志和会话回放。
 
-您无需额外配置——模块会自动设置 `apiHost`，通过服务器的代理端点路由：
+无需额外配置。该模块会自动设置 `apiHost` 以通过您服务器的代理端点进行路由：
 
 ```ts
 export default defineNuxtConfig({
   scripts: {
-    firstParty: true, // 默认开启
     registry: {
       posthog: {
         apiKey: 'YOUR_API_KEY',
-        // apiHost 会自动设置为 '/_proxy/ph' （欧盟区域为 '/_proxy/ph-eu'）
+        // apiHost 自动设置为 '/_scripts/p/ph'（或为欧盟区域设置为 '/_scripts/p/ph-eu'）
       }
     }
   }
@@ -121,3 +115,6 @@ export default defineNuxtConfig({
   }
 })
 ```
+
+::script-types
+::
