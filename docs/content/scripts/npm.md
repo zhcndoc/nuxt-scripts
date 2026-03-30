@@ -4,7 +4,7 @@ description: 在你的 Nuxt 应用中从 NPM 加载 IIFE 脚本。
 links:
   - label: 源码
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/npm.ts
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/npm.ts
     size: xs
 ---
 

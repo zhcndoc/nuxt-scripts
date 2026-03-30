@@ -4,7 +4,7 @@ description: 在你的 Nuxt 应用中使用 Clarity。
 links:
 - label: 源码
   icon: i-simple-icons-github
-  to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/clarity.ts
+  to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/clarity.ts
   size: xs
 ---
 

@@ -4,7 +4,7 @@ description: 服务器端渲染的 Bluesky 嵌入，零客户端 API 调用。
 links:
   - label: ScriptBlueskyEmbed
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptBlueskyEmbed.vue
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/components/ScriptBlueskyEmbed.vue
     size: xs
 ---
 
@@ -212,7 +212,7 @@ interface SlotProps {
   richText: string // 含链接、提及和标签的 HTML
   langs?: string[] // 语言代码
   // 格式化数值
-  datetime: string // "12:47 PM · 2024年2月5日"
+  datetime: string // "12:47 PM · 2024 年 2 月 5 日"
   createdAt: Date
   likes: number
   likesFormatted: string // "1.2K"

@@ -4,7 +4,7 @@ description: 服务端渲染的 Instagram 嵌入，零客户端 API 调用。
 links:
   - label: ScriptInstagramEmbed
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptInstagramEmbed.vue
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/components/ScriptInstagramEmbed.vue
     size: xs
 ---
 

@@ -4,11 +4,11 @@ description: 在您的 Nuxt 应用中展示性能优化的 YouTube 视频。
 links:
   - label: useScriptYouTubePlayer
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/youtube-player.ts
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/youtube-player.ts
     size: xs
   - label: "<ScriptYouTubePlayer>"
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptYouTubePlayer.vue
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/components/ScriptYouTubePlayer.vue
     size: xs
 ---
 
@@ -34,7 +34,7 @@ pnpm add -D @types/youtube
 
 `ScriptYouTubePlayer` 组件是基于 `useScriptYouTubePlayer` 组合函数的封装。它提供了一种简单的方法来在您的 Nuxt 应用中嵌入 YouTube 视频。
 
-它通过利用 [元素事件触发器](/docs/guides/script-triggers#element-event触发器) 进行性能优化，仅在特定元素发生事件时加载 YouTube 播放器。默认情况下，它会在 `mousedown` 事件时加载。
+它通过利用 [元素事件触发器](/docs/guides/script-triggers#element-event 触发器) 进行性能优化，仅在特定元素发生事件时加载 YouTube 播放器。默认情况下，它会在 `mousedown` 事件时加载。
 
 ### 演示
 
@@ -42,7 +42,7 @@ pnpm add -D @types/youtube
 
 :youtube-demo{label="输出"}
 
-```vue [Input]
+```vue [输入]
 <script setup lang="ts">
 const isLoaded = ref(false)
 const isPlaying = ref(false)
@@ -78,14 +78,14 @@ function stateChange(event) {
 
 ::
 
-### Props
+### 属性
 
 `ScriptYouTubePlayer` 组件接受以下 props：
 
 - `trigger`：加载 YouTube 播放器的触发事件。默认是 `mousedown`。欲了解更多信息，请参阅 [元素事件触发器](/docs/guides/script-triggers#element-event-触发器)。
 - `placeholderAttrs`：占位图片的属性。默认是 `{ loading: 'lazy' }`。
 - `aboveTheFold`：优化首屏内容的占位图片。默认是 `false`。
-- `placeholderObjectFit`：占位图片的 `object-fit` CSS 属性。默认是 `cover`。对非16:9视频（如 YouTube Shorts）很有用。
+- `placeholderObjectFit`：占位图片的 `object-fit` CSS 属性。默认是 `cover`。对非 16:9 视频（如 YouTube Shorts）很有用。
 
 `playerVars` prop 支持所有来自 [YouTube IFrame Player API](https://developers.google.com/youtube/iframe_api_reference) 的脚本选项，请参考 [支持的参数](https://developers.google.com/youtube/player_parameters#Parameters) 以获取完整文档。
 
@@ -128,11 +128,11 @@ YouTube 播放器的占位图片是 1280x720 大小的 webp，默认启用懒加
 
 ::code-group
 
-```vue [Placeholder Attrs]
+```vue [占位符属性]
 <ScriptYouTubePlayer above-the-fold />
 ```
 
-```vue [Placeholder Slot]
+```vue [占位符插槽]
 <ScriptYouTubePlayer>
   <template #placeholder="{ placeholder }">
     <img :src="placeholder" alt="视频占位符">
@@ -230,7 +230,7 @@ const emits = defineEmits<{
 `useScriptYouTubePlayer` 组合函数让您可以更细粒度地控制 YouTube 播放器 SDK。它提供了一种加载 YouTube 播放器 SDK 并以编程方式交互的方式。
 
 ```ts
-export function useScriptYouTubePlayer<T extends YouTubePlayerApi>(_options?: YouTubePlayerInput) {}
+export function useScriptYouTubePlayer<T extends YouTubePlayerApi>(_options: YouTubePlayerInput) {}
 ```
 
 请参阅 [注册脚本](/docs/guides/registry-scripts) 指南，了解更多高级用法。

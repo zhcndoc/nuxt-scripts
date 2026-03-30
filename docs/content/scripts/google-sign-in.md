@@ -4,7 +4,7 @@ description: 为您的 Nuxt 应用添加 Google 登录，支持 One Tap 和个�
 links:
 - label: 源代码
   icon: i-simple-icons-github
-  to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/google-sign-in.ts
+  to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/google-sign-in.ts
   size: xs
 - label: Google 身份服务
   icon: i-simple-icons-google
@@ -204,7 +204,7 @@ One Tap 提示提供了一种简化的登录体验：
 <script setup lang="ts">
 const { onLoaded } = useScriptGoogleSignIn()
 
-function handleCredentialResponse(response: CredentialResponse) {
+async function handleCredentialResponse(response: CredentialResponse) {
   // 将凭证发送到您的后端进行验证
   await $fetch('/api/auth/google', {
     method: 'POST',
@@ -238,7 +238,7 @@ onMounted(() => {
 const { onLoaded } = useScriptGoogleSignIn()
 
 function handleCredentialResponse(response: CredentialResponse) {
-  console.log('Signed in!', response.credential)
+  console.log('已登录!', response.credential)
 }
 
 onMounted(() => {

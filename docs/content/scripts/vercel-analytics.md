@@ -4,7 +4,7 @@ description: 在你的 Nuxt 应用中使用 Vercel 分析。
 links:
   - label: 源码
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/vercel-analytics.ts
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/vercel-analytics.ts
     size: xs
 ---
 
@@ -34,7 +34,7 @@ Vercel 分析会自动启用第一方模式。Nuxt 在本地打包分析脚本�
 export default defineNuxtConfig({
   scripts: {
     registry: {
-      vercelAnalytics: true,
+      vercelAnalytics: { trigger: 'onNuxtReady' },
     }
   }
 })

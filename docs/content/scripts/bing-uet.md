@@ -4,7 +4,7 @@ description: 在您的 Nuxt 应用中使用 Microsoft Advertising Universal Even
 links:
 - label: 源代码
   icon: i-simple-icons-github
-  to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/bing-uet.ts
+  to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/bing-uet.ts
   size: xs
 ---
 
@@ -30,9 +30,10 @@ Nuxt Scripts 提供了一个注册表脚本组合式函数 [`useScriptBingUet()`
 const { proxy } = useScriptBingUet()
 
 function trackPurchase() {
-  proxy.uetq.push('event', 'purchase', {
-    revenue_value: 49.99,
-    currency: 'USD',
+  proxy.uetq.push({
+    ec: 'purchase',
+    ev: 49.99,
+    gc: 'USD',
   })
 }
 </script>
@@ -45,9 +46,10 @@ function trackPurchase() {
 const { proxy } = useScriptBingUet()
 
 function trackSignup() {
-  proxy.uetq.push('event', 'sign_up', {
-    event_category: 'engagement',
-    event_label: 'newsletter',
+  proxy.uetq.push({
+    ec: 'sign_up',
+    el: 'newsletter',
+    ea: 'engagement',
   })
 }
 </script>

@@ -2,9 +2,9 @@
 title: Google reCAPTCHA
 description: 在你的 Nuxt 应用中使用 Google reCAPTCHA v3。
 links:
-  - label: Source
+  - label: 源码
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/google-recaptcha.ts
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/google-recaptcha.ts
     size: xs
 ---
 
@@ -167,7 +167,7 @@ export default defineNuxtConfig({
 
 ## 示例
 
-Using reCAPTCHA v3 to protect a form submission with server-side verification.
+使用 reCAPTCHA v3 保护表单提交并进行服务器端验证。
 
 ::code-group
 

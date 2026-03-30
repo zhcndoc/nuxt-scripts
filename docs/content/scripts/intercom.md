@@ -4,11 +4,11 @@ description: 在你的 Nuxt 应用中使用 Intercom。
 links:
   - label: 源码
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/intercom.ts
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/intercom.ts
     size: xs
   - label: "<ScriptIntercom>"
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptIntercom.vue
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/components/ScriptIntercom.vue
     size: xs
 ---
 
@@ -26,7 +26,7 @@ Nuxt Scripts 提供了一个 [`useScriptIntercom()`{lang="ts"}](#usescriptinterc
 
 [`<ScriptIntercom>`{lang="html"}](/scripts/intercom){lang="html"} 组件是一个无头的外观组件，封装了 [`useScriptIntercom()`{lang="ts"}](#usescriptintercom){lang="ts"} 组合函数，提供了一种简单并且性能优化的方式，将 Intercom 加载到你的 Nuxt 应用中。
 
-它通过使用[元素事件触发器](/docs/guides/script-triggers#element-event-triggers)进行了性能优化，仅在特定元素事件发生时才加载 Intercom。
+它通过使用 [元素事件触发器](/docs/guides/script-triggers#element-event-triggers) 进行了性能优化，仅在特定元素事件发生时才加载 Intercom。
 
 默认情况下，它会在 `click` DOM 事件发生时加载。
 
@@ -86,7 +86,7 @@ const isLoaded = ref(false)
 export default defineNuxtConfig({
   scripts: {
     registry: {
-      intercom: true,
+      intercom: { trigger: 'onNuxtReady' },
     }
   },
   // 你需要提供运行时配置以访问环境变量
@@ -130,13 +130,13 @@ function onReady(intercom) {
 
 ### Intercom API
 
-该组件暴露了一个 `intercom` 实例，你可以通过它访问基本的 Intercom API。
+该组件暴露出一个 `intercom` 实例（`useScriptIntercom()`{lang="ts"} 的返回值），你可以使用它来调用 Intercom API。
 
 ```vue
 <script setup lang="ts">
 const intercomEl = ref()
 onMounted(() => {
-  intercomEl.value.intercom.do('chat:open')
+  intercomEl.value.intercom.proxy.Intercom('show')
 })
 </script>
 
@@ -206,7 +206,7 @@ proxy.Intercom('update', { name: '张三' })
 ::script-types
 ::
 
-## Example
+## 示例
 
 仅在生产环境中使用 Intercom。
 

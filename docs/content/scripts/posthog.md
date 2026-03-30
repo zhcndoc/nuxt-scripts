@@ -4,7 +4,7 @@ description: 在您的 Nuxt 应用中使用 PostHog。
 links:
 - label: 源码
   icon: i-simple-icons-github
-  to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/posthog.ts
+  to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/posthog.ts
   size: xs
 ---
 
@@ -45,7 +45,7 @@ export default defineNuxtConfig({
 
 ## 第一方代理
 
-当[第一方模式](/docs/guides/first-party)处于活动状态时（为支持的脚本自动启用），您的服务器会自动代理 PostHog 请求。这通过避免广告拦截器来提高事件捕获的可靠性。Nuxt 不会应用隐私匿名化；PostHog 是一个受信任的开源工具，需要完整保真度的数据来进行 GeoIP 丰富、功能标志和会话回放。
+当 [第一方模式](/docs/guides/first-party) 处于活动状态时（为支持的脚本自动启用），您的服务器会自动代理 PostHog 请求。这通过避免广告拦截器来提高事件捕获的可靠性。Nuxt 不会应用隐私匿名化；PostHog 是一个受信任的开源工具，需要完整保真度的数据来进行 GeoIP 丰富、功能标志和会话回放。
 
 无需额外配置。该模块会自动设置 `apiHost` 以通过您服务器的代理端点进行路由：
 

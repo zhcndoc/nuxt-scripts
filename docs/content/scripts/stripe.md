@@ -4,19 +4,19 @@ description: 在 Nuxt 应用中使用 Stripe。
 links:
   - label: useScriptStripe
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/stripe.ts
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/stripe.ts
     size: xs
   - label: "<ScriptStripePricingTable>"
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptStripePricingTable.vue
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/components/ScriptStripePricingTable.vue
     size: xs
 ---
 
 [Stripe](https://stripe.com) 是一个流行的支付网关，允许你在线接受付款。
 
-Nuxt Scripts 提供了两个 Stripe 功能：  
-- `useScriptStripe` 组合函数，会加载脚本 `https://js.stripe.com/v3/`。  
-- `ScriptStripePricingTable` 组件，允许你使用 `https://js.stripe.com/v3/pricing-table.js` 在你的网站上嵌入一个 [Stripe 价格表](https://docs.stripe.com/payments/checkout/pricing-table)。
+Nuxt Scripts 提供两个 Stripe 功能：
+- [`useScriptStripe()`{lang="ts"}](/scripts/stripe){lang="ts"} 组合函数，用于加载脚本 `https://js.stripe.com/basil/stripe.js`。
+- `ScriptStripePricingTable` 组件，允许你使用 `https://js.stripe.com/v3/pricing-table.js` 在你的网站上嵌入 [Stripe 价格表](https://docs.stripe.com/payments/checkout/pricing-table)。
 
 ## 类型
 
@@ -41,7 +41,7 @@ Stripe 建议在你的应用中全局加载其脚本，以增强防欺诈检测�
 export default defineNuxtConfig({
   scripts: {
     registry: {
-      stripe: true,
+      stripe: { trigger: 'onNuxtReady' },
     }
   }
 })
@@ -52,7 +52,7 @@ export default defineNuxtConfig({
   $production: {
     scripts: {
       registry: {
-        stripe: true,
+        stripe: { trigger: 'onNuxtReady' },
       }
     }
   }

@@ -4,7 +4,7 @@ description: 使用 Vue 组件在您的 Nuxt 应用中展示 Carbon 广告。
 links:
   - label: "<ScriptCarbonAds>"
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptCarbonAds.vue
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/components/ScriptCarbonAds.vue
     size: xs
 ---
 
@@ -18,7 +18,7 @@ Nuxt Scripts 提供了一个无头（headless）`ScriptCarbonAds` 组件，用�
 ::script-docs
 ::
 
-默认情况下，组件使用 CarbonAds 的最佳实践，即在挂载时立即加载。如果您希望在特定事件触发时加载广告，可以使用[元素事件触发器](/docs/guides/script-triggers#element-event-triggers)。
+默认情况下，组件使用 CarbonAds 的最佳实践，即在挂载时立即加载。如果您希望在特定事件触发时加载广告，可以使用 [元素事件触发器](/docs/guides/script-triggers#element-event-triggers)。
 
 ```vue
 <template>
@@ -160,7 +160,7 @@ Nuxt Scripts 提供了一个无头（headless）`ScriptCarbonAds` 组件，用�
 
 ### 组件 API
 
-完整的 props、事件和插槽请参阅[门面组件 API](/docs/guides/facade-components#facade-components-api)。
+完整的 props、事件和插槽请参阅 [门面组件 API](/docs/guides/facade-components#facade-components-api)。
 
 注意：Carbon Ads 脚本**不**扩展 [`useScript()`{lang="ts"}](/docs/api/use-script){lang="ts"} 组合函数。访问该脚本会返回 `HTMLScriptElement`。
 

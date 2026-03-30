@@ -4,7 +4,7 @@ description: 服务端渲染的 X（Twitter）嵌入，零客户端 API 调用�
 links:
   - label: ScriptXEmbed
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptXEmbed.vue
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/components/ScriptXEmbed.vue
     size: xs
 ---
 
@@ -70,7 +70,7 @@ Nuxt Scripts 提供了 [`<ScriptXEmbed>`{lang="html"}](/scripts/x-embed){lang="h
         <p class="mb-3 whitespace-pre-wrap">{{ text }}</p>
         <!-- 图片 -->
         <div v-if="photos?.length" class="mb-3 rounded-xl overflow-hidden">
-          <img v-for="photo in photos" :key="photo.URL" :src="photo.proxiedURL" class="w-full">
+          <img v-for="photo in photos" :key="photo.url" :src="photo.proxiedUrl" class="w-full">
         </div>
         <!-- 底部 -->
         <div class="flex items-center gap-4 text-gray-500 text-sm">
@@ -98,7 +98,7 @@ Nuxt Scripts 提供了 [`<ScriptXEmbed>`{lang="html"}](/scripts/x-embed){lang="h
 
 ::
 
-### Props
+### 属性
 
 `ScriptXEmbed` 组件接受以下属性：
 
@@ -109,9 +109,9 @@ Nuxt Scripts 提供了 [`<ScriptXEmbed>`{lang="html"}](/scripts/x-embed){lang="h
 | `imageProxyEndpoint` | `string`       | `/api/_scripts/x-embed-image` | 代理图片的自定义端点     |
 | `rootAttrs`        | `HTMLAttributes` | `{}`                      | 根元素属性             |
 
-### 插槽 Props
+### 插槽属性
 
-默认插槽接收以下 props：
+默认插槽接收以下属性：
 
 ```ts
 interface SlotProps {
@@ -135,7 +135,7 @@ interface SlotProps {
   // 媒体资源
   photos?: Array<{
     URL: string
-    proxiedURL: string
+    proxiedUrl: string
     width: number
     height: number
   }>
@@ -144,10 +144,10 @@ interface SlotProps {
     posterProxied: string
     variants: Array<{ type: string, src: string }>
   }
-  // 链接
-  tweetURL: string
-  userURL: string
-  // 引用推文
+  // Links
+  tweetUrl: string
+  userUrl: string
+  // Quote tweet
   quotedTweet?: XEmbedTweetData
   // 回复上下文
   isReply: boolean
@@ -161,7 +161,7 @@ interface SlotProps {
 
 | 插槽      | 描述                                      |
 |-----------|-------------------------------------------|
-| `default` | 主内容，带插槽 props                        |
+| `default` | 主内容，带插槽属性                        |
 | `loading` | 获取推文数据时展示                         |
 | `error`   | 推文数据获取失败时展示，接收 `{ error }`  |
 

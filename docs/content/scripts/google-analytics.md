@@ -4,7 +4,7 @@ description: 在 Nuxt 应用中使用 Google Analytics。
 links:
   - label: 源码
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/google-analytics.ts
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/google-analytics.ts
     size: xs
 ---
 

@@ -4,7 +4,7 @@ description: 在你的 Nuxt 应用中使用 Mixpanel。
 links:
 - label: 源码
   icon: i-simple-icons-github
-  to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/mixpanel-analytics.ts
+  to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/mixpanel-analytics.ts
   size: xs
 ---
 

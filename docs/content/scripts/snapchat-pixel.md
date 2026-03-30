@@ -4,7 +4,7 @@ description: 在你的 Nuxt 应用中使用 Snapchat 像素。
 links:
 - label: 源码
   icon: i-simple-icons-github
-  to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/snapchat-pixel.ts
+  to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/snapchat-pixel.ts
   size: xs
 ---
 

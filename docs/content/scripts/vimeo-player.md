@@ -1,14 +1,14 @@
 ---
-title: Vimeo Player
+title: Vimeo 播放器
 description: 在你的 Nuxt 应用中展示性能优化的 Vimeo 视频。
 links:
   - label: useScriptVimeoPlayer
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/vimeo-player.ts
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/vimeo-player.ts
     size: xs
   - label: "<ScriptVimeoPlayer>"
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptVimeoPlayer.vue
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/components/ScriptVimeoPlayer.vue
     size: xs
 ---
 
@@ -24,10 +24,11 @@ Nuxt Scripts 提供了一个 `useScriptVimeoPlayer` 组合式函数和一个无 
 
 ## 类型
 
-若想使用具备完整 TypeScript 支持的视频播放器，你需要安装 `@types/vimeo__player` 依赖。
+要使用具有完整 TypeScript 支持的视频播放器，你需要
+安装 `@vimeo/player` 依赖，其中包含了其自身的类型定义。
 
 ```bash
-pnpm add -D @types/vimeo__player
+pnpm add -D @vimeo/player
 ```
 
 ## [`<ScriptVimeoPlayer>`{lang="html"}](/scripts/vimeo-player){lang="html"}
@@ -44,7 +45,7 @@ pnpm add -D @types/vimeo__player
 
 :vimeo-demo{label="输出"}
 
-```vue [Input]
+```vue [输入]
 <script setup lang="ts">
 const isLoaded = ref(false)
 const isPlaying = ref(false)
@@ -126,11 +127,11 @@ Vimeo 视频的占位图默认是懒加载的。如果你的视频是折叠上�
 
 ::code-group
 
-```vue [Placeholder Attrs]
+```vue [占位图属性]
 <ScriptVimeoPlayer above-the-fold />
 ```
 
-```vue [Placeholder Slot]
+```vue [占位图插槽]
 <ScriptVimeoPlayer>
   <template #placeholder="{ placeholder }">
     <img :src="placeholder" alt="视频占位图">
@@ -250,7 +251,7 @@ const emits = defineEmits<{
 export function useScriptVimeoPlayer<T extends VimeoPlayerApi>(_options?: VimeoPlayerInput) {}
 ```
 
-请参考 [Registry Scripts](/docs/guides/registry-scripts) 指南以获取更多高级用法。
+请参考 [脚本注册表](/docs/guides/registry-scripts) 指南以获取更多高级用法。
 
 ::script-types
 ::

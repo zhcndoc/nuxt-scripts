@@ -62,7 +62,6 @@ const circleOptions = {
         api-key="AIzaSyAOEIQ_xOdLx2dNwnFMzyJoswwvPCTcGzU"
         :width="800"
         :height="500"
-        above-the-fold
         :zoom="12"
         :map-options="{
           center: { lat: -33.87, lng: 151.21 },
@@ -75,12 +74,12 @@ const circleOptions = {
           @clusteringbegin="(p: any) => log('MarkerClusterer', 'clusteringbegin', p)"
           @clusteringend="(p: any) => log('MarkerClusterer', 'clusteringend', p)"
         >
-          <ScriptGoogleMapsAdvancedMarkerElement
+          <ScriptGoogleMapsMarker
             v-for="m in markers"
             :key="`${m.position.lat},${m.position.lng}`"
             :position="m.position"
-            @click="(p: any) => log('AdvancedMarker', 'click', p)"
-            @drag="(p: any) => log('AdvancedMarker', 'drag', p)"
+            @click="(p: any) => log('Marker', 'click', p)"
+            @drag="(p: any) => log('Marker', 'drag', p)"
           />
         </ScriptGoogleMapsMarkerClusterer>
 

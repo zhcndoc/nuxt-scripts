@@ -4,15 +4,15 @@ description: 在你的 Nuxt 应用中使用 PayPal。
 links:
   - label: useScriptPayPal
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/paypal.ts
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/paypal.ts
     size: xs
   - label: "<ScriptPayPalButtons>"
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptPayPalButtons.vue
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/components/ScriptPayPalButtons.vue
     size: xs
   - label: "<ScriptPayPalMessages>"
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptPayPalMessages.vue
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/components/ScriptPayPalMessages.vue
     size: xs
 ---
 
@@ -99,13 +99,13 @@ async function startPayment(instance?: SdkInstance<Components[]>) {
 
 #### 使用环境变量配置
 
-如果你更喜欢使用环境变量来配置你的 client ID。
+如果你更喜欢使用环境变量来配置你的客户端 ID。
 
 ```ts [nuxt.config.ts]
 export default defineNuxtConfig({
   scripts: {
     registry: {
-      paypal: true,
+      paypal: { trigger: 'onNuxtReady' },
     }
   },
   // 你需要提供运行时配置以访问环境变量
@@ -131,7 +131,7 @@ NUXT_PUBLIC_SCRIPTS_PAYPAL_CLIENT_ID=<YOUR_CLIENT_ID>
 export function useScriptPayPal<T extends PayPalApi>(_options?: PayPalInput) {}
 ```
 
-请遵循 [Registry Scripts](/docs/guides/registry-scripts) 指南以了解更多高级用法。
+请遵循 [注册表脚本](/docs/guides/registry-scripts) 指南以了解更多高级用法。
 
 ::script-types
 ::

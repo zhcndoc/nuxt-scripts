@@ -2,13 +2,13 @@
 title: Gravatar
 description: 在你的 Nuxt 应用中使用 Gravatar。
 links:
-- label: Source
+- label: 源码
   icon: i-simple-icons-github
-  to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/gravatar.ts
+  to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/gravatar.ts
   size: xs
 - label: "<ScriptGravatar>"
   icon: i-simple-icons-github
-  to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptGravatar.vue
+  to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/components/ScriptGravatar.vue
   size: xs
 ---
 

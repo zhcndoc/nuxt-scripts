@@ -4,7 +4,7 @@ description: 在你的 Nuxt 应用中使用 Matomo 分析。
 links:
   - label: 源码
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/matomo-analytics.ts
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/matomo-analytics.ts
     size: xs
 ---
 
@@ -41,7 +41,7 @@ proxy._paq.push(['setCustomDimension', 1, 'value'])
 proxy._paq.push(['trackPageView'])
 ```
 
-请参阅[配置架构](#config-schema)了解所有可用选项。
+请参阅 [配置架构](#config-schema) 了解所有可用选项。
 
 ## 自定义页面跟踪
 

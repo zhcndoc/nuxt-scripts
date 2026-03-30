@@ -4,11 +4,11 @@ description: 在你的 Nuxt 应用中使用 Cloudflare 网站分析。
 links:
   - label: 源码
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/cloudflare-web-analytics.ts
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/cloudflare-web-analytics.ts
     size: xs
 ---
 
-[Cloudflare Web Analytics](https://developers.cloudflare.com/analytics/web-analytics/) 是适用于 Nuxt 的绝佳隐私保护分析解决方案。它为你的网站提供免费的、以隐私为中心的分析服务。它不会从访客那里收集任何个人身份信息，却能提供详细的洞察，展示页面在访客体验中的表现。
+[Cloudflare 网站分析](https://developers.cloudflare.com/analytics/web-analytics/) 是适用于 Nuxt 的绝佳隐私保护分析解决方案。它为你的网站提供免费的、以隐私为中心的分析服务。它不会从访客那里收集任何个人身份信息，却能提供详细的洞察，展示页面在访客体验中的表现。
 
 ::script-stats  
 ::
@@ -38,8 +38,8 @@ Cloudflare 网站分析组合式函数会向全局作用域注入一个 `window.
 
 ```ts
 const { onLoaded } = useScriptCloudflareWebAnalytics()
-onLoaded(({ cfBeacon }) => {
-  console.log(cfBeacon)
+onLoaded(({ __cfBeacon }) => {
+  console.log(__cfBeacon)
 })
 ```
 

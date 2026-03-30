@@ -4,7 +4,7 @@ description: 在你的 Nuxt 应用中使用 X Pixel。
 links:
 - label: 源码
   icon: i-simple-icons-github
-  to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/x-pixel.ts
+  to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/x-pixel.ts
   size: xs
 ---
 

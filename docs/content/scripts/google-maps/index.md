@@ -4,15 +4,15 @@ description: 在你的 Nuxt 应用中展示性能优化的谷歌地图。
 links:
   - label: useScriptGoogleMaps
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/google-maps.ts
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/google-maps.ts
     size: xs
   - label: "<ScriptGoogleMaps>"
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/GoogleMaps/ScriptGoogleMaps.vue
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/components/GoogleMaps/ScriptGoogleMaps.vue
     size: xs
 ---
 
-[Google Maps](https://maps.google.com/) 允许你在网站中嵌入地图，并使用你的内容对其进行自定义。
+[谷歌地图](https://maps.google.com/) 允许你在网站中嵌入地图，并使用你的内容对其进行自定义。
 
 Nuxt Scripts 提供了 [`useScriptGoogleMaps()`{lang="ts"}](/scripts/google-maps/api/use-script-google-maps){lang="ts"} 组合式函数和一个无头的 [`<ScriptGoogleMaps>`{lang="html"}](/scripts/google-maps/api/script-google-maps){lang="html"} 组件来与 Google Maps 交互。
 
@@ -35,7 +35,7 @@ pnpm add -D @types/google.maps
 export default defineNuxtConfig({
   scripts: {
     registry: {
-      googleMaps: true,
+      googleMaps: { trigger: 'onNuxtReady' },
     },
   },
   runtimeConfig: {
@@ -62,7 +62,7 @@ NUXT_PUBLIC_SCRIPTS_GOOGLE_MAPS_API_KEY=<你的_API_密钥>
 你可以直接在 `<ScriptGoogleMaps>`{lang="html"} 组件上传递 `api-key`，但不推荐这样做，因为这会在客户端请求中暴露你的密钥。
 ::
 
-查看 [Billing & Permissions](/scripts/google-maps/guides/billing) 了解 API 费用和所需的权限。
+查看 [计费与权限](/scripts/google-maps/guides/billing) 了解 API 费用和所需的权限。
 
 ## 快速开始
 
@@ -75,4 +75,4 @@ NUXT_PUBLIC_SCRIPTS_GOOGLE_MAPS_API_KEY=<你的_API_密钥>
 </template>
 ```
 
-查看 [Markers & Info Windows](/scripts/google-maps/guides/markers-and-info-windows) 指南了解如何添加标记、弹窗和自定义内容。查看 [Shapes & Overlays](/scripts/google-maps/guides/shapes-and-overlays) 了解如何在地图上绘制图形。
+查看 [标记与信息窗口](/scripts/google-maps/guides/markers-and-info-windows) 指南了解如何添加标记、弹窗和自定义内容。查看 [形状与覆盖物](/scripts/google-maps/guides/shapes-and-overlays) 了解如何在地图上绘制图形。

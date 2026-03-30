@@ -4,11 +4,11 @@ description: 在你的 Nuxt 应用中展示性能优化的 Crisp。
 links:
   - label: useScriptCrisp
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/crisp.ts
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/crisp.ts
     size: xs
   - label: "<ScriptCrisp>"
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptCrisp.vue
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/components/ScriptCrisp.vue
     size: xs
 ---
 
@@ -26,7 +26,7 @@ Nuxt Scripts 提供了一个 [`useScriptCrisp()`{lang="ts"}](#usescriptcrisp){la
 
 [`<ScriptCrisp>`{lang="html"}](/scripts/crisp){lang="html"} 组件是一个无头的外观组件，封装了 [`useScriptCrisp()`{lang="ts"}](#usescriptcrisp){lang="ts"} 组合函数，提供了一种简单且性能优化的方式，在你的 Nuxt 应用中加载 Crisp。
 
-它通过使用[元素事件触发器](/docs/guides/script-triggers#element-event-triggers)进行性能优化，仅在特定元素事件发生时加载 Crisp。
+它通过使用 [元素事件触发器](/docs/guides/script-triggers#element-event-triggers) 进行性能优化，仅在特定元素事件发生时加载 Crisp。
 
 默认情况下，它将在 `click` DOM 事件时加载。
 
@@ -97,7 +97,7 @@ const isLoaded = ref(false)
 
 ### 组件 API
 
-有关完整的属性、事件和插槽，请参阅[外观组件 API](/docs/guides/facade-components#facade-components-api)。
+有关完整的属性、事件和插槽，请参阅 [外观组件 API](/docs/guides/facade-components#facade-components-api)。
 
 #### 使用环境变量
 
@@ -107,7 +107,7 @@ const isLoaded = ref(false)
 export default defineNuxtConfig({
   scripts: {
     registry: {
-      crisp: true,
+      crisp: { trigger: 'onNuxtReady' },
     }
   },
   // 你需要提供运行时配置以访问环境变量
@@ -193,7 +193,7 @@ function onReady(crisp) {
 export function useScriptCrisp<T extends CrispApi>(_options?: CrispInput) {}
 ```
 
-请参阅[脚本注册指南](/docs/guides/registry-scripts)以了解更多高级用法。
+请参阅 [脚本注册指南](/docs/guides/registry-scripts) 以了解更多高级用法。
 
 更多信息请参考 [Crisp API 文档](https://docs.crisp.chat/guides/chatbox-sdks/web-sdk/dollar-crisp/)。
 

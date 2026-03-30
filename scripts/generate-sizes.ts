@@ -4,7 +4,7 @@ import { createServer } from 'node:http'
 import { resolve } from 'node:path'
 import { parseAndWalk } from 'oxc-walker'
 import { chromium } from 'playwright-core'
-import { scriptMeta } from '../src/script-meta'
+import { scriptMeta } from '../packages/script/src/script-meta'
 
 // Patterns that indicate a script measures Core Web Vitals
 const CWV_PATTERNS = [
@@ -1227,7 +1227,7 @@ async function main() {
   await browser.close()
   close()
 
-  const outPath = resolve(import.meta.dirname, '../src/script-sizes.json')
+  const outPath = resolve(import.meta.dirname, '../packages/script/src/script-sizes.json')
   writeFileSync(outPath, `${JSON.stringify(sizes, null, 2)}\n`)
   console.log(`\nWrote ${outPath}`)
 }

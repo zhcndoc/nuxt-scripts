@@ -4,11 +4,11 @@ description: 在您的 Nuxt 应用中展示 Google AdSense 广告。
 links:
   - label: useScriptGoogleAdsense
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/google-adsense.ts
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/google-adsense.ts
     size: xs
   - label: "<ScriptGoogleAdsense>"
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/components/ScriptGoogleAdsense.vue
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/components/ScriptGoogleAdsense.vue
     size: xs
 ---
 
@@ -154,7 +154,7 @@ Google 建议添加 `ads.txt` 文件以确保**广告收入资格**。
 
 #### 使用 `data-ad-layout` 的示例
 
-若要为广告指定布局（如 “in-article”），可使用 `data-ad-layout` 属性：
+若要为广告指定布局（如 "in-article"），可使用 `data-ad-layout` 属性：
 
 ```vue
 <template>

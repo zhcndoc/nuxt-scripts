@@ -1,10 +1,10 @@
 ---
-title: TikTok Pixel
+title: TikTok 像素
 description: 在你的 Nuxt 应用中使用 TikTok 像素。
 links:
-- label: Source
+- label: 源码
   icon: i-simple-icons-github
-  to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/tiktok-pixel.ts
+  to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/tiktok-pixel.ts
   size: xs
 ---
 

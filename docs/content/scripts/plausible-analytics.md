@@ -4,7 +4,7 @@ description: 在您的 Nuxt 应用中使用 Plausible Analytics。
 links:
   - label: 源码
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/plausible-analytics.ts
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/plausible-analytics.ts
     size: xs
 ---
 

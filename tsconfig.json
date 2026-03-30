@@ -6,7 +6,7 @@
   "exclude": [
     "docs",
     "playground",
-    "client",
+    "packages/devtools-app",
     "scripts",
     "dist",
     ".output",

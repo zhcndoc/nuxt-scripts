@@ -4,7 +4,7 @@ description: 在你的 Nuxt 应用中使用 Google 标签管理器。
 links:
   - label: 源码
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/google-tag-manager.ts
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/google-tag-manager.ts
     size: xs
 ---
 
@@ -28,7 +28,7 @@ Nuxt Scripts 提供了许多功能，可以轻松地在 Nuxt 应用内实现。�
 
 ```ts
 const { proxy } = useScriptGoogleTagManager({
-  id: 'YOUR_ID' // 仅当你未全局配置时需要提供id
+  id: 'YOUR_ID' // 仅当你未全局配置时需要提供 id
 })
 
 useScriptEventPage(({ title, path }) => {
@@ -45,11 +45,11 @@ useScriptEventPage(({ title, path }) => {
 
 [`useScriptGoogleTagManager()`{lang="ts"}](/scripts/google-tag-manager){lang="ts"} 会自动初始化 Google 标签管理器，也会自动推送 `js`、`config` 和 `gtm.start` 事件。
 
-如果你需要在 GTM 启动前配置，比如[设置同意模式](https://developers.google.com/tag-platform/security/guides/consent?consentmode=basic)，你有两个选项：
+如果你需要在 GTM 启动前配置，比如 [设置同意模式](https://developers.google.com/tag-platform/security/guides/consent?consentmode=basic)，你有两个选项：
 
 ### 选项 1：在 nuxt.config 中使用 `defaultConsent`（推荐）
 
-如果你在 `nuxt.config` 里配置 GTM，则使用 `defaultConsent` 选项。见上方[默认同意模式](#loading-globally)示例。
+如果你在 `nuxt.config` 里配置 GTM，则使用 `defaultConsent` 选项。见上方 [默认同意模式](#loading-globally) 示例。
 
 ### 选项 2：使用 `onBeforeGtmStart` 回调
 

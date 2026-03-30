@@ -4,7 +4,7 @@ description: 在你的 Nuxt 应用中使用 Databuddy Analytics。
 links:
   - label: 源代码
     icon: i-simple-icons-github
-    to: https://github.com/nuxt/scripts/blob/main/src/runtime/registry/databuddy-analytics.ts
+    to: https://github.com/nuxt/scripts/blob/main/packages/script/src/runtime/registry/databuddy-analytics.ts
     size: xs
 ---
 
@@ -22,7 +22,7 @@ links:
 
 ```ts
 useScriptDatabuddyAnalytics({
-  scriptInput: { src: 'https://my-host/databuddy.js' },
+  scriptUrl: 'https://my-host/databuddy.js',
   clientId: 'YOUR_CLIENT_ID'
 })
 ```
