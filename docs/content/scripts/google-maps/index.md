@@ -62,7 +62,11 @@ NUXT_PUBLIC_SCRIPTS_GOOGLE_MAPS_API_KEY=<你的_API_密钥>
 你可以直接在 `<ScriptGoogleMaps>`{lang="html"} 组件上传递 `api-key`，但不推荐这样做，因为这会在客户端请求中暴露你的密钥。
 ::
 
-查看 [计费与权限](/scripts/google-maps/guides/billing) 了解 API 费用和所需的权限。
+::callout{type="info"}
+This script's proxy endpoints use [HMAC URL signing](/docs/guides/first-party#proxy-endpoint-security) when you configure a `NUXT_SCRIPTS_PROXY_SECRET`. See the [security guide](/docs/guides/first-party#proxy-endpoint-security) for setup instructions.
+::
+
+See [Billing & Permissions](/scripts/google-maps/guides/billing) for API costs and required permissions.
 
 ## 快速开始
 

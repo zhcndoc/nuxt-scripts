@@ -18,7 +18,11 @@ Nuxt Scripts 提供了 [`<ScriptXEmbed>`{lang="html"}](/scripts/x-embed){lang="h
 ::script-docs{embed}
 ::
 
-这会注册所需的服务器 API 路由（`/_scripts/embed/x` 和 `/_scripts/embed/x-image`），用于获取推文数据和代理图片。
+::callout{type="info"}
+This script's proxy endpoints use [HMAC URL signing](/docs/guides/first-party#proxy-endpoint-security) when you configure a `NUXT_SCRIPTS_PROXY_SECRET`. See the [security guide](/docs/guides/first-party#proxy-endpoint-security) for setup instructions.
+::
+
+This registers the required server API routes (`/_scripts/embed/x` and `/_scripts/embed/x-image`) that handle fetching tweet data and proxying images.
 
 ## [`<ScriptXEmbed>`{lang="html"}](/scripts/x-embed){lang="html"}
 

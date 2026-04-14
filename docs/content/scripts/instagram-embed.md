@@ -18,11 +18,15 @@ Nuxt Scripts 提供了一个 [`<ScriptInstagramEmbed>`{lang="html"}](/scripts/in
 ::script-docs{embed}
 ::
 
-这会注册所需的服务器 API 路由（`/_scripts/embed/instagram`、`/_scripts/embed/instagram-image` 和 `/_scripts/embed/instagram-asset`），用于处理嵌入 HTML 的获取以及图片/资源的代理。
+::callout{type="info"}
+当配置 `NUXT_SCRIPTS_PROXY_SECRET` 时，该脚本的代理端点使用 [HMAC URL 签名](/docs/guides/first-party#proxy-endpoint-security)。有关设置说明，请参阅 [安全指南](/docs/guides/first-party#proxy-endpoint-security)。
+::
+
+这将注册所需的服务器 API 路由（`/_scripts/embed/instagram`、`/_scripts/embed/instagram-image` 和 `/_scripts/embed/instagram-asset`），用于处理嵌入 HTML 获取和资源代理。
 
 ## [`<ScriptInstagramEmbed>`{lang="html"}](/scripts/instagram-embed){lang="html"}
 
-`<ScriptInstagramEmbed>` 组件特点：
+`<ScriptInstagramEmbed>` 组件特性：
 - 服务器端获取官方 Instagram 嵌入 HTML
 - 重写所有图片和资源 URL，通过你的服务器代理
 - 移除 Instagram 的 embed.js 脚本（不需要）

@@ -44,6 +44,10 @@ import type { XPixelInput } from './registry/x-pixel'
 import type { YouTubePlayerInput } from './registry/youtube-player'
 import type { ProxyPrivacyInput } from './server/utils/privacy'
 
+// Google Maps component types (re-exported for easy user access)
+export type { Cluster, ClusterStats, MarkerClustererContext, MarkerClustererInstance, MarkerClustererOptions } from './components/GoogleMaps/types'
+export { MARKER_CLUSTERER_INJECTION_KEY } from './components/GoogleMaps/types'
+
 export type WarmupStrategy = false | 'preload' | 'preconnect' | 'dns-prefetch'
 
 export type UseScriptContext<T extends Record<symbol | string, any>> = VueScriptInstance<T> & {
@@ -249,12 +253,28 @@ export type BuiltInRegistryScriptKey
  */
 export type RegistryScriptKey = Exclude<keyof ScriptRegistry, `${string}-npm`>
 
-type RegistryConfigInput<T> = [T] extends [true] ? Record<string, never> : T
+type RegistryConfigInput<T> = 0 extends 1 & T ? Record<string, any> : [T] extends [true] ? Record<string, never> : T
 
 export type NuxtConfigScriptRegistryEntry<T> = true | false | 'mock' | (RegistryConfigInput<T> & { trigger?: NuxtUseScriptOptionsSerializable['trigger'] | false, proxy?: boolean, bundle?: boolean, partytown?: boolean, privacy?: ProxyPrivacyInput })
-export type NuxtConfigScriptRegistry<T extends keyof ScriptRegistry = keyof ScriptRegistry> = Partial<{
-  [key in T]: NuxtConfigScriptRegistryEntry<ScriptRegistry[key]>
-}> & Record<string & {}, NuxtConfigScriptRegistryEntry<any>>
+
+// Internal mapped type: derives config entry types from ScriptRegistry.
+// Excludes the `${string}-npm` pattern since it's covered by the string index signature.
+type _NuxtConfigScriptRegistryEntries = {
+  [K in keyof ScriptRegistry as K extends `${string}-npm` ? never : K]?: NuxtConfigScriptRegistryEntry<ScriptRegistry[K]>
+}
+
+// Interface (not intersection) ensures IDE displays specific types for known keys.
+// Explicit properties inherited via `extends` always take priority over the index
+// signature, making this immune to catch-all type contamination.
+// Augmenting ScriptRegistry automatically flows through to this type.
+//
+// The index signature uses `any` to satisfy TypeScript's constraint that all
+// inherited properties must be subtypes of the index type. This is safe because
+// in an interface, explicit properties always take priority over the index
+// signature for property access.
+export interface NuxtConfigScriptRegistry extends _NuxtConfigScriptRegistryEntries {
+  [key: string]: any
+}
 
 export type UseFunctionType<T, U> = T extends {
   use: infer V
@@ -284,6 +304,14 @@ export interface RegistryScriptServerHandler {
   route: string
   handler: string
   middleware?: boolean
+  /**
+   * Whether this handler verifies HMAC signatures via `withSigning()`.
+   *
+   * When any enabled script registers a handler with `requiresSigning: true`,
+   * the module enforces that `NUXT_SCRIPTS_PROXY_SECRET` is set in production,
+   * and the `/_scripts/sign` endpoint will accept this route as a signable path.
+   */
+  requiresSigning?: boolean
 }
 
 /**

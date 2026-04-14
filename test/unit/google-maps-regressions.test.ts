@@ -5,7 +5,7 @@
  */
 import { describe, expect, it, vi } from 'vitest'
 import { bindGoogleMapsEvents } from '../../packages/script/src/runtime/components/GoogleMaps/useGoogleMapsResource'
-import { createMockAdvancedMarkerElement, createMockGoogleMapsAPIWithInstances, createMockInfoWindow } from './__mocks__/google-maps-api'
+import { createMockAdvancedMarkerElement, createMockGoogleMapsAPIWithInstances, createMockInfoWindow, createMockMap } from './__mocks__/google-maps-api'
 
 describe('google Maps Regressions', () => {
   describe('bindGoogleMapsEvents emit forwarding', () => {
@@ -314,6 +314,141 @@ describe('google Maps Regressions', () => {
 
       isPositioned = false
       expect(dataState()).toBe('closed')
+    })
+  })
+
+  describe('map setOptions should not reset zoom or center', () => {
+    // Regression: when parent component re-renders (e.g. overlay open/close toggling
+    // state in parent), the options computed re-evaluates (defu returns a new object),
+    // triggering watch(options) which called setOptions with the initial zoom and center,
+    // resetting any user pan/zoom interactions.
+    // Fix: exclude center and zoom from the generic setOptions call; use dedicated watchers.
+
+    // Simulate the old (broken) watcher: passed full options including center/zoom
+    function applyOptionsOld(map: ReturnType<typeof createMockMap>, options: Record<string, any>) {
+      map.setOptions(options)
+    }
+
+    // Simulate the fixed watcher: strips center and zoom before calling setOptions
+    function applyOptionsFixed(map: ReturnType<typeof createMockMap>, options: Record<string, any>) {
+      const { center: _, zoom: __, ...rest } = options
+      map.setOptions(rest)
+    }
+
+    it('old behavior: setOptions resets zoom and center on unrelated re-render', () => {
+      const map = createMockMap()
+      const options = { center: { lat: 40, lng: -74 }, zoom: 12, mapId: 'abc' }
+
+      // User has panned/zoomed the map, but parent re-renders and the watcher fires.
+      // Old code passed full options, resetting zoom and center to initial values.
+      applyOptionsOld(map, options)
+
+      expect(map.setOptions).toHaveBeenCalledWith(
+        expect.objectContaining({ zoom: 12, center: { lat: 40, lng: -74 } }),
+      )
+    })
+
+    it('fixed behavior: setOptions excludes zoom and center', () => {
+      const map = createMockMap()
+      const options = { center: { lat: 40, lng: -74 }, zoom: 12, mapId: 'abc' }
+
+      applyOptionsFixed(map, options)
+
+      expect(map.setOptions).toHaveBeenCalledWith({ mapId: 'abc' })
+      expect(map.setOptions).not.toHaveBeenCalledWith(
+        expect.objectContaining({ center: expect.anything() }),
+      )
+      expect(map.setOptions).not.toHaveBeenCalledWith(
+        expect.objectContaining({ zoom: expect.anything() }),
+      )
+    })
+
+    it('old behavior: repeated overlay toggles reset zoom/center every time', () => {
+      const map = createMockMap()
+      const baseOptions = { center: { lat: 40, lng: -74 }, zoom: 12, mapId: 'abc', disableDefaultUI: true }
+
+      // Simulate 3 re-renders from overlay open/close/open
+      for (let i = 0; i < 3; i++) {
+        applyOptionsOld(map, { ...baseOptions })
+      }
+
+      // Every call leaked center and zoom, resetting user interactions each time
+      expect(map.setOptions).toHaveBeenCalledTimes(3)
+      for (const call of map.setOptions.mock.calls) {
+        expect(call[0]).toHaveProperty('center')
+        expect(call[0]).toHaveProperty('zoom')
+      }
+    })
+
+    it('fixed behavior: repeated overlay toggles never reset zoom/center', () => {
+      const map = createMockMap()
+      const baseOptions = { center: { lat: 40, lng: -74 }, zoom: 12, mapId: 'abc', disableDefaultUI: true }
+
+      // Simulate 3 re-renders from overlay open/close/open
+      for (let i = 0; i < 3; i++) {
+        applyOptionsFixed(map, { ...baseOptions })
+      }
+
+      expect(map.setOptions).toHaveBeenCalledTimes(3)
+      for (const call of map.setOptions.mock.calls) {
+        expect(call[0]).not.toHaveProperty('center')
+        expect(call[0]).not.toHaveProperty('zoom')
+      }
+      expect(map.setCenter).not.toHaveBeenCalled()
+      expect(map.setZoom).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('center watcher should skip setCenter when lat/lng unchanged', () => {
+    // Regression: when mapOptions is a plain (non-reactive) object, the `options`
+    // computed re-evaluates on any re-render (defu creates a new object ref),
+    // firing the center watcher even though lat/lng are identical. This resets the
+    // user's pan position.
+    // Fix: compare new center lat/lng against map.getCenter() before calling setCenter.
+
+    function applyCenterUpdate(
+      map: ReturnType<typeof createMockMap>,
+      newCenter: { lat: number, lng: number } | { lat: () => number, lng: () => number },
+    ) {
+      const current = map.getCenter()
+      if (current) {
+        const newLat = typeof (newCenter as any).lat === 'function' ? (newCenter as any).lat() : (newCenter as any).lat
+        const newLng = typeof (newCenter as any).lng === 'function' ? (newCenter as any).lng() : (newCenter as any).lng
+        if (current.lat() === newLat && current.lng() === newLng)
+          return
+      }
+      map.setCenter(newCenter)
+    }
+
+    it('should skip setCenter when lat/lng are unchanged', () => {
+      const map = createMockMap()
+      // Mock getCenter returns { lat: () => 40, lng: () => -74 }
+      map.getCenter.mockReturnValue({ lat: () => 40, lng: () => -74 })
+
+      // Same coordinates as current position — should NOT call setCenter
+      applyCenterUpdate(map, { lat: 40, lng: -74 })
+
+      expect(map.setCenter).not.toHaveBeenCalled()
+    })
+
+    it('should call setCenter when lat/lng actually change', () => {
+      const map = createMockMap()
+      map.getCenter.mockReturnValue({ lat: () => 40, lng: () => -74 })
+
+      // Different coordinates — should call setCenter
+      applyCenterUpdate(map, { lat: 41, lng: -73 })
+
+      expect(map.setCenter).toHaveBeenCalledWith({ lat: 41, lng: -73 })
+    })
+
+    it('should handle LatLng objects with function accessors', () => {
+      const map = createMockMap()
+      map.getCenter.mockReturnValue({ lat: () => 40, lng: () => -74 })
+
+      // Same coordinates via function accessors — should NOT call setCenter
+      applyCenterUpdate(map, { lat: () => 40, lng: () => -74 } as any)
+
+      expect(map.setCenter).not.toHaveBeenCalled()
     })
   })
 

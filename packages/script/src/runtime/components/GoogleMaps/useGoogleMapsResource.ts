@@ -1,6 +1,6 @@
 import type { InjectionKey, Ref, ShallowRef } from 'vue'
 import { whenever } from '@vueuse/core'
-import { inject, onUnmounted, ref, shallowRef } from 'vue'
+import { effectScope, inject, onUnmounted, ref, shallowRef, watch } from 'vue'
 
 export const MAP_INJECTION_KEY = Symbol('map') as InjectionKey<{
   map: ShallowRef<google.maps.Map | undefined>
@@ -39,6 +39,144 @@ export function bindGoogleMapsEvents(
 export interface GoogleMapsResourceContext {
   map: google.maps.Map
   mapsApi: typeof google.maps
+}
+
+/**
+ * Normalizes a `LatLng | LatLngLiteral` value into a plain `LatLngLiteral`.
+ *
+ * Google's `LatLng` exposes coordinates via `.lat()`/`.lng()` methods, while
+ * `LatLngLiteral` exposes them as plain `lat`/`lng` numeric properties. The
+ * runtime distinguishes them by checking whether `.lat` is callable; this is
+ * preferred over `instanceof google.maps.LatLng` because mocked APIs in tests
+ * return plain objects rather than real `LatLng` instances.
+ */
+export function normalizeLatLng(
+  p: google.maps.LatLng | google.maps.LatLngLiteral,
+): google.maps.LatLngLiteral {
+  if (typeof p.lat === 'function') {
+    const ll = p as google.maps.LatLng
+    return { lat: ll.lat(), lng: ll.lng() }
+  }
+  return { lat: p.lat as number, lng: p.lng as number }
+}
+
+/**
+ * Defines a deprecated property alias on an exposed object. Reading the alias
+ * returns the value of the canonical key and emits a one-shot
+ * `console.warn` (so repeated reads don't spam the console).
+ *
+ * Used to provide backward-compatible renames on `defineExpose` payloads
+ * without breaking existing template-ref consumers. Call sites should wrap
+ * this in `if (import.meta.dev)` so production builds skip the getter
+ * entirely and the alias stays a plain data property.
+ */
+export function defineDeprecatedAlias<T extends object, K extends keyof T>(
+  target: T,
+  alias: string,
+  canonicalKey: K,
+  message: string,
+): T {
+  let warned = false
+  Object.defineProperty(target, alias, {
+    get() {
+      if (!warned) {
+        warned = true
+        console.warn(message)
+      }
+      return target[canonicalKey]
+    },
+    enumerable: true,
+    configurable: true,
+  })
+  return target
+}
+
+/**
+ * Emits dev-mode deprecation warnings for the legacy top-level `center` and
+ * `zoom` props on `<ScriptGoogleMaps>`. Both props still work, but new code
+ * should pass them via `mapOptions` instead.
+ *
+ * Returns the number of warnings emitted (useful for tests).
+ */
+export function warnDeprecatedTopLevelMapProps(props: {
+  center?: unknown
+  zoom?: unknown
+}): number {
+  let warned = 0
+  if (props.center !== undefined) {
+    warned++
+    console.warn(
+      '[nuxt-scripts] <ScriptGoogleMaps> prop "center" is deprecated; use `:map-options="{ center: ... }"` instead. See https://scripts.nuxt.com/docs/migration-guide/v0-to-v1',
+    )
+  }
+  if (props.zoom !== undefined) {
+    warned++
+    console.warn(
+      '[nuxt-scripts] <ScriptGoogleMaps> prop "zoom" is deprecated; use `:map-options="{ zoom: ... }"` instead. See https://scripts.nuxt.com/docs/migration-guide/v0-to-v1',
+    )
+  }
+  return warned
+}
+
+/**
+ * Wait until the Google Maps API and a Map instance are both available.
+ *
+ * Triggers script loading via `load()` if not already loaded. Uses an
+ * immediate watcher (matching `importLibrary`'s pattern) to avoid the race
+ * where `load()` resolves synchronously: a non-immediate watcher would miss
+ * the change and the promise would hang forever.
+ *
+ * Rejects if `status` enters an `'error'` state before both refs are populated.
+ * Runs the watcher inside a detached effect scope so it is safe to call from
+ * any context (component setup, exposed methods, tests).
+ */
+export async function waitForMapsReady({
+  mapsApi,
+  map,
+  status,
+  load,
+}: {
+  mapsApi: ShallowRef<typeof google.maps | undefined>
+  map: ShallowRef<google.maps.Map | undefined>
+  status: Ref<string>
+  load: () => Promise<unknown> | unknown
+}): Promise<void> {
+  if (mapsApi.value && map.value)
+    return
+  if (status.value === 'error')
+    throw new Error('Google Maps script failed to load')
+
+  await load()
+
+  // load() may have populated both refs synchronously — re-check before
+  // installing a watcher to avoid the race that hangs the promise forever.
+  if (mapsApi.value && map.value)
+    return
+  if (status.value === 'error')
+    throw new Error('Google Maps script failed to load')
+
+  const scope = effectScope(true)
+  try {
+    await new Promise<void>((resolve, reject) => {
+      scope.run(() => {
+        watch(
+          [mapsApi, map, status],
+          ([api, m, s]) => {
+            if (api && m) {
+              resolve()
+              return
+            }
+            if (s === 'error')
+              reject(new Error('Google Maps script failed to load'))
+          },
+          { immediate: true },
+        )
+      })
+    })
+  }
+  finally {
+    scope.stop()
+  }
 }
 
 /**

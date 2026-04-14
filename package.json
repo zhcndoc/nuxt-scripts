@@ -1,7 +1,7 @@
 {
   "name": "nuxt-scripts-monorepo",
   "type": "module",
-  "version": "1.0.0-beta.33",
+  "version": "1.0.0-rc.7",
   "private": true,
   "packageManager": "pnpm@10.33.0",
   "description": "Load third-party scripts with better performance, privacy and DX in Nuxt Apps.",
@@ -21,7 +21,7 @@
     "dev:prepare": "pnpm -r dev:prepare && nuxt prepare && nuxt prepare playground && pnpm prepare:fixtures",
     "prepare:fixtures": "nuxt prepare test/fixtures/basic && nuxt prepare test/fixtures/cdn && nuxt prepare test/fixtures/extend-registry && nuxt prepare test/fixtures/partytown && nuxt prepare test/fixtures/first-party",
     "typecheck": "nuxt typecheck",
-    "release": "pnpm build && bumpp --output=CHANGELOG.md",
+    "release": "pnpm build && bumpp -r --output=CHANGELOG.md",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest",
@@ -51,8 +51,5 @@
     "vitest": "catalog:",
     "vue": "catalog:",
     "vue-tsc": "catalog:"
-  },
-  "resolutions": {
-    "@nuxt/scripts": "workspace:*"
   }
 }

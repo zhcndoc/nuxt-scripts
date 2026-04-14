@@ -20,9 +20,13 @@ links:
 ::script-docs  
 ::
 
+::callout{type="info"}
+当配置了 `NUXT_SCRIPTS_PROXY_SECRET` 时，该脚本的代理端点会使用 [HMAC URL 签名](/docs/guides/first-party#proxy-endpoint-security)。请参阅 [安全指南](/docs/guides/first-party#proxy-endpoint-security) 获取设置说明。
+::
+
 ## [`<ScriptGravatar>`{lang="html"}](/scripts/gravatar){lang="html"}
 
-[`<ScriptGravatar>`{lang="html"}](/scripts/gravatar){lang="html"} 组件为给定的邮箱地址渲染 Gravatar 头像。所有请求都通过你的服务器代理 - Gravatar 永远不会看到你用户的 IP 地址或请求头。
+[`<ScriptGravatar>`{lang="html"}](/scripts/gravatar){lang="html"} 组件会为给定的邮箱地址渲染 Gravatar 头像。所有请求都会通过你的服务器代理发送 — Gravatar 永远不会看到你的用户的 IP 地址或请求头。
 
 ### 演示
 
@@ -44,7 +48,7 @@ links:
 
 ### 组件 API
 
-查看 [Facade Component API](/docs/guides/facade-components#facade-components-api) 了解完整的属性、事件和插槽。
+请查看 [Facade Component API](/docs/guides/facade-components#facade-components-api) 了解完整的属性、事件和插槽。
 
 ### 属性
 

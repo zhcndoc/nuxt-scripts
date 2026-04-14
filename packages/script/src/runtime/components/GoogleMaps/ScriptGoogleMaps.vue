@@ -2,26 +2,13 @@
 /// <reference types="google.maps" />
 import type { ElementScriptTrigger } from '#nuxt-scripts/types'
 import type { HTMLAttributes, ReservedProps, ShallowRef } from 'vue'
-import { useScriptTriggerElement } from '#nuxt-scripts/composables/useScriptTriggerElement'
-import { useScriptGoogleMaps } from '#nuxt-scripts/registry/google-maps'
-import { scriptRuntimeConfig, scriptsPrefix } from '#nuxt-scripts/utils'
-import { defu } from 'defu'
-import { tryUseNuxtApp, useHead, useRuntimeConfig } from 'nuxt/app'
-import { computed, onBeforeUnmount, onMounted, provide, ref, shallowRef, toRaw, useAttrs, watch } from 'vue'
-import ScriptAriaLoadingIndicator from '../ScriptAriaLoadingIndicator.vue'
-
-import { MAP_INJECTION_KEY } from './useGoogleMapsResource'
-
-const DIGITS_ONLY_RE = /^\d+$/
-const DIGITS_PX_RE = /^\d+px$/i
 
 export { MAP_INJECTION_KEY } from './useGoogleMapsResource'
-</script>
 
-<script lang="ts" setup>
-const props = withDefaults(defineProps<{
+export interface ScriptGoogleMapsProps {
   /**
    * Defines the trigger event to load the script.
+   * @default ['mouseenter', 'mouseover', 'mousedown']
    */
   trigger?: ElementScriptTrigger
   /**
@@ -30,11 +17,20 @@ const props = withDefaults(defineProps<{
   apiKey?: string
   /**
    * A latitude / longitude of where to focus the map.
+   *
+   * @deprecated Pass `center` via `mapOptions` instead. The top-level `center`
+   * prop will be removed in a future major version. When both are set,
+   * `mapOptions.center` wins.
+   * @see https://scripts.nuxt.com/docs/migration-guide/v0-to-v1
    */
   center?: google.maps.LatLng | google.maps.LatLngLiteral | `${string},${string}`
   /**
    * Zoom level for the map (0-21). Reactive: changing this will update the map.
-   * Takes precedence over mapOptions.zoom when provided.
+   *
+   * @deprecated Pass `zoom` via `mapOptions` instead. The top-level `zoom`
+   * prop will be removed in a future major version. When both are set,
+   * `mapOptions.zoom` wins.
+   * @see https://scripts.nuxt.com/docs/migration-guide/v0-to-v1
    */
   zoom?: number
   /**
@@ -46,19 +42,21 @@ const props = withDefaults(defineProps<{
    */
   region?: string
   /**
-   * Defines the language of the map
+   * Defines the language of the map.
    */
   language?: string
   /**
-   * Defines the version of google maps js API
+   * Defines the version of google maps js API.
    */
   version?: string
   /**
    * Defines the width of the map.
+   * @default 640
    */
   width?: number | string
   /**
-   * Defines the height of the map
+   * Defines the height of the map.
+   * @default 400
    */
   height?: number | string
   /**
@@ -73,41 +71,114 @@ const props = withDefaults(defineProps<{
   mapIds?: { light?: string, dark?: string }
   /**
    * Manual color mode control. When provided, overrides auto-detection from @nuxtjs/color-mode.
-   * Accepts 'light', 'dark', or a reactive ref.
+   * Accepts 'light' or 'dark'.
    */
   colorMode?: 'light' | 'dark'
-}>(), {
+}
+
+export interface ScriptGoogleMapsExpose {
+  /**
+   * A reference to the loaded Google Maps API namespace (`google.maps`), or
+   * `undefined` if not yet loaded.
+   */
+  mapsApi: ShallowRef<typeof google.maps | undefined>
+  /**
+   * A reference to the loaded Google Maps API namespace, or `undefined` if not
+   * yet loaded.
+   *
+   * @deprecated Use `mapsApi` instead. The `googleMaps` alias will be removed
+   * in a future major version.
+   * @see https://scripts.nuxt.com/docs/migration-guide/v0-to-v1
+   */
+  googleMaps: ShallowRef<typeof google.maps | undefined>
+  /**
+   * A reference to the Google Map instance, or `undefined` if not yet initialized.
+   */
+  map: ShallowRef<google.maps.Map | undefined>
+  /**
+   * Utility function to resolve a location query (e.g. "New York, NY") to latitude/longitude coordinates.
+   * Uses a caching mechanism and a server-side proxy to avoid unnecessary client-side API calls.
+   */
+  resolveQueryToLatLng: (query: string) => Promise<google.maps.LatLng | google.maps.LatLngLiteral | undefined>
+  /**
+   * Utility function to dynamically import additional Google Maps libraries (e.g. "marker", "places").
+   * Caches imported libraries for efficient reuse.
+   */
+  importLibrary: {
+    (key: 'marker'): Promise<google.maps.MarkerLibrary>
+    (key: 'places'): Promise<google.maps.PlacesLibrary>
+    (key: 'geometry'): Promise<google.maps.GeometryLibrary>
+    (key: 'drawing'): Promise<google.maps.DrawingLibrary>
+    (key: 'visualization'): Promise<google.maps.VisualizationLibrary>
+    (key: string): Promise<any>
+  }
+}
+
+export interface ScriptGoogleMapsEmits {
+  /**
+   * Fired when the Google Maps instance is fully loaded and ready to use. Provides access to the maps API.
+   */
+  ready: [payload: ScriptGoogleMapsExpose]
+  /**
+   * Fired when the Google Maps script fails to load.
+   */
+  error: []
+}
+
+export interface ScriptGoogleMapsSlots {
+  /**
+   * Default slot for rendering child components (e.g. markers, info windows) that depend on the map being ready.
+   */
+  default?: () => any
+  /**
+   * Slot displayed while the map is loading. Can be used to show a custom loading indicator.
+   */
+  loading?: () => any
+  /**
+   * Slot displayed when the script is awaiting user interaction to load (based on the `trigger` prop).
+   */
+  awaitingLoad?: () => any
+  /**
+   * Slot displayed if the script fails to load.
+   */
+  error?: () => any
+  /**
+   * Slot displayed as a placeholder before the map is ready. Useful for showing a static map or skeleton.
+   */
+  placeholder?: () => any
+}
+</script>
+
+<script lang="ts" setup>
+import { useScriptTriggerElement } from '#nuxt-scripts/composables/useScriptTriggerElement'
+import { useScriptGoogleMaps } from '#nuxt-scripts/registry/google-maps'
+import { scriptRuntimeConfig, scriptsPrefix } from '#nuxt-scripts/utils'
+import { defu } from 'defu'
+import { tryUseNuxtApp, useHead, useRuntimeConfig } from 'nuxt/app'
+import { computed, onBeforeUnmount, onMounted, provide, ref, shallowRef, toRaw, useAttrs, useTemplateRef, watch } from 'vue'
+import ScriptAriaLoadingIndicator from '../ScriptAriaLoadingIndicator.vue'
+import { defineDeprecatedAlias, MAP_INJECTION_KEY, waitForMapsReady, warnDeprecatedTopLevelMapProps } from './useGoogleMapsResource'
+
+const props = withDefaults(defineProps<ScriptGoogleMapsProps>(), {
   // @ts-expect-error untyped
   trigger: ['mouseenter', 'mouseover', 'mousedown'],
   width: 640,
   height: 400,
 })
-
-const emits = defineEmits<{
-  /**
-   * Fired when the Google Maps instance is fully loaded and ready to use. Provides access to the maps API.
-   */
-  ready: [e: typeof googleMaps]
-  /**
-   * Fired when the Google Maps script fails to load.
-   */
-  error: []
-}>()
+const emits = defineEmits<ScriptGoogleMapsEmits>()
+defineSlots<ScriptGoogleMapsSlots>()
+const DIGITS_ONLY_RE = /^\d+$/
+const DIGITS_PX_RE = /^\d+px$/i
 
 const apiKey = props.apiKey || scriptRuntimeConfig('googleMaps')?.apiKey
 const runtimeConfig = useRuntimeConfig()
 
-// Color mode support - try to auto-detect from @nuxtjs/color-mode
-const nuxtApp = tryUseNuxtApp()
-const nuxtColorMode = nuxtApp?.$colorMode as { value: string } | undefined
-
-const currentColorMode = computed(() => {
-  if (props.colorMode)
-    return props.colorMode
-  if (nuxtColorMode?.value)
-    return nuxtColorMode.value === 'dark' ? 'dark' : 'light'
-  return 'light'
+const nuxtColorMode = computed(() => {
+  const value = (tryUseNuxtApp()?.$colorMode as { value: string } | undefined)?.value
+  return value === 'dark' || value === 'light' ? value : undefined
 })
+
+const currentColorMode = computed(() => props.colorMode || nuxtColorMode.value || 'light')
 
 const currentMapId = computed(() => {
   if (!props.mapIds)
@@ -115,7 +186,7 @@ const currentMapId = computed(() => {
   return props.mapIds[currentColorMode.value] || props.mapIds.light || props.mapOptions?.mapId
 })
 
-const mapsApi = ref<typeof google.maps | undefined>()
+const mapsApi = shallowRef<typeof google.maps | undefined>()
 
 if (import.meta.dev) {
   if (!apiKey)
@@ -132,10 +203,11 @@ if (import.meta.dev) {
     if (prop in attrs)
       console.warn(`[nuxt-scripts] <ScriptGoogleMaps> prop "${prop}" was removed in v1. ${message} See https://scripts.nuxt.com/docs/migration-guide/v0-to-v1`)
   }
+  warnDeprecatedTopLevelMapProps({ center: props.center, zoom: props.zoom })
 }
 
-const rootEl = ref<HTMLElement>()
-const mapEl = ref<HTMLElement>()
+const rootEl = useTemplateRef<HTMLElement>('rootEl')
+const mapEl = useTemplateRef<HTMLElement>('mapEl')
 
 const centerOverride = ref()
 
@@ -152,12 +224,19 @@ const { load, status, onLoaded } = useScriptGoogleMaps({
 
 const options = computed(() => {
   const mapId = props.mapOptions?.styles ? undefined : (currentMapId.value || 'map')
-  return defu({ center: centerOverride.value, mapId, zoom: props.zoom }, props.mapOptions, {
-    center: props.center,
-    zoom: 15,
-  })
+  // Precedence (defu merges left-to-right, leftmost wins):
+  // 1. centerOverride: resolved query result, always wins for center
+  // 2. mapOptions: preferred public API
+  // 3. deprecated top-level: legacy fallback for center/zoom
+  // 4. defaults: { zoom: 15 } when nothing else is set
+  return defu(
+    { center: centerOverride.value, mapId },
+    props.mapOptions,
+    { center: props.center, zoom: props.zoom },
+    { zoom: 15 },
+  )
 })
-const ready = ref(false)
+const isMapReady = ref(false)
 
 const map: ShallowRef<google.maps.Map | undefined> = shallowRef()
 
@@ -189,32 +268,32 @@ async function resolveQueryToLatLng(query: string) {
     throw new Error(`No location found for ${query}`)
   }
 
-  // Fallback: use Places API client-side
-  // eslint-disable-next-line no-async-promise-executor
-  return new Promise<google.maps.LatLng>(async (resolve, reject) => {
-    if (!mapsApi.value) {
-      await load()
-      // await new promise, watch until mapsApi is set
-      await new Promise<void>((resolve) => {
-        const _ = watch(mapsApi, () => {
-          _()
-          resolve()
-        })
-      })
-    }
-    const placesService = new mapsApi.value!.places.PlacesService(map.value!)
-    placesService.findPlaceFromQuery({
-      query,
-      fields: ['name', 'geometry'],
-    }, (results, status) => {
-      if (status === 'OK' && results?.[0]?.geometry?.location)
-        return resolve(results[0].geometry.location)
-      return reject(new Error(`No location found for ${query}`))
-    })
-  }).then((res) => {
-    queryToLatLngCache.set(query, res)
-    return res
+  // Fallback: use Places API client-side. Wait for both the maps API and a
+  // Map instance: resolveQueryToLatLng is publicly exposed and may be called
+  // before onLoaded has populated map.value, so constructing PlacesService
+  // without map would throw.
+  await waitForMapsReady({ mapsApi, map, status, load })
+
+  const placesService = new mapsApi.value!.places.PlacesService(map.value!)
+  const result = await new Promise<google.maps.LatLng>((resolve, reject) => {
+    placesService.findPlaceFromQuery(
+      {
+        query,
+        fields: ['name', 'geometry'],
+      },
+      (results, status) => {
+        if (status === 'OK' && results?.[0]?.geometry?.location) {
+          resolve(results[0].geometry.location)
+        }
+        else {
+          reject(new Error(`No location found for ${query}`))
+        }
+      },
+    )
   })
+
+  queryToLatLngCache.set(query, result)
+  return result
 }
 
 const libraries = new Map<string, any>()
@@ -246,14 +325,27 @@ function importLibrary<T>(key: string): Promise<T> {
   return cached as Promise<T>
 }
 
-const googleMaps = {
+const exposed: ScriptGoogleMapsExpose = {
+  mapsApi,
+  // Plain alias for production. In dev, replaced below with a getter that
+  // emits a one-shot deprecation warning. Both forms return the same
+  // shallow ref as `mapsApi`.
   googleMaps: mapsApi,
   map,
   resolveQueryToLatLng,
   importLibrary,
-} as const
+}
 
-defineExpose(googleMaps)
+if (import.meta.dev) {
+  defineDeprecatedAlias(
+    exposed,
+    'googleMaps',
+    'mapsApi',
+    '[nuxt-scripts] <ScriptGoogleMaps> expose key "googleMaps" is deprecated; use "mapsApi" instead. See https://scripts.nuxt.com/docs/migration-guide/v0-to-v1',
+  )
+}
+
+defineExpose<ScriptGoogleMapsExpose>(exposed)
 
 // Shared InfoWindow group: only one InfoWindow open at a time within this map
 let activeInfoWindow: google.maps.InfoWindow | undefined
@@ -269,9 +361,9 @@ provide(MAP_INJECTION_KEY, {
 })
 
 onMounted(() => {
-  watch(ready, (v) => {
+  watch(isMapReady, (v) => {
     if (v) {
-      emits('ready', googleMaps)
+      emits('ready', exposed)
     }
   })
   watch(status, (v) => {
@@ -280,16 +372,34 @@ onMounted(() => {
     }
   })
   watch(options, () => {
-    map.value?.setOptions(options.value)
+    if (!map.value)
+      return
+    // Exclude center and zoom — they have dedicated watchers that avoid
+    // resetting user interactions (pan/zoom) on unrelated re-renders.
+    const { center: _, zoom: __, ...rest } = options.value
+    map.value.setOptions(rest)
   })
-  watch([() => options.value.center, ready, map], async (next) => {
+  watch(() => options.value.zoom, (zoom) => {
+    if (map.value && zoom != null)
+      map.value.setZoom(zoom)
+  })
+  watch([() => options.value.center, isMapReady, map], async (next) => {
     if (!map.value) {
       return
     }
     let center = toRaw(next[0])
     if (center) {
-      if (isLocationQuery(center) && ready.value) {
+      if (isLocationQuery(center) && isMapReady.value) {
         center = await resolveQueryToLatLng(center as string)
+      }
+      // Skip setCenter if the map is already at the same position to avoid
+      // resetting user pan interactions on unrelated re-renders.
+      const current = map.value!.getCenter()
+      if (current) {
+        const newLat = typeof (center as any).lat === 'function' ? (center as any).lat() : (center as any).lat
+        const newLng = typeof (center as any).lng === 'function' ? (center as any).lng() : (center as any).lng
+        if (current.lat() === newLat && current.lng() === newLng)
+          return
       }
       map.value!.setCenter(center as google.maps.LatLng)
     }
@@ -308,9 +418,10 @@ onMounted(() => {
     map.value = new mapsApi.value!.Map(mapEl.value!, _options)
     if (center && isLocationQuery(center)) {
       centerOverride.value = await resolveQueryToLatLng(center)
-      map.value?.setCenter(centerOverride.value)
+      if (centerOverride.value)
+        map.value?.setCenter(centerOverride.value)
     }
-    ready.value = true
+    isMapReady.value = true
   })
 })
 
@@ -378,9 +489,9 @@ onBeforeUnmount(() => {
 
 <template>
   <div ref="rootEl" v-bind="rootAttrs">
-    <div v-show="ready" ref="mapEl" :style="{ width: '100%', height: '100%', maxWidth: '100%' }" />
-    <slot v-if="!ready" name="placeholder" />
-    <slot v-if="status !== 'awaitingLoad' && !ready" name="loading">
+    <div v-show="isMapReady" ref="mapEl" :style="{ width: '100%', height: '100%', maxWidth: '100%' }" />
+    <slot v-if="!isMapReady" name="placeholder" />
+    <slot v-if="status !== 'awaitingLoad' && !isMapReady" name="loading">
       <ScriptAriaLoadingIndicator />
     </slot>
     <slot v-if="status === 'awaitingLoad'" name="awaitingLoad" />

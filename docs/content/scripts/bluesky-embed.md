@@ -18,7 +18,11 @@ Nuxt Scripts 提供了一个 [`<ScriptBlueskyEmbed>`{lang="html"}](/scripts/blue
 ::script-docs{embed}
 ::
 
-这会注册所需的服务器 API 路由（`/_scripts/embed/bluesky` 和 `/_scripts/embed/bluesky-image`），用于处理帖子数据获取和图片代理。
+::callout{type="info"}
+This script's proxy endpoints use [HMAC URL signing](/docs/guides/first-party#proxy-endpoint-security) when you configure a `NUXT_SCRIPTS_PROXY_SECRET`. See the [security guide](/docs/guides/first-party#proxy-endpoint-security) for setup instructions.
+::
+
+This registers the required server API routes (`/_scripts/embed/bluesky` and `/_scripts/embed/bluesky-image`) that handle fetching post data and proxying images.
 
 ## [`<ScriptBlueskyEmbed>`{lang="html"}](/scripts/bluesky-embed){lang="html"}
 
@@ -248,7 +252,7 @@ interface SlotProps {
 | 插槽 | 描述 |
 |------|-------------|
 | `default` | 主内容，使用插槽属性渲染 |
-| `loading` | 数据获取中显示 |
+| `loading` | 数据加载中显示 |
 | `error` | 获取失败时显示，接收 `{ error }` |
 
 ## 工作原理
