@@ -22,18 +22,16 @@
 
 import type { EventHandler, EventHandlerRequest, EventHandlerResponse } from 'h3'
 import { createError, defineEventHandler } from 'h3'
+import { useRuntimeConfig } from 'nitropack/runtime'
 import { verifyProxyRequest } from './sign'
 
 export function withSigning<Req extends EventHandlerRequest = EventHandlerRequest, Res extends EventHandlerResponse = EventHandlerResponse>(
   handler: EventHandler<Req, Res>,
 ): EventHandler<Req, Res> {
   return defineEventHandler<Req>(async (event) => {
-    // Lazy-resolve useRuntimeConfig to avoid pulling nitro's virtual modules
-    // into unit tests that import handler files for their exported utilities
-    // (e.g. instagram-embed.ts exports rewriteUrl / scopeCss alongside the handler).
-    const { useRuntimeConfig } = await import('#imports')
     const runtimeConfig = useRuntimeConfig(event)
-    const secret = (runtimeConfig['nuxt-scripts'] as { proxySecret?: string } | undefined)?.proxySecret
+    const scriptsConfig = runtimeConfig['nuxt-scripts'] as { proxySecret?: string, pageTokenMaxAge?: number } | undefined
+    const secret = scriptsConfig?.proxySecret
 
     // No secret configured: pass through without verification. This lets the
     // handler wiring ship before components emit signed URLs. Users opt in to
@@ -41,7 +39,7 @@ export function withSigning<Req extends EventHandlerRequest = EventHandlerReques
     if (!secret)
       return handler(event) as Res
 
-    if (!verifyProxyRequest(event, secret)) {
+    if (!verifyProxyRequest(event, secret, scriptsConfig?.pageTokenMaxAge)) {
       throw createError({
         statusCode: 403,
         statusMessage: 'Invalid signature',

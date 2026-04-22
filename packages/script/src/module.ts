@@ -19,6 +19,7 @@ import {
   addBuildPlugin,
   addComponentsDir,
   addImports,
+  addPlugin,
   addPluginTemplate,
   addServerHandler,
   addTemplate,
@@ -234,6 +235,51 @@ export function applyAutoInject(
     rtEntry[autoInject.configField] = value
 }
 
+const ABSOLUTE_URL_RE = /^[a-z][a-z\d+.-]*:\/\//i
+
+function resolveConfiguredProxyDomain(value: unknown): string | undefined {
+  if (typeof value !== 'string')
+    return
+
+  const trimmed = value.trim()
+  if (!trimmed || (!ABSOLUTE_URL_RE.test(trimmed) && !trimmed.startsWith('//')))
+    return
+
+  try {
+    return new URL(trimmed, 'https://nuxt-scripts.local').hostname || undefined
+  }
+  catch {
+
+  }
+}
+
+export function resolveConfiguredProxyDomains(
+  config: Record<string, any> | undefined,
+  proxyConfig?: Pick<ProxyConfig, 'autoInject' | 'configDomainFields'>,
+): string[] {
+  if (!config || typeof config !== 'object')
+    return []
+
+  const domains = new Set<string>()
+  const scriptSrc = resolveConfiguredProxyDomain(config.scriptInput?.src)
+  if (scriptSrc)
+    domains.add(scriptSrc)
+
+  if (proxyConfig?.autoInject?.configField) {
+    const endpointDomain = resolveConfiguredProxyDomain(config[proxyConfig.autoInject.configField])
+    if (endpointDomain)
+      domains.add(endpointDomain)
+  }
+
+  for (const field of proxyConfig?.configDomainFields || []) {
+    const domain = resolveConfiguredProxyDomain(config[field])
+    if (domain)
+      domains.add(domain)
+  }
+
+  return [...domains].sort()
+}
+
 export interface ModuleOptions {
   /**
    * Base path prefix for all script endpoints (proxy and bundled assets).
@@ -332,6 +378,21 @@ export interface ModuleOptions {
      * @default true
      */
     autoGenerateSecret?: boolean
+    /**
+     * How long (in seconds) a page token issued during SSR remains valid on the
+     * client. Client-driven proxy requests (dynamic fetches, runtime image
+     * helpers) attach this token so `withSigning` accepts them without each URL
+     * being HMAC-signed up front.
+     *
+     * The default of 1 hour is safe for SSR; for SSG or prerendered routes,
+     * deployed HTML carries the build-time token, so bump this (e.g. `2592000`
+     * for 30 days) to keep client-side proxy calls working after the build.
+     * Longer TTLs widen the replay window if a token is scraped, so prefer the
+     * shortest value that covers your cache horizon.
+     *
+     * @default 3600
+     */
+    pageTokenMaxAge?: number
   }
   /**
    * Google Static Maps proxy configuration.
@@ -438,8 +499,9 @@ export default defineNuxtModule<ModuleOptions>({
     // Normalize registry entries to [input, scriptOptions?] tuple form
     // Eliminates 4-shape polymorphism (true | 'mock' | object | array) for all downstream consumers
     if (config.registry) {
+      const componentOnlyKeys = new Set(scripts.filter(s => !s.import).map(s => s.registryKey!))
       migrateDeprecatedRegistryKeys(config.registry as Record<string, any>, msg => logger.warn(msg))
-      normalizeRegistryConfig(config.registry as Record<string, any>, msg => logger.warn(msg))
+      normalizeRegistryConfig(config.registry as Record<string, any>, msg => logger.warn(msg), componentOnlyKeys)
       nuxt.options.runtimeConfig.public = nuxt.options.runtimeConfig.public || {}
 
       // Auto-populate env var defaults for enabled registry scripts so that
@@ -511,9 +573,21 @@ export default defineNuxtModule<ModuleOptions>({
     const proxyHandlerPath = await resolvePath('./runtime/server/proxy-handler')
     addServerHandler({ route: `${proxyPrefix}/**`, handler: proxyHandlerPath })
 
+    // In dev, sink Vercel Analytics insight POSTs to `/_vercel/insights/*` so
+    // they don't 404. Vercel's edge serves this path in production; locally
+    // there's no upstream, so we return 204 to keep the script happy.
+    if (nuxt.options.dev && config.registry?.vercelAnalytics) {
+      addServerHandler({
+        route: '/_vercel/insights/**',
+        handler: await resolvePath('./runtime/server/vercel-insights-sink'),
+      })
+    }
+
     const composables = [
       'useScript',
       'useScriptEventPage',
+      'useScriptProxyToken',
+      'useScriptProxyUrl',
       'useScriptTriggerConsent',
       'useScriptTriggerElement',
       'useScriptTriggerIdleTimeout',
@@ -569,10 +643,32 @@ export default defineNuxtModule<ModuleOptions>({
         const script = scripts.find(s => s.registryKey === key)
         if (!script?.schema)
           continue
-        const requiredFields = extractRequiredFields(script.schema)
-        const missing = requiredFields.filter(f => !input[f])
-        if (missing.length) {
-          logger.warn(`[nuxt-scripts] registry.${key}: missing required field${missing.length > 1 ? 's' : ''} ${missing.map(f => `'${f}'`).join(', ')}. The script infrastructure is registered but will not function without ${missing.length > 1 ? 'them' : 'it'}.`)
+        // Component-only scripts (e.g. xEmbed, instagramEmbed, blueskyEmbed) have
+        // required fields that are per-instance props on the <Script*> component.
+        // Global registry config is still valid for shared defaults (proxy endpoints
+        // etc.), but `trigger` has no effect since the component manages its own
+        // lifecycle, and required fields cannot be satisfied from nuxt.config.
+        const isComponentOnly = !script.import
+        if (isComponentOnly) {
+          if (scriptOptions && 'trigger' in scriptOptions && scriptOptions.trigger !== false) {
+            const pascal = key.charAt(0).toUpperCase() + key.slice(1)
+            logger.warn(
+              `[nuxt-scripts] registry.${key}: \`trigger\` has no effect on component-only scripts. `
+              + `Render <Script${pascal}> in your template to load the embed.`,
+            )
+          }
+          continue
+        }
+        // Required-field validation only applies when the script will auto-load.
+        // Without a trigger the user supplies fields later via the composable call,
+        // so a missing `id` etc. in nuxt.config isn't a problem.
+        const willAutoLoad = scriptOptions && 'trigger' in scriptOptions && scriptOptions.trigger !== false
+        if (willAutoLoad) {
+          const requiredFields = extractRequiredFields(script.schema)
+          const missing = requiredFields.filter(f => !input[f])
+          if (missing.length) {
+            logger.warn(`[nuxt-scripts] registry.${key}: missing required field${missing.length > 1 ? 's' : ''} ${missing.map(f => `'${f}'`).join(', ')}. The script infrastructure is registered but will not function without ${missing.length > 1 ? 'them' : 'it'}.`)
+          }
         }
         // Warn when a user provides input config but no explicit trigger.
         // In v0 all configured scripts auto-loaded; in v1 a trigger is required.
@@ -673,6 +769,7 @@ export default defineNuxtModule<ModuleOptions>({
         const unmatchedScripts: string[] = []
         let totalDomains = 0
         const devtoolsScripts: ProxyDevtoolsScript[] = []
+        const publicScripts = nuxt.options.runtimeConfig.public?.scripts as Record<string, any> | undefined
 
         for (const key of registryKeys) {
           const script = scriptByKey.get(key)
@@ -695,10 +792,20 @@ export default defineNuxtModule<ModuleOptions>({
           // Per-script privacy override from user config (stays on input after normalization)
           const entry = (config.registry as Record<string, any>)?.[key]
           const inputPrivacy = entry?.[0]?.privacy
+          const runtimeEntry = publicScripts?.[key] && typeof publicScripts[key] === 'object'
+            ? publicScripts[key]
+            : undefined
 
           for (const domain of proxyConfig.domains) {
             domainPrivacy[domain] = inputPrivacy ?? proxyConfig.privacy
             totalDomains++
+          }
+
+          for (const source of [entry?.[0], runtimeEntry]) {
+            for (const domain of resolveConfiguredProxyDomains(source, proxyConfig)) {
+              domainPrivacy[domain] = inputPrivacy ?? proxyConfig.privacy
+              totalDomains++
+            }
           }
 
           if (proxyConfig.autoInject && config.registry)
@@ -880,7 +987,17 @@ export default defineNuxtModule<ModuleOptions>({
         logger.warn(`[security] Generated an in-memory ${PROXY_SECRET_ENV_KEY} (could not write .env). Signed URLs will break across restarts.`)
 
       if (proxySecretResolved?.secret) {
-        ;(nuxt.options.runtimeConfig['nuxt-scripts'] as any).proxySecret = proxySecretResolved.secret
+        const scriptsRuntime = nuxt.options.runtimeConfig['nuxt-scripts'] as Record<string, unknown>
+        scriptsRuntime.proxySecret = proxySecretResolved.secret
+        if (config.security?.pageTokenMaxAge !== undefined)
+          scriptsRuntime.pageTokenMaxAge = config.security.pageTokenMaxAge
+        // Emit a per-request page token during SSR so client-driven proxy
+        // calls (reactive fetches, dynamic image helpers) authenticate via
+        // `_pt` + `_ts` without needing each URL to be HMAC-signed up front.
+        addPlugin({
+          src: await resolvePath('./runtime/plugins/proxy-token.server'),
+          mode: 'server',
+        })
       }
       else if (!nuxt.options.dev) {
         logger.warn(

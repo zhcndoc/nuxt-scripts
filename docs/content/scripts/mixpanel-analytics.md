@@ -69,3 +69,36 @@ proxy.mixpanel.register({
 })
 </script>
 ```
+
+## 同意模式
+
+Mixpanel 提供了 [`opt_in_tracking` / `opt_out_tracking`](https://docs.mixpanel.com/docs/privacy/opt-out-of-tracking)。使用 `defaultConsent` 设置启动时默认状态，并在运行时调用 `consent.optIn()`{lang="ts"} / `consent.optOut()`{lang="ts"}。
+
+### `defaultConsent`
+
+| 值 | 行为 |
+|-------|-----------|
+| `'opt-in'` | 以已同意状态启动。 |
+| `'opt-out'` | 调用 `mixpanel.init(..., { opt_out_tracking_by_default: true })`{lang="ts"}，使 SDK 以未同意状态启动。 |
+
+::callout{icon="i-heroicons-information-circle"}
+当你需要 SDK 以未同意状态启动时，请使用 `defaultConsent: 'opt-out'`。运行时的 `consent.optOut()`{lang="ts"} 会在初始化后调用 `opt_out_tracking()`{lang="ts"}，其效力弱于启动时标志；在初始化与退出同意调用之间捕获的任何事件仍会被发送。
+::
+
+### 示例
+
+```vue
+<script setup lang="ts">
+const { consent } = useScriptMixpanelAnalytics({
+  token: 'YOUR_TOKEN',
+  defaultConsent: 'opt-out',
+})
+
+function onAccept() {
+  consent.optIn()
+}
+function onRevoke() {
+  consent.optOut()
+}
+</script>
+```

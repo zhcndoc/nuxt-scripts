@@ -83,6 +83,40 @@ useScriptMatomoAnalytics({
 })
 ```
 
+## 同意模式
+
+Matomo 内置了一个由 `requireConsent` 控制的 [跟踪同意 API](https://developer.matomo.org/guides/tracking-consent)。在注册时设置 `defaultConsent` 以启用该控制，然后在运行时调用 `consent.give()`{lang="ts"} / `consent.forget()`{lang="ts"}。
+
+### `defaultConsent`
+
+| 值 | 行为 |
+|-------|-----------|
+| `'required'` | 推送 `['requireConsent']`。在用户选择加入之前，Matomo 不会跟踪任何内容。 |
+| `'given'` | 推送 `['requireConsent']` 然后推送 `['setConsentGiven']`。跟踪会立即开始。 |
+| `'not-required'` | 默认的 Matomo 行为（不启用同意控制）。 |
+
+::callout{icon="i-heroicons-exclamation-triangle" color="warning"}
+`consent.give()`{lang="ts"} / `consent.forget()`{lang="ts"} **只有在注册时设置了 `defaultConsent: 'required'` 或 `'given'` 时才会生效** -- 当尚未推送 `requireConsent` 时，Matomo 会忽略 `setConsentGiven` / `forgetConsentGiven`。如果你忘记设置，会触发仅开发环境可见的警告。
+::
+
+### 示例
+
+```vue
+<script setup lang="ts">
+const { consent } = useScriptMatomoAnalytics({
+  cloudId: 'YOUR_CLOUD_ID',
+  defaultConsent: 'required',
+})
+
+function onAccept() {
+  consent.give()
+}
+function onRevoke() {
+  consent.forget()
+}
+</script>
+```
+
 ### 使用 Matomo 白标版
 
 对于 Matomo 白标版，设置 `trackerUrl` 和 `scriptInput.src` 以自定义跟踪。

@@ -48,5 +48,27 @@ export default defineNuxtConfig({
 })
 ```
 
+## 同意模式
+
+TikTok 像素提供了一个三态同意 API：授权、撤销，或保持（延后决定）。使用 `defaultConsent` 设置初始状态，并在运行时调用 `consent.grant()`{lang="ts"} / `consent.revoke()`{lang="ts"} / `consent.hold()`{lang="ts"}：
+
+```vue
+<script setup lang="ts">
+const { consent } = useScriptTikTokPixel({
+  id: 'YOUR_PIXEL_ID',
+  defaultConsent: 'hold', // 'granted' | 'denied' | 'hold'
+})
+
+function acceptAds() {
+  consent.grant()
+}
+function rejectAds() {
+  consent.revoke()
+}
+</script>
+```
+
+有关完整行为，请参阅 [TikTok cookie 同意文档](https://business-api.tiktok.com/portal/docs?id=1739585600931842)。
+
 ::script-types
 ::

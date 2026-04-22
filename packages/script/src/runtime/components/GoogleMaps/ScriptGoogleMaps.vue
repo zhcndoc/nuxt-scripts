@@ -223,12 +223,11 @@ const { load, status, onLoaded } = useScriptGoogleMaps({
 })
 
 const options = computed(() => {
-  const mapId = props.mapOptions?.styles ? undefined : (currentMapId.value || 'map')
-  // Precedence (defu merges left-to-right, leftmost wins):
-  // 1. centerOverride: resolved query result, always wins for center
-  // 2. mapOptions: preferred public API
-  // 3. deprecated top-level: legacy fallback for center/zoom
-  // 4. defaults: { zoom: 15 } when nothing else is set
+  // JSON `styles` and `mapId` are mutually exclusive in Google Maps. When the user
+  // sets `styles`, we drop `mapId` so styles apply. Otherwise fall back to a map ID
+  // so `AdvancedMarkerElement` can function. The marker component warns if markers
+  // are mounted against a styled (mapId-less) map.
+  const mapId = props.mapOptions?.styles ? undefined : (currentMapId.value || 'DEMO_MAP_ID')
   return defu(
     { center: centerOverride.value, mapId },
     props.mapOptions,
@@ -479,9 +478,11 @@ onBeforeUnmount(() => {
   // so anything after an `await` runs as a detached microtask.
   // Note: do NOT null mapsApi here — children unmount AFTER onBeforeUnmount
   // and need mapsApi.value for clearInstanceListeners in their cleanup.
+  // Note: do NOT remove map DOM here — during page transitions the leave
+  // animation is still playing, and tearing out the iframe leaves blank
+  // space. Vue removes the parent element on actual unmount.
   map.value?.unbindAll()
   map.value = undefined
-  mapEl.value?.firstChild?.remove()
   libraries.clear()
   queryToLatLngCache.clear()
 })

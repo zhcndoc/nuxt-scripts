@@ -54,3 +54,21 @@ function trackSignup() {
 }
 </script>
 ```
+
+### Consent Mode
+
+Bing UET 支持 [高级同意模式](https://help.ads.microsoft.com/#apex/ads/en/60119/1-500)。仅会遵循 `ad_storage`；使用 `defaultConsent` 设置初始状态，并通过运行时的 `consent.update()`{lang="ts"} 进行更新：
+
+```vue
+<script setup lang="ts">
+const { consent } = useScriptBingUet({
+  defaultConsent: { ad_storage: 'denied' },
+})
+
+function grantConsent() {
+  consent.update({ ad_storage: 'granted' })
+}
+</script>
+```
+
+`onBeforeUetStart` 仍可用于任何其他预加载设置。

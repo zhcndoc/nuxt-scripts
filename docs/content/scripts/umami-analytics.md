@@ -18,15 +18,16 @@ links:
 
 ### 自托管的 Umami
 
-如果你使用自托管版本的 Umami，请为脚本提供一个显式的 src，使浏览器能将 API 事件发送到正确的端点。
+如果你使用自托管版本的 Umami，请将 `hostUrl` 设置为你的 Umami 源站。这是告诉 Umami 将事件发送到哪里的、该提供程序特有的方式。
 
 ```ts
 useScriptUmamiAnalytics({
-  scriptInput: {
-    src: 'https://my-self-hosted/script.js'
-  }
+  websiteId: 'YOUR_WEBSITE_ID',
+  hostUrl: 'https://my-self-hosted'
 })
 ```
+
+仅当你还需要覆盖脚本 URL 本身时，才使用 `scriptInput.src`。
 
 ## 高级功能
 

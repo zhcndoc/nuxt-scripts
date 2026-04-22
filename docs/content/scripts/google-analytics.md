@@ -30,7 +30,45 @@ proxy.gtag('event', 'page_view')
 
 proxy 暴露了 `gtag` 和 `dataLayer` 属性，你应当按照 Google Analytics 的最佳实践使用它们。
 
-### 客户/消费者 ID 追踪
+### Consent Mode
+
+Google Analytics 原生支持 [GCMv2 同意状态](https://developers.google.com/tag-platform/security/guides/consent)。通过 `defaultConsent` 设置默认值（会在 `gtag('js', ...)`{lang="ts"} 之前触发 `gtag('consent', 'default', ...)`{lang="ts"}），并在运行时调用 `consent.update()`{lang="ts"}：
+
+```vue
+<script setup lang="ts">
+const { consent } = useScriptGoogleAnalytics({
+  id: 'G-XXXXXXXX',
+  defaultConsent: {
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+    analytics_storage: 'denied',
+  },
+})
+
+function acceptAll() {
+  consent.update({
+    ad_storage: 'granted',
+    ad_user_data: 'granted',
+    ad_personalization: 'granted',
+    analytics_storage: 'granted',
+  })
+}
+
+function savePreferences(choices: { analytics: boolean, marketing: boolean }) {
+  consent.update({
+    analytics_storage: choices.analytics ? 'granted' : 'denied',
+    ad_storage: choices.marketing ? 'granted' : 'denied',
+    ad_user_data: choices.marketing ? 'granted' : 'denied',
+    ad_personalization: choices.marketing ? 'granted' : 'denied',
+  })
+}
+</script>
+```
+
+`consent.update()`{lang="ts"} 接受任意 `Partial<ConsentState>`{lang="ts"}；缺失的类别将保持其当前值。对于除了同意默认值之外、在 `gtag('js')`{lang="ts"} 之前的设置，`onBeforeGtagStart` 仍可作为通用的逃生入口使用。
+
+### 客户/消费者 ID 跟踪
 
 对于需要在主追踪之外进行客户特定数据追踪的电商或多租户应用：
 

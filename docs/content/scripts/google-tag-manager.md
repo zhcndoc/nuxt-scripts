@@ -41,29 +41,15 @@ useScriptEventPage(({ title, path }) => {
 })
 ```
 
-## 在 GTM 启动前进行配置
+## 同意模式
 
-[`useScriptGoogleTagManager()`{lang="ts"}](/scripts/google-tag-manager){lang="ts"} 会自动初始化 Google 标签管理器，也会自动推送 `js`、`config` 和 `gtm.start` 事件。
-
-如果你需要在 GTM 启动前配置，比如 [设置同意模式](https://developers.google.com/tag-platform/security/guides/consent?consentmode=basic)，你有两个选项：
-
-### 选项 1：在 nuxt.config 中使用 `defaultConsent`（推荐）
-
-如果你在 `nuxt.config` 里配置 GTM，则使用 `defaultConsent` 选项。见上方 [默认同意模式](#loading-globally) 示例。
-
-### 选项 2：使用 `onBeforeGtmStart` 回调
-
-如果你在组件中直接调用 [`useScriptGoogleTagManager()`{lang="ts"}](/scripts/google-tag-manager){lang="ts"} 并传入 ID（不是在 nuxt.config 中配置），则可以使用 `onBeforeGtmStart` 钩子，该钩子会在推送 `gtm.start` 事件之前运行。
-
-::callout{icon="i-heroicons-exclamation-triangle" color="warning"}  
-`onBeforeGtmStart` 仅在直接传入 GTM ID 给 [`useScriptGoogleTagManager()`{lang="ts"}](/scripts/google-tag-manager){lang="ts"} 时生效，使用 nuxt.config 全局配置时该钩子无效，替代方案请用 `defaultConsent` 选项。  
-::  
+Google Tag Manager 原生支持 [GCMv2 同意状态](https://developers.google.com/tag-platform/security/guides/consent?consentmode=basic)。使用 `defaultConsent` 设置默认值（会在 `gtm.js` 事件之前将 `['consent','default', state]` 推送到 dataLayer 中），并在运行时调用 `consent.update()`{lang="ts"}。
 
 ::callout{icon="i-heroicons-play" to="https://stackblitz.com/github/nuxt/scripts/tree/main/examples/cookie-consent" target="_blank"}  
 在 [StackBlitz](https://stackblitz.com) 上试试实时的 [Cookie 同意示例](https://stackblitz.com/github/nuxt/scripts/tree/main/examples/cookie-consent) 或 [细粒度同意示例](https://stackblitz.com/github/nuxt/scripts/tree/main/examples/granular-consent)。  
 ::  
 
-#### 同意模式 v2 信号
+### 同意模式 v2 信号
 
 | 信号             | 目的                     |
 |------------------|--------------------------|
@@ -72,60 +58,45 @@ useScriptEventPage(({ title, path }) => {
 | `ad_personalization` | 个性化广告（再营销）        |
 | `analytics_storage`| 分析相关的 Cookie          |
 
-#### 更新同意状态
+### 示例
 
-当用户接受时，调用 `gtag('consent', 'update', ...)`{lang="ts"}：
+```vue
+<script setup lang="ts">
+const { proxy, consent } = useScriptGoogleTagManager({
+  id: 'GTM-XXXXXX',
+  defaultConsent: {
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+    analytics_storage: 'denied',
+  },
+})
 
-```ts
-function acceptCookies() {
-  window.gtag?.('consent', 'update', {
+function acceptAll() {
+  consent.update({
     ad_storage: 'granted',
     ad_user_data: 'granted',
     ad_personalization: 'granted',
     analytics_storage: 'granted',
   })
 }
-```
 
-若要在获得同意前阻止 GTM，可以结合使用 [`useScriptTriggerConsent()`{lang="ts"}](/docs/guides/consent){lang="ts"}。
-
-```vue
-<script setup lang="ts">
-const consent = useState('consent', () => 'denied')
-
-const { proxy } = useScriptGoogleTagManager({
-  onBeforeGtmStart: (gtag) => {
-    // 设置默认同意状态为 denied
-    gtag('consent', 'default', {
-      ad_user_data: 'denied',
-      ad_personalization: 'denied',
-      ad_storage: 'denied',
-      analytics_storage: 'denied',
-      wait_for_update: 500,
-    })
-
-    // 如果已经获得同意，则更新 gtag
-    if (consent.value === 'granted') {
-      gtag('consent', 'update', {
-        ad_user_data: consent.value,
-        ad_personalization: consent.value,
-        ad_storage: consent.value,
-        analytics_storage: consent.value
-      })
-    }
-  }
-})
-
-// 将页面访问事件推送到 dataLayer
-useScriptEventPage(({ title, path }) => {
-  proxy.dataLayer.push({
-    event: 'pageview',
-    title,
-    path
+function savePreferences(choices: { analytics: boolean, marketing: boolean }) {
+  consent.update({
+    analytics_storage: choices.analytics ? 'granted' : 'denied',
+    ad_storage: choices.marketing ? 'granted' : 'denied',
+    ad_user_data: choices.marketing ? 'granted' : 'denied',
+    ad_personalization: choices.marketing ? 'granted' : 'denied',
   })
+}
+
+useScriptEventPage(({ title, path }) => {
+  proxy.dataLayer.push({ event: 'pageview', title, path })
 })
 </script>
 ```
+
+`onBeforeGtmStart` 仍然可用，作为任何其他 `gtm.start` 之前设置的通用逃生通道（仅当 GTM ID 直接传给组合式函数时可用，而不是通过 `nuxt.config` 传入）。
 
 ::script-types
 ::

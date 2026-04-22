@@ -308,6 +308,7 @@ export async function registry(resolve?: (path: string) => Promise<string>): Pro
       proxy: {
         domains: ['va.vercel-scripts.com', 'vitals.vercel-insights.com'],
         privacy: PRIVACY_IP_ONLY,
+        configDomainFields: ['endpoint'],
       },
     }),
     def('posthog', {
@@ -352,6 +353,7 @@ export async function registry(resolve?: (path: string) => Promise<string>): Pro
       proxy: {
         domains: ['cdn.matomo.cloud'],
         privacy: PRIVACY_IP_ONLY,
+        configDomainFields: ['matomoUrl', 'trackerUrl'],
       },
       partytown: { forwards: ['_paq.push'] },
     }),
@@ -387,6 +389,7 @@ export async function registry(resolve?: (path: string) => Promise<string>): Pro
         domains: ['cdn.databuddy.cc', 'basket.databuddy.cc'],
         privacy: PRIVACY_IP_ONLY,
         autoInject: { field: 'apiUrl', target: 'basket.databuddy.cc' },
+        configDomainFields: ['scriptUrl'],
       },
     }),
     def('segment', {
@@ -413,7 +416,7 @@ export async function registry(resolve?: (path: string) => Promise<string>): Pro
           return 'https://cdn.mxpnl.com/libs/mixpanel-2-latest.min.js'
         },
       },
-      partytown: { forwards: ['mixpanel', 'mixpanel.init', 'mixpanel.track', 'mixpanel.identify', 'mixpanel.people.set', 'mixpanel.reset', 'mixpanel.register'] },
+      partytown: { forwards: ['mixpanel', 'mixpanel.init', 'mixpanel.track', 'mixpanel.identify', 'mixpanel.people.set', 'mixpanel.reset', 'mixpanel.register', 'mixpanel.opt_in_tracking', 'mixpanel.opt_out_tracking'] },
     }),
     // ad
     def('bingUet', {
@@ -468,7 +471,7 @@ export async function registry(resolve?: (path: string) => Promise<string>): Pro
         domains: ['analytics.tiktok.com', 'mon.tiktok.com', 'mcs.tiktok.com'],
         privacy: PRIVACY_FULL,
       },
-      partytown: { forwards: ['ttq.track', 'ttq.page', 'ttq.identify'] },
+      partytown: { forwards: ['ttq.track', 'ttq.page', 'ttq.identify', 'ttq.grantConsent', 'ttq.revokeConsent', 'ttq.holdConsent'] },
     }),
     def('snapchatPixel', {
       schema: SnapTrPixelOptions,
@@ -570,7 +573,7 @@ export async function registry(resolve?: (path: string) => Promise<string>): Pro
         domains: ['www.clarity.ms', 'scripts.clarity.ms', 'd.clarity.ms', 'e.clarity.ms', 'k.clarity.ms', 'c.clarity.ms', 'a.clarity.ms', 'b.clarity.ms'],
         privacy: PRIVACY_HEATMAP,
       },
-      partytown: { forwards: [] },
+      partytown: { forwards: ['clarity'] },
     }),
     // payments
     def('stripe', {
@@ -860,6 +863,7 @@ export function buildProxyConfigsFromRegistry(
       domains: proxyDef.domains.map(d => typeof d === 'string' ? d : d.domain),
       privacy: proxyDef.privacy || { ip: false, userAgent: false, language: false, screen: false, timezone: false, hardware: false },
       autoInject: proxyDef.autoInject ? resolveAutoInject(proxyDef.autoInject) : undefined,
+      configDomainFields: proxyDef.configDomainFields,
       sdkPatches: proxyDef.sdkPatches,
     }
   }

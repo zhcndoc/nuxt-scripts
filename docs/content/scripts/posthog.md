@@ -101,6 +101,54 @@ onLoaded(({ posthog }) => {
 })
 ```
 
+## 同意模式
+
+PostHog 提供 [`opt_in_capturing` / `opt_out_capturing`](https://posthog.com/docs/privacy/opting-out)。使用 `defaultConsent` 设置启动时默认值，并在运行时调用 `consent.optIn()`{lang="ts"} / `consent.optOut()`{lang="ts"}。
+
+### `defaultConsent`
+
+| 值 | 行为 |
+|-------|-----------|
+| `'opt-in'` | 在初始化后立即调用 `posthog.opt_in_capturing()`{lang="ts"}。 |
+| `'opt-out'` | 调用 `posthog.init(..., { opt_out_capturing_by_default: true })`{lang="ts"}，使 SDK 以退出状态启动。 |
+
+::callout{icon="i-heroicons-information-circle"}
+当您需要 SDK 以退出状态启动时，请使用 `defaultConsent: 'opt-out'`。运行时的 `consent.optOut()`{lang="ts"} 会在初始化后调用 `opt_out_capturing()`{lang="ts"}，这比启动时标志更弱；在初始化和退出调用之间捕获的任何事件仍会被发送。
+::
+
+### 示例
+
+```vue
+<script setup lang="ts">
+const { consent } = useScriptPostHog({
+  apiKey: 'YOUR_API_KEY',
+  defaultConsent: 'opt-out',
+})
+
+function onAccept() {
+  consent.optIn()
+}
+function onRevoke() {
+  consent.optOut()
+}
+</script>
+```
+
+在 `nuxt.config` 中全局配置 PostHog：
+
+```ts
+export default defineNuxtConfig({
+  scripts: {
+    registry: {
+      posthog: {
+        apiKey: 'YOUR_API_KEY',
+        defaultConsent: 'opt-out',
+      }
+    }
+  }
+})
+```
+
 ## 禁用会话录制
 
 ```ts
