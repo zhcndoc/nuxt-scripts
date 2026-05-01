@@ -116,7 +116,12 @@ export const registryMeta: RegistryScriptMeta[] = [
   m('plausibleAnalytics', 'Plausible Analytics', 'analytics', 'useScriptPlausibleAnalytics', { bundle: true, proxy: true, partytown: true }, PRIVACY_IP_ONLY),
   m('cloudflareWebAnalytics', 'Cloudflare Web Analytics', 'analytics', 'useScriptCloudflareWebAnalytics', { bundle: true, proxy: true, partytown: true }, PRIVACY_IP_ONLY),
   m('posthog', 'PostHog', 'analytics', 'useScriptPostHog', { proxy: true }, PRIVACY_IP_ONLY),
-  m('fathomAnalytics', 'Fathom Analytics', 'analytics', 'useScriptFathomAnalytics', { bundle: true, proxy: true, partytown: true }, PRIVACY_IP_ONLY),
+  // proxy intentionally off: proxied beacons reach Fathom from the server's IP
+  // (datacenter) and Fathom's bot detection ignores X-Forwarded-For, flagging
+  // every visitor as a bot. Bundle is supported via neutralize-domain-check —
+  // the script is served from the user's origin but beacons still go directly
+  // to cdn.usefathom.com so Fathom sees real client IPs. See nuxt/scripts#720.
+  m('fathomAnalytics', 'Fathom Analytics', 'analytics', 'useScriptFathomAnalytics', { bundle: true }, null),
   m('matomoAnalytics', 'Matomo Analytics', 'analytics', 'useScriptMatomoAnalytics', { proxy: true, partytown: true }, PRIVACY_IP_ONLY),
   m('rybbitAnalytics', 'Rybbit Analytics', 'analytics', 'useScriptRybbitAnalytics', { bundle: true, proxy: true }, PRIVACY_IP_ONLY),
   m('databuddyAnalytics', 'Databuddy Analytics', 'analytics', 'useScriptDatabuddyAnalytics', { bundle: true, proxy: true }, PRIVACY_IP_ONLY),
@@ -329,6 +334,10 @@ export async function registry(resolve?: (path: string) => Promise<string>): Pro
             return `${proxyPrefix}/${host}`
           },
         },
+        // PostHog supports `apiHost` for self-hosted instances and custom
+        // reverse proxies. Without this, custom-host users are 403'd through
+        // the proxy because only the SaaS US/EU hosts are allowlisted.
+        configDomainFields: ['apiHost'],
       },
     }),
     def('fathomAnalytics', {
@@ -337,13 +346,13 @@ export async function registry(resolve?: (path: string) => Promise<string>): Pro
       src: 'https://cdn.usefathom.com/script.js',
       category: 'analytics',
       envDefaults: { site: '' },
-      bundle: true,
-      proxy: {
-        domains: ['cdn.usefathom.com', 'usefathom.com'],
-        privacy: PRIVACY_IP_ONLY,
-        sdkPatches: [{ type: 'neutralize-domain-check' }],
+      // Bundle without proxy: serve the script from the user's origin (faster
+      // load, ad-blocker resistant for domain-based blocking) but keep beacons
+      // pointed at cdn.usefathom.com via the neutralize-domain-check patch so
+      // Fathom sees real client IPs. Proxying is unsupported (see #720).
+      bundle: {
+        sdkPatches: [{ type: 'neutralize-domain-check', domain: 'cdn.usefathom.com' }],
       },
-      partytown: { forwards: ['fathom', 'fathom.trackEvent', 'fathom.trackPageview'] },
     }),
     def('matomoAnalytics', {
       schema: MatomoAnalyticsOptions,
@@ -570,7 +579,13 @@ export async function registry(resolve?: (path: string) => Promise<string>): Pro
         },
       },
       proxy: {
-        domains: ['www.clarity.ms', 'scripts.clarity.ms', 'd.clarity.ms', 'e.clarity.ms', 'k.clarity.ms', 'c.clarity.ms', 'a.clarity.ms', 'b.clarity.ms'],
+        // Clarity buckets visitors across letter/hash-prefixed shards (a/b/c/d/e/k/...).
+        // Microsoft adds shards over time, so an enumerated list silently 403s
+        // through the proxy when an unlisted letter is rolled out (#728-class bug).
+        // `*.clarity.ms` covers the full surface at runtime; `www.clarity.ms` is
+        // kept literal so the build-time URL rewrite (which filters wildcards)
+        // can still rewrite `https://www.clarity.ms/tag/<id>` in bundled SDKs.
+        domains: ['www.clarity.ms', '*.clarity.ms'],
         privacy: PRIVACY_HEATMAP,
       },
       partytown: { forwards: ['clarity'] },
@@ -729,7 +744,10 @@ export async function registry(resolve?: (path: string) => Promise<string>): Pro
         },
       },
       proxy: {
-        domains: ['www.google-analytics.com', 'analytics.google.com', 'stats.g.doubleclick.net', 'pagead2.googlesyndication.com', 'www.googleadservices.com', 'googleads.g.doubleclick.net', 'www.google.com', 'www.googletagmanager.com'],
+        // `www.google.com` covers static URLs (www.google.com/g/collect) rewritten at build time;
+        // `www.google.*` covers the geo-localized ga-audiences beacon, which gtag.js dynamically
+        // fires to the visitor's local Google cctld (www.google.com.tw, www.google.co.jp, ...).
+        domains: ['www.google-analytics.com', 'analytics.google.com', 'stats.g.doubleclick.net', 'pagead2.googlesyndication.com', 'www.googleadservices.com', 'googleads.g.doubleclick.net', 'www.google.com', 'www.google.*', 'www.googletagmanager.com'],
         privacy: PRIVACY_HEATMAP,
       },
       partytown: { forwards: ['dataLayer.push', 'gtag'] },

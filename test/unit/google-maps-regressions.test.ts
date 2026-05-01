@@ -329,9 +329,11 @@ describe('google Maps Regressions', () => {
       map.setOptions(options)
     }
 
-    // Simulate the fixed watcher: strips center and zoom before calling setOptions
+    // Simulate the fixed watcher: strips center, zoom, mapId, and colorScheme
+    // before calling setOptions. mapId/colorScheme are init-only in Google Maps
+    // and are handled by a dedicated re-init watcher (see #726 regression suite).
     function applyOptionsFixed(map: ReturnType<typeof createMockMap>, options: Record<string, any>) {
-      const { center: _, zoom: __, ...rest } = options
+      const { center: _, zoom: __, mapId: ___, colorScheme: ____, ...rest } = options
       map.setOptions(rest)
     }
 
@@ -348,18 +350,21 @@ describe('google Maps Regressions', () => {
       )
     })
 
-    it('fixed behavior: setOptions excludes zoom and center', () => {
+    it('fixed behavior: setOptions excludes zoom, center, mapId, and colorScheme', () => {
       const map = createMockMap()
-      const options = { center: { lat: 40, lng: -74 }, zoom: 12, mapId: 'abc' }
+      const options = { center: { lat: 40, lng: -74 }, zoom: 12, mapId: 'abc', disableDefaultUI: true }
 
       applyOptionsFixed(map, options)
 
-      expect(map.setOptions).toHaveBeenCalledWith({ mapId: 'abc' })
+      expect(map.setOptions).toHaveBeenCalledWith({ disableDefaultUI: true })
       expect(map.setOptions).not.toHaveBeenCalledWith(
         expect.objectContaining({ center: expect.anything() }),
       )
       expect(map.setOptions).not.toHaveBeenCalledWith(
         expect.objectContaining({ zoom: expect.anything() }),
+      )
+      expect(map.setOptions).not.toHaveBeenCalledWith(
+        expect.objectContaining({ mapId: expect.anything() }),
       )
     })
 
@@ -500,6 +505,224 @@ describe('google Maps Regressions', () => {
       activateInfoWindow(iw)
 
       expect(iw.close).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('color-mode reactivity for cloud-based map IDs (#726)', () => {
+    // Regression: toggling color mode with `mapIds` set (or with cloud-based
+    // styling on a single mapId) did not update the map. The old code passed
+    // the resolved mapId via `setOptions`, which Google Maps refuses
+    // ("A Map's mapId property cannot be changed after initial Map render").
+    // Both `mapId` and `colorScheme` are init-only; the fix excludes them
+    // from the generic setOptions call and re-initialises the Map instance
+    // when either changes.
+
+    function resolveMapId(props: {
+      mapIds?: { light?: string, dark?: string }
+      mapOptions?: { mapId?: string }
+    }, colorMode: 'light' | 'dark') {
+      if (!props.mapIds)
+        return props.mapOptions?.mapId
+      return props.mapIds[colorMode] || props.mapIds.light || props.mapOptions?.mapId
+    }
+
+    function resolveColorScheme(props: {
+      mapIds?: { light?: string, dark?: string }
+      colorMode?: 'light' | 'dark'
+      hasNuxtColorMode?: boolean
+    }, currentColorMode: 'light' | 'dark') {
+      if (!props.mapIds && !props.colorMode && !props.hasNuxtColorMode)
+        return undefined
+      return currentColorMode === 'dark' ? 'DARK' : 'LIGHT'
+    }
+
+    function applyOptionsFixed(map: ReturnType<typeof createMockMap>, options: Record<string, any>) {
+      const { center: _, zoom: __, mapId: ___, colorScheme: ____, ...rest } = options
+      map.setOptions(rest)
+    }
+
+    it('strips mapId and colorScheme from setOptions to avoid the init-only warning', () => {
+      const map = createMockMap()
+      const options = {
+        center: { lat: 40, lng: -74 },
+        zoom: 12,
+        mapId: 'abc',
+        colorScheme: 'DARK',
+        disableDefaultUI: true,
+      }
+
+      applyOptionsFixed(map, options)
+
+      expect(map.setOptions).toHaveBeenCalledWith({ disableDefaultUI: true })
+      expect(map.setOptions).not.toHaveBeenCalledWith(
+        expect.objectContaining({ mapId: expect.anything() }),
+      )
+      expect(map.setOptions).not.toHaveBeenCalledWith(
+        expect.objectContaining({ colorScheme: expect.anything() }),
+      )
+    })
+
+    it('resolves a different mapId per color mode when both light and dark are provided', () => {
+      const props = { mapIds: { light: 'LIGHT_ID', dark: 'DARK_ID' } }
+
+      expect(resolveMapId(props, 'light')).toBe('LIGHT_ID')
+      expect(resolveMapId(props, 'dark')).toBe('DARK_ID')
+    })
+
+    it('emits a colorScheme so a single mapId with cloud-based light/dark styling can re-init', () => {
+      // User configured one mapId in Cloud Console with both Light and Dark
+      // schemes. mapIds resolves to the same id in both modes, so the only
+      // signal that triggers re-init is the colorScheme value.
+      const props = { mapIds: { light: 'SAME_ID', dark: 'SAME_ID' } }
+
+      expect(resolveMapId(props, 'light')).toBe('SAME_ID')
+      expect(resolveMapId(props, 'dark')).toBe('SAME_ID')
+
+      expect(resolveColorScheme(props, 'light')).toBe('LIGHT')
+      expect(resolveColorScheme(props, 'dark')).toBe('DARK')
+    })
+
+    it('does not emit a colorScheme when no color-mode props or @nuxtjs/color-mode are present', () => {
+      // Avoid forcing a LIGHT scheme on existing maps that never opted in to
+      // color-mode reactivity — would otherwise needlessly re-init on first
+      // mount or accidentally override mapOptions.colorScheme.
+      expect(resolveColorScheme({}, 'light')).toBeUndefined()
+    })
+
+    it('emits a colorScheme when @nuxtjs/color-mode is detected even without explicit mapIds', () => {
+      expect(resolveColorScheme({ hasNuxtColorMode: true }, 'dark')).toBe('DARK')
+    })
+
+    it('triggers re-init only when the resolved mapId or colorScheme actually changes', () => {
+      // Mirrors the dedup guard in the recreate watcher.
+      function shouldReinit(
+        prev: { mapId: string | undefined, scheme: string | undefined },
+        next: { mapId: string | undefined, scheme: string | undefined },
+      ) {
+        return prev.mapId !== next.mapId || prev.scheme !== next.scheme
+      }
+
+      // Identical → no re-init (covers e.g. unrelated re-renders that re-evaluate the options computed).
+      expect(shouldReinit(
+        { mapId: 'abc', scheme: 'LIGHT' },
+        { mapId: 'abc', scheme: 'LIGHT' },
+      )).toBe(false)
+
+      // mapId changes (two-id light/dark setup).
+      expect(shouldReinit(
+        { mapId: 'LIGHT_ID', scheme: 'LIGHT' },
+        { mapId: 'DARK_ID', scheme: 'DARK' },
+      )).toBe(true)
+
+      // Single mapId, only colorScheme changes (cloud styling on one id).
+      expect(shouldReinit(
+        { mapId: 'SAME_ID', scheme: 'LIGHT' },
+        { mapId: 'SAME_ID', scheme: 'DARK' },
+      )).toBe(true)
+    })
+
+    it('persists the user-panned center via centerOverride before tearing down', () => {
+      // Regression: after the re-init watcher captured zoom/center, it created
+      // the new Map with the captured center, but the standalone center
+      // watcher (which depends on `options.value.center` and `map`) re-fired
+      // when `map.value` was reassigned. Because `options.value.center` still
+      // pointed at the *prop-defined* initial center, the watcher then called
+      // setCenter(initialCenter), discarding the user's pan.
+      // Fix: write the captured center to `centerOverride` before teardown so
+      // that `options.value.center` reflects the user's pan; the watcher's
+      // lat/lng comparison guard then short-circuits.
+      const map = createMockMap()
+      // User panned to (50, 100)
+      map.getCenter.mockReturnValue({ lat: () => 50, lng: () => 100 })
+
+      // Simulate: capture center → write to centerOverride
+      const captured = map.getCenter()
+      const centerOverride = { lat: captured.lat(), lng: captured.lng() }
+
+      // Simulate the options computed after centerOverride is set:
+      // `defu({ center: centerOverride, ... }, props.mapOptions, { center: props.center }, ...)`
+      // centerOverride wins.
+      const propsCenter = { lat: 0, lng: 0 } // initial prop center
+      const optionsCenter = centerOverride || propsCenter
+
+      // The center watcher comparison guard now sees:
+      //   current = newMap.getCenter() = { lat: 50, lng: 100 }
+      //   new     = options.value.center = { lat: 50, lng: 100 }
+      // → matches → setCenter is skipped.
+      expect(optionsCenter.lat).toBe(50)
+      expect(optionsCenter.lng).toBe(100)
+      // Without the fix, optionsCenter would have been the prop's initial value:
+      expect(optionsCenter).not.toEqual(propsCenter)
+    })
+
+    it('passes captured zoom and center to the new Map instance', () => {
+      // The re-init watcher reads the live map state before teardown and uses
+      // the captured values when constructing the new Map. Verifies that the
+      // _options object spread does not let an undefined captured zoom fall
+      // back to a stale options value, and that the literal coordinate object
+      // is the right shape for Google Maps.
+      const map = createMockMap()
+      map.getCenter.mockReturnValue({ lat: () => 50, lng: () => 100 })
+      map.getZoom.mockReturnValue(10)
+
+      const optionsValue = { zoom: 5, center: { lat: 0, lng: 0 }, mapId: 'a', colorScheme: 'DARK' }
+
+      const center = map.getCenter()
+      const zoom = map.getZoom()
+      const _options = {
+        ...optionsValue,
+        center: center ? { lat: center.lat(), lng: center.lng() } : optionsValue.center,
+        zoom: zoom ?? optionsValue.zoom,
+      }
+
+      expect(_options.zoom).toBe(10)
+      expect(_options.center).toEqual({ lat: 50, lng: 100 })
+      // mapId/colorScheme from the new options pass through (init-only, but the
+      // new instance can accept them).
+      expect(_options.mapId).toBe('a')
+      expect(_options.colorScheme).toBe('DARK')
+    })
+
+    it('preserves zoom of 0 (a valid Google Maps zoom level)', () => {
+      // `zoom ?? options.value.zoom` correctly handles 0 vs undefined.
+      const map = createMockMap()
+      map.getZoom.mockReturnValue(0)
+      const zoom = map.getZoom()
+      expect(zoom ?? 15).toBe(0)
+    })
+
+    it('re-emits ready after map re-init so imperative bindings can re-attach', () => {
+      // Consumers that attach state via the exposed `map` ref (rather than
+      // declarative children) need a signal to re-bind after the Map instance
+      // is recreated on color-mode change.
+      const emit = vi.fn()
+      const exposed = { map: { value: createMockMap() } } as any
+
+      // initial ready
+      emit('ready', exposed)
+
+      // simulate re-init with a new map instance
+      exposed.map.value = createMockMap()
+      emit('ready', exposed)
+
+      expect(emit).toHaveBeenCalledTimes(2)
+      expect(emit).toHaveBeenNthCalledWith(2, 'ready', exposed)
+    })
+
+    it('clears centerOverride when controlled center prop changes', () => {
+      // Regression: writing centerOverride from the user's pan would block
+      // subsequent prop-driven center updates because centerOverride wins
+      // over props in defu. Clearing it on prop change restores priority.
+      const centerOverride: { value: { lat: number, lng: number } | undefined } = { value: { lat: 50, lng: 100 } }
+
+      // Simulate the watcher firing on prop change
+      function onPropCenterChange() {
+        centerOverride.value = undefined
+      }
+
+      onPropCenterChange()
+
+      expect(centerOverride.value).toBeUndefined()
     })
   })
 })

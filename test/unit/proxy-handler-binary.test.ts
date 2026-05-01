@@ -18,19 +18,13 @@ describe('proxy handler - compressed binary payloads (#618)', () => {
   let upstreamPort: number
   let proxyPort: number
   let capturedUpstreamBody: Buffer | null = null
-  // eslint-disable-next-line unused-imports/no-unused-vars
-  let capturedUpstreamContentType: string | undefined
 
   beforeAll(async () => {
     // Mock upstream: captures raw request bytes exactly as received
     const upstreamApp = createApp()
     upstreamApp.use('/', defineEventHandler(async (event) => {
-      const chunks: Buffer[] = []
-      for await (const chunk of event.node.req) {
-        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
-      }
-      capturedUpstreamBody = Buffer.concat(chunks)
-      capturedUpstreamContentType = event.node.req.headers['content-type'] as string
+      const raw = await readRawBody(event, false)
+      capturedUpstreamBody = raw ? Buffer.from(raw) : Buffer.alloc(0)
       return { status: 1 }
     }))
 
@@ -89,7 +83,6 @@ describe('proxy handler - compressed binary payloads (#618)', () => {
 
   beforeEach(() => {
     capturedUpstreamBody = null
-    capturedUpstreamContentType = undefined
   })
 
   afterAll(() => {

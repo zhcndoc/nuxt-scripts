@@ -1,6 +1,7 @@
 import type { ProxyPrivacyInput, ResolvedProxyPrivacy } from './utils/privacy'
-import { createError, defineEventHandler, getHeaders, getQuery, getRequestIP, getRequestWebStream, readBody, setResponseHeader } from 'h3'
+import { createError, defineEventHandler, getHeaders, getQuery, getRequestIP, getRequestWebStream, readBody, setResponseHeader, setResponseStatus } from 'h3'
 import { useNitroApp, useRuntimeConfig } from 'nitropack/runtime'
+import { matchDomain } from './utils/match-domain'
 import {
   anonymizeIP,
   mergePrivacy,
@@ -83,10 +84,10 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // Find privacy config by matching domain (exact or parent domain match)
+  // Find privacy config by matching domain (exact, parent domain, or wildcard pattern)
   let perScriptInput: ProxyPrivacyInput | undefined
   for (const [configDomain, privacyInput] of Object.entries(domainPrivacy)) {
-    if (domain === configDomain || domain.endsWith(`.${configDomain}`)) {
+    if (matchDomain(domain, configDomain)) {
       perScriptInput = privacyInput
       break
     }
@@ -398,9 +399,7 @@ export default defineEventHandler(async (event) => {
     }
   })
 
-  // Set status code
-  event.node.res.statusCode = response.status
-  event.node.res.statusMessage = response.statusText
+  setResponseStatus(event, response.status, response.statusText)
 
   // Return the body as text for text-based content, otherwise as buffer
   const responseContentType = response.headers.get('content-type') || ''

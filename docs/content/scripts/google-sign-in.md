@@ -27,7 +27,96 @@ Nuxt Scripts 提供了一个注册表脚本组合式函数 [`useScriptGoogleSign
 ::google-sign-in-demo
 ::
 
-## 时刻通知
+## Composable API
+
+`useScriptGoogleSignIn()`{lang="ts"} 返回标准脚本上下文（`status`、`proxy`、`onLoaded` 等），以及三个用于封装最常见流程的辅助函数。传递给该 composable 的 schema 选项会合并到每次调用中，因此您无需重复传入 `clientId`、`loginUri`、`uxMode` 等。
+
+```ts
+const { initialize, renderButton, prompt, status, onLoaded, proxy } = useScriptGoogleSignIn({
+  clientId: 'YOUR_CLIENT_ID',
+  context: 'signin',
+  useFedcmForPrompt: true,
+})
+```
+
+### `initialize(config?)`{lang="ts"}
+
+使用与 `config` 合并后的 schema 选项调用 `google.accounts.id.initialize()`{lang="ts"}。内部已做保护，因此多次调用（例如跨页面导航和组件重新挂载）是安全的；如果在按钮已渲染后再次运行 `initialize()`{lang="ts"}，Google 的 API 会记录错误，因此该辅助函数只会转发第一次调用。
+
+```ts
+initialize({
+  callback: (response) => {
+    // 在服务器端验证 response.credential
+  }
+})
+```
+
+### `renderButton(parent, config?)`{lang="ts"}
+
+渲染个性化按钮。如有需要会自动初始化，并且在语言切换或导航时可安全重新渲染。
+
+```vue
+<script setup lang="ts">
+const { initialize, renderButton } = useScriptGoogleSignIn()
+const buttonRef = useTemplateRef<HTMLDivElement>('buttonRef')
+
+initialize({ callback: handleCredential })
+
+watch(buttonRef, (el) => {
+  if (el)
+    renderButton(el, { text: 'continue_with', use_fedcm: true })
+}, { immediate: true })
+</script>
+
+<template>
+  <div ref="buttonRef" />
+</template>
+```
+
+### `prompt(listener?)`{lang="ts"}
+
+显示 One Tap 提示。如有需要会自动初始化。
+
+```ts
+prompt((notification) => {
+  if (notification.isNotDisplayed())
+    console.log('未显示:', notification.getNotDisplayedReason())
+})
+```
+
+### 切换语言环境
+
+按钮的语言环境是 `renderButton` 的选项，而不是 `initialize` 的选项。要更改语言，请清空容器并重新渲染：
+
+```ts
+watch([locale, buttonRef], ([newLocale, el]) => {
+  if (!el)
+    return
+  el.innerHTML = ''
+  renderButton(el, { locale: newLocale, use_fedcm: true })
+}, { immediate: true })
+```
+
+::note
+即使设置了此选项，Google 仍可能回退到用户的 Google 账户语言。这是 Google 端的行为，无法配置。
+::
+
+### 重定向 UX 模式
+
+在 `uxMode: 'redirect'` 下，Google 会将凭证通过 **POST** 以 `application/x-www-form-urlencoded` 的形式发送到您的 `loginUri` 服务器端点（字段包括：`credential`、`g_csrf_token`、`select_by` 等）。重定向后，凭证不会作为 URL fragment 出现；它会随 POST 请求体传输，由您的服务器在将浏览器重定向之前进行处理。
+
+如果您需要在客户端获取凭证（例如使用独立 API 的 SPA），请改用带有 `callback` 的 `uxMode: 'popup'`。
+
+```ts
+const { initialize, renderButton } = useScriptGoogleSignIn({
+  uxMode: 'redirect',
+  loginUri: 'https://your-server.com/auth/google',
+})
+
+initialize() // 重定向模式下不需要 callback
+```
+
+## Moment 通知
 
 跟踪 One Tap 的显示状态：
 
@@ -84,6 +173,24 @@ export default defineEventHandler(async (event) => {
   return { user }
 })
 ```
+
+## Cross-Origin-Opener-Policy
+
+在 `popup` UX 模式（默认）下，Google 会打开一个弹窗，并通过 `window.postMessage` 将凭证返回到您的页面。如果您的页面发送了严格的 `Cross-Origin-Opener-Policy` 标头，浏览器会阻止该消息，登录看起来就像没有反应：弹窗会关闭，但不会触发回调。
+
+如果您设置了 COOP，请使用 `same-origin-allow-popups`：
+
+```ts [nuxt.config.ts]
+export default defineNuxtConfig({
+  routeRules: {
+    '/login/**': {
+      headers: { 'Cross-Origin-Opener-Policy': 'same-origin-allow-popups' },
+    },
+  },
+})
+```
+
+未显式设置 COOP 标头的页面默认可正常工作。重定向模式（`uxMode: 'redirect'`）和仅 FedCM 流程不受影响。
 
 ## FedCM API 支持
 
@@ -202,68 +309,53 @@ One Tap 提示提供了一种简化的登录体验：
 
 ```vue
 <script setup lang="ts">
-const { onLoaded } = useScriptGoogleSignIn()
+const { initialize, prompt } = useScriptGoogleSignIn({
+  context: 'signin',
+  useFedcmForPrompt: true,
+})
 
 async function handleCredentialResponse(response: CredentialResponse) {
-  // 将凭证发送到您的后端进行验证
   await $fetch('/api/auth/google', {
     method: 'POST',
     body: { credential: response.credential }
   })
 }
 
-onMounted(() => {
-  onLoaded(({ accounts }) => {
-    accounts.id.initialize({
-      client_id: 'YOUR_CLIENT_ID',
-      callback: handleCredentialResponse,
-      context: 'signin',
-      ux_mode: 'popup',
-      use_fedcm_for_prompt: true // 使用隐私沙箱 FedCM API
-    })
-
-    // 显示 One Tap
-    accounts.id.prompt()
-  })
-})
+initialize({ callback: handleCredentialResponse })
+onMounted(() => prompt())
 </script>
 ```
 
 ### 个性化按钮
 
-渲染 Google 的个性化"使用 Google 登录"按钮：
+渲染 Google 的个性化“使用 Google 登录”按钮：
 
 ```vue
 <script setup lang="ts">
-const { onLoaded } = useScriptGoogleSignIn()
+const { initialize, renderButton } = useScriptGoogleSignIn()
+const buttonRef = useTemplateRef<HTMLDivElement>('buttonRef')
 
 function handleCredentialResponse(response: CredentialResponse) {
   console.log('已登录!', response.credential)
 }
 
-onMounted(() => {
-  onLoaded(({ accounts }) => {
-    accounts.id.initialize({
-      client_id: 'YOUR_CLIENT_ID',
-      callback: handleCredentialResponse
-    })
+initialize({ callback: handleCredentialResponse })
 
-    const buttonDiv = document.getElementById('g-signin-button')
-    if (buttonDiv) {
-      accounts.id.renderButton(buttonDiv, {
-        type: 'standard',
-        theme: 'outline',
-        size: 'large',
-        text: 'signin_with',
-        shape: 'rectangular',
-        logo_alignment: 'left'
-      })
-    }
-  })
-})
+watch(buttonRef, (el) => {
+  if (el) {
+    renderButton(el, {
+      type: 'standard',
+      theme: 'outline',
+      size: 'large',
+      text: 'signin_with',
+      shape: 'rectangular',
+      logo_alignment: 'left',
+    })
+  }
+}, { immediate: true })
 </script>
 
 <template>
-  <div id="g-signin-button" />
+  <div ref="buttonRef" />
 </template>
 ```
