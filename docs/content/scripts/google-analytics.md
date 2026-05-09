@@ -1,5 +1,5 @@
 ---
-title: Google Analytics
+title: 谷歌分析
 description: 在 Nuxt 应用中使用 Google Analytics。
 links:
   - label: 源码
@@ -8,7 +8,7 @@ links:
     size: xs
 ---
 
-[Google Analytics](https://marketingplatform.google.com/about/analytics/) 是适用于 Nuxt 应用的分析解决方案。
+[谷歌分析](https://marketingplatform.google.com/about/analytics/) 是适用于 Nuxt 应用的分析解决方案。
 
 它提供了详尽的洞察，帮助你了解网站的性能表现、用户如何与你的内容互动，以及他们如何浏览你的网站。
 
@@ -30,9 +30,13 @@ proxy.gtag('event', 'page_view')
 
 proxy 暴露了 `gtag` 和 `dataLayer` 属性，你应当按照 Google Analytics 的最佳实践使用它们。
 
-### Consent Mode
+## 同意模式
 
-Google Analytics 原生支持 [GCMv2 同意状态](https://developers.google.com/tag-platform/security/guides/consent)。通过 `defaultConsent` 设置默认值（会在 `gtag('js', ...)`{lang="ts"} 之前触发 `gtag('consent', 'default', ...)`{lang="ts"}），并在运行时调用 `consent.update()`{lang="ts"}：
+Google Analytics 原生支持 [GCMv2 同意状态](https://developers.google.com/tag-platform/security/guides/consent)。通过 `defaultConsent` 设置默认值（它会在 `gtag('js', ...)`{lang="ts"} 之前触发 `gtag('consent', 'default', state)`{lang="ts"}），并在运行时调用 `consent.update()`{lang="ts"} 来切换类别。
+
+::callout{icon="i-heroicons-play" to="https://stackblitz.com/github/nuxt/scripts/tree/main/examples/regional-consent" target="_blank"}
+在 [StackBlitz](https://stackblitz.com) 上试用实时的 [区域同意示例](https://stackblitz.com/github/nuxt/scripts/tree/main/examples/regional-consent)。
+::
 
 ```vue
 <script setup lang="ts">
@@ -68,7 +72,39 @@ function savePreferences(choices: { analytics: boolean, marketing: boolean }) {
 
 `consent.update()`{lang="ts"} 接受任意 `Partial<ConsentState>`{lang="ts"}；缺失的类别将保持其当前值。对于除了同意默认值之外、在 `gtag('js')`{lang="ts"} 之前的设置，`onBeforeGtagStart` 仍可作为通用的逃生入口使用。
 
-### 客户/消费者 ID 跟踪
+### 按地区的默认值
+
+向 `defaultConsent` 传入一个数组，即可为每个条目分别触发一次 `gtag('consent','default', state)`{lang="ts"}。这与 Google 的 [特定地区同意模式](https://developers.google.com/tag-platform/security/guides/consent?consentmode=advanced#region-specific-behavior) 一致：更具体的地区（例如 `US-CA`）会覆盖更宽泛的地区（`US`）；没有 `region` 的条目则是不带范围的全局回退值。
+
+```vue
+<script setup lang="ts">
+useScriptGoogleAnalytics({
+  id: 'G-XXXXXXXX',
+  defaultConsent: [
+    {
+      // 欧盟 + 英国 + 瑞士——默认拒绝，等待用户选择 500 毫秒
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      analytics_storage: 'denied',
+      region: ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'GB', 'IS', 'LI', 'NO', 'CH'],
+      wait_for_update: 500,
+    },
+    {
+      // 其他所有地区——默认授予
+      ad_storage: 'granted',
+      ad_user_data: 'granted',
+      ad_personalization: 'granted',
+      analytics_storage: 'granted',
+    },
+  ],
+})
+</script>
+```
+
+模块会按输入顺序原样转发每个条目。区域作用域默认值与无作用域默认值之间的优先级由运行时的 gtag 负责处理，而不是由顺序决定。
+
+## 客户/消费者 ID 跟踪
 
 对于需要在主追踪之外进行客户特定数据追踪的电商或多租户应用：
 

@@ -263,6 +263,8 @@ describe('first-party mode', () => {
         'xPixel',
         'snapchatPixel',
         'redditPixel',
+        'linkedinInsight',
+        'ahrefsAnalytics',
         'clarity',
         'hotjar',
       ]

@@ -11,8 +11,10 @@ describe('module options registry', () => {
     // Every built-in registry key must resolve to its specific type, not `any`.
     // NuxtConfigScriptRegistry is an interface (not an intersection), so explicit
     // properties inherited via `extends` always take priority over the index signature.
+    expectTypeOf<Registry['ahrefsAnalytics']>().not.toBeAny()
     expectTypeOf<Registry['bingUet']>().not.toBeAny()
     expectTypeOf<Registry['blueskyEmbed']>().not.toBeAny()
+    expectTypeOf<Registry['calendly']>().not.toBeAny()
     expectTypeOf<Registry['carbonAds']>().not.toBeAny()
     expectTypeOf<Registry['crisp']>().not.toBeAny()
     expectTypeOf<Registry['clarity']>().not.toBeAny()
@@ -31,6 +33,7 @@ describe('module options registry', () => {
     expectTypeOf<Registry['googleTagManager']>().not.toBeAny()
     expectTypeOf<Registry['hotjar']>().not.toBeAny()
     expectTypeOf<Registry['intercom']>().not.toBeAny()
+    expectTypeOf<Registry['linkedinInsight']>().not.toBeAny()
     expectTypeOf<Registry['paypal']>().not.toBeAny()
     expectTypeOf<Registry['posthog']>().not.toBeAny()
     expectTypeOf<Registry['matomoAnalytics']>().not.toBeAny()
@@ -47,6 +50,7 @@ describe('module options registry', () => {
     expectTypeOf<Registry['vercelAnalytics']>().not.toBeAny()
     expectTypeOf<Registry['vimeoPlayer']>().not.toBeAny()
     expectTypeOf<Registry['umamiAnalytics']>().not.toBeAny()
+    expectTypeOf<Registry['usercentrics']>().not.toBeAny()
     expectTypeOf<Registry['gravatar']>().not.toBeAny()
     expectTypeOf<Registry['npm']>().not.toBeAny()
   })

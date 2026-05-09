@@ -1,7 +1,7 @@
 <script lang="ts">
+import type { HTMLAttributes, ReservedProps, ShallowRef } from 'vue'
 /// <reference types="google.maps" />
 import type { ElementScriptTrigger } from '#nuxt-scripts/types'
-import type { HTMLAttributes, ReservedProps, ShallowRef } from 'vue'
 
 export { MAP_INJECTION_KEY } from './useGoogleMapsResource'
 
@@ -150,12 +150,12 @@ export interface ScriptGoogleMapsSlots {
 </script>
 
 <script lang="ts" setup>
-import { useScriptTriggerElement } from '#nuxt-scripts/composables/useScriptTriggerElement'
-import { useScriptGoogleMaps } from '#nuxt-scripts/registry/google-maps'
-import { scriptRuntimeConfig, scriptsPrefix } from '#nuxt-scripts/utils'
 import { defu } from 'defu'
 import { tryUseNuxtApp, useHead, useRuntimeConfig } from 'nuxt/app'
 import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref, shallowRef, toRaw, useAttrs, useTemplateRef, watch } from 'vue'
+import { useScriptTriggerElement } from '#nuxt-scripts/composables/useScriptTriggerElement'
+import { useScriptGoogleMaps } from '#nuxt-scripts/registry/google-maps'
+import { scriptRuntimeConfig, scriptsPrefix } from '#nuxt-scripts/utils'
 import ScriptAriaLoadingIndicator from '../ScriptAriaLoadingIndicator.vue'
 import { defineDeprecatedAlias, MAP_INJECTION_KEY, waitForMapsReady, warnDeprecatedTopLevelMapProps } from './useGoogleMapsResource'
 
@@ -257,6 +257,62 @@ const map: ShallowRef<google.maps.Map | undefined> = shallowRef()
 
 function isLocationQuery(s: string | any) {
   return typeof s === 'string' && (s.split(',').length > 2 || s.includes('+'))
+}
+
+type ScriptGoogleMapsCenter = ScriptGoogleMapsProps['center'] | google.maps.MapOptions['center']
+
+function getCenterWatchKey(center: ScriptGoogleMapsCenter): string | undefined {
+  const raw = toRaw(center)
+  if (!raw)
+    return undefined
+  if (typeof raw === 'string')
+    return `query:${raw}`
+  const lat = typeof (raw as any).lat === 'function' ? (raw as any).lat() : (raw as any).lat
+  const lng = typeof (raw as any).lng === 'function' ? (raw as any).lng() : (raw as any).lng
+  if (lat != null && lng != null)
+    return `latlng:${lat},${lng}`
+  return undefined
+}
+
+const controlledCenterKey = computed(() => {
+  return getCenterWatchKey(centerOverride.value)
+    || getCenterWatchKey(props.mapOptions?.center)
+    || getCenterWatchKey(props.center)
+})
+
+function getReactiveMapOptions(options: google.maps.MapOptions): google.maps.MapOptions {
+  // Exclude center and zoom — they have dedicated watchers that avoid
+  // resetting user interactions (pan/zoom) on unrelated re-renders.
+  // Exclude mapId and colorScheme — Google Maps treats these as init-only;
+  // changes are handled by the dedicated re-init watcher below.
+  const { center: _, zoom: __, mapId: ___, colorScheme: ____, ...rest } = options
+  return rest
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== 'object')
+    return false
+  const proto = Object.getPrototypeOf(value)
+  return proto === Object.prototype || proto === null
+}
+
+function isSameOptionValue(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b))
+    return true
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((value, index) => isSameOptionValue(value, b[index]))
+  }
+  if (isPlainObject(a) && isPlainObject(b)) {
+    const aKeys = Object.keys(a)
+    const bKeys = Object.keys(b)
+    return aKeys.length === bKeys.length
+      && aKeys.every(key => Object.hasOwn(b, key) && isSameOptionValue(a[key], b[key]))
+  }
+  return false
+}
+
+function isSameMapOptions(a: google.maps.MapOptions, b: google.maps.MapOptions): boolean {
+  return isSameOptionValue(toRaw(a), toRaw(b))
 }
 
 const queryToLatLngCache = new Map<string, google.maps.LatLng | google.maps.LatLngLiteral>()
@@ -386,15 +442,12 @@ onMounted(() => {
       emits('error')
     }
   })
-  watch(options, () => {
+  watch(() => getReactiveMapOptions(options.value), (nextOptions, previousOptions) => {
     if (!map.value)
       return
-    // Exclude center and zoom — they have dedicated watchers that avoid
-    // resetting user interactions (pan/zoom) on unrelated re-renders.
-    // Exclude mapId and colorScheme — Google Maps treats these as init-only;
-    // changes are handled by the dedicated re-init watcher below.
-    const { center: _, zoom: __, mapId: ___, colorScheme: ____, ...rest } = options.value
-    map.value.setOptions(rest)
+    if (isSameMapOptions(nextOptions, previousOptions))
+      return
+    map.value.setOptions(nextOptions)
   })
   // Re-init map when mapId or colorScheme changes (e.g. user toggles color mode
   // with `mapIds` set or with cloud-based styling on a single mapId). Both are
@@ -443,20 +496,21 @@ onMounted(() => {
     emits('ready', exposed)
   })
   watch(() => options.value.zoom, (zoom) => {
-    if (map.value && zoom != null)
+    if (map.value && zoom != null) {
       map.value.setZoom(zoom)
+    }
   })
   // Clear centerOverride when the controlled center prop changes so external
   // updates take effect (otherwise centerOverride, written from the user's
   // pan during re-init, would permanently win over future prop updates).
-  watch([() => props.center, () => props.mapOptions?.center], () => {
+  watch([() => getCenterWatchKey(props.center), () => getCenterWatchKey(props.mapOptions?.center)], () => {
     centerOverride.value = undefined
   })
-  watch([() => options.value.center, isMapReady, map], async (next) => {
+  watch([controlledCenterKey, isMapReady, map], async () => {
     if (!map.value) {
       return
     }
-    let center = toRaw(next[0])
+    let center = toRaw(options.value.center)
     if (center) {
       if (isLocationQuery(center) && isMapReady.value) {
         center = await resolveQueryToLatLng(center as string)

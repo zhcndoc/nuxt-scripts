@@ -63,18 +63,20 @@ NUXT_PUBLIC_SCRIPTS_GOOGLE_MAPS_API_KEY=<你的_API_密钥>
 ::
 
 ::callout{type="info"}
-This script's proxy endpoints use [HMAC URL signing](/docs/guides/first-party#proxy-endpoint-security) when you configure a `NUXT_SCRIPTS_PROXY_SECRET`. See the [security guide](/docs/guides/first-party#proxy-endpoint-security) for setup instructions.
+当你配置 `NUXT_SCRIPTS_PROXY_SECRET` 时，此脚本的代理端点会使用 [HMAC URL 签名](/docs/guides/first-party#proxy-endpoint-security)。有关设置说明，请参阅[安全指南](/docs/guides/first-party#proxy-endpoint-security)。
 ::
 
-See [Billing & Permissions](/scripts/google-maps/guides/billing) for API costs and required permissions.
+有关 API 费用和所需权限，请参阅 [计费与权限](/scripts/google-maps/guides/billing)。
 
 ## 快速开始
 
 ```vue
 <template>
   <ScriptGoogleMaps
-    :center="{ lat: -33.8688, lng: 151.2093 }"
-    :zoom="12"
+    :map-options="{
+      center: { lat: -33.8688, lng: 151.2093 },
+      zoom: 12,
+    }"
   />
 </template>
 ```

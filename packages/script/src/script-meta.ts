@@ -18,6 +18,11 @@ export interface ScriptMeta {
 
 export const scriptMeta = {
   // Analytics
+  ahrefsAnalytics: {
+    urls: ['https://analytics.ahrefs.com/analytics.js'],
+    trackedData: ['page-views', 'events'],
+    testId: 'test-ahrefs-key',
+  },
   plausibleAnalytics: {
     urls: ['https://plausible.io/js/script.js'],
     trackedData: ['page-views', 'events', 'conversions'],
@@ -99,6 +104,11 @@ export const scriptMeta = {
     trackedData: ['page-views', 'conversions', 'retargeting', 'audiences'],
     testId: 'a2_ilz4u0kbdr3v',
   },
+  linkedinInsight: {
+    urls: ['https://snap.licdn.com/li.lms-analytics/insight.min.js'],
+    trackedData: ['page-views', 'conversions', 'retargeting', 'audiences'],
+    testId: '111143',
+  },
   googleAdsense: {
     urls: ['https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js'],
     trackedData: ['page-views', 'retargeting', 'audiences'],
@@ -175,6 +185,10 @@ export const scriptMeta = {
   },
 
   // Utility
+  calendly: {
+    urls: ['https://assets.calendly.com/assets/external/widget.js'],
+    trackedData: [],
+  },
   googleRecaptcha: {
     urls: ['https://www.google.com/recaptcha/api.js'],
     trackedData: [],
@@ -195,6 +209,12 @@ export const scriptMeta = {
   },
   xEmbed: {
     urls: ['https://platform.twitter.com/widgets.js'],
+    trackedData: [],
+  },
+
+  // CMP / Consent
+  usercentrics: {
+    urls: ['https://web.cmp.usercentrics.eu/ui/loader.js', 'https://web.cmp.usercentrics.eu/modules/autoblocker.js'],
     trackedData: [],
   },
 

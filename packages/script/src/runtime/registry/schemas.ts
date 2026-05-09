@@ -16,6 +16,15 @@ const gcmConsentState = object({
   region: optional(array(string())),
 })
 
+export const AhrefsAnalyticsOptions = object({
+  /**
+   * Your Ahrefs Web Analytics project key. Set as the `data-key` attribute
+   * on the loaded `analytics.js` script tag.
+   * @see https://ahrefs.com/web-analytics
+   */
+  key: pipe(string(), minLength(1)),
+})
+
 export const BlueskyEmbedOptions = object({
   /**
    * The Bluesky post URL to embed.
@@ -306,10 +315,12 @@ export const GoogleAnalyticsOptions = object({
    */
   l: optional(string()),
   /**
-   * Default GCMv2 consent state fired as `gtag('consent', 'default', ...)` before `gtag('js', ...)`.
-   * @see https://developers.google.com/tag-platform/security/guides/consent
+   * Default GCMv2 consent state(s) fired as `gtag('consent', 'default', state)` before
+   * `gtag('js', ...)`. Pass an array to fire multiple defaults — for example, different
+   * defaults per `region` (more specific regions override broader ones at runtime).
+   * @see https://developers.google.com/tag-platform/security/guides/consent?consentmode=advanced#region-specific-behavior
    */
-  defaultConsent: optional(gcmConsentState),
+  defaultConsent: optional(union([gcmConsentState, array(gcmConsentState)])),
 })
 
 export const GoogleMapsOptions = object({
@@ -476,10 +487,13 @@ export const GoogleTagManagerOptions = object({
   authReferrerPolicy: optional(string()),
 
   /**
-   * Default consent settings for GTM
+   * Default GCMv2 consent state(s) fired as `['consent','default', state]` onto the dataLayer
+   * before the `gtm.js` event. Pass an array to fire multiple defaults — for example,
+   * different defaults per `region` (more specific regions override broader ones at runtime).
    * @see https://developers.google.com/tag-platform/tag-manager/templates/consent-apis
+   * @see https://developers.google.com/tag-platform/security/guides/consent?consentmode=advanced#region-specific-behavior
    */
-  defaultConsent: optional(record(string(), union([string(), number()]))),
+  defaultConsent: optional(union([gcmConsentState, array(gcmConsentState)])),
 })
 
 export const HotjarOptions = object({
@@ -822,6 +836,108 @@ export const BingUetOptions = object({
   defaultConsent: optional(object({
     ad_storage: optional(consentCategoryValue),
   })),
+})
+
+export const LinkedInInsightOptions = object({
+  /**
+   * Your LinkedIn Insight Tag Partner ID, or an array of Partner IDs to push
+   * onto window._linkedin_data_partner_ids. The first ID is used as the
+   * primary _linkedin_partner_id global.
+   * @example '111143'
+   * @example ['111143', '111154']
+   * @see https://www.linkedin.com/help/lms/answer/a417869/access-your-linkedin-partner-id
+   */
+  id: union([pipe(string(), minLength(1)), pipe(array(pipe(string(), minLength(1))), minLength(1))]),
+  /**
+   * Optional page-load event ID for Conversions API deduplication. Assigned
+   * to window._linkedin_event_id BEFORE the Insight Tag base code runs. Must
+   * match the eventId sent with the corresponding server-side Conversions
+   * API event.
+   *
+   * Per-event conversion deduplication uses the per-call event_id passed to
+   * lintrk('track', { conversion_id, event_id }) instead.
+   * @see https://learn.microsoft.com/en-us/linkedin/marketing/conversions/deduplication
+   */
+  eventId: optional(string()),
+  /**
+   * Auto-fire lintrk('track') on Vue Router route changes (SPA virtual page
+   * views). When true, suppresses the script's built-in auto-page-view via
+   * window._wait_for_lintrk and tracks every navigation including the
+   * initial page through Nuxt's page:finish hook. When false, the script
+   * fires its own page-view exactly once on load and SPA navigations are
+   * not tracked unless lintrk('track') is called manually.
+   * @default false
+   */
+  enableAutoSpaTracking: optional(boolean()),
+})
+
+export const UsercentricsOptions = object({
+  /**
+   * Your Usercentrics CMP v3 ruleset ID. Find it in the admin under
+   * Implementation; the snippet's `data-ruleset-id` value.
+   */
+  rulesetId: pipe(string(), minLength(1)),
+  /**
+   * Inject the Usercentrics autoblocker (`autoblocker.js`) ahead of the loader.
+   * Enable when your ruleset relies on Auto Blocking (vs. Manual Blocking) to
+   * gate third-party scripts before consent is granted.
+   * @default false
+   */
+  autoblocker: optional(boolean()),
+  /**
+   * Override the language displayed by the CMP UI (BCP-47 code, e.g. `'en'`, `'de'`).
+   */
+  language: optional(string()),
+})
+
+export const CalendlyOptions = object({
+  /**
+   * The Calendly event URL to embed.
+   * Required for inline, popup, and badge widgets when called via the composable.
+   * @example 'https://calendly.com/your-name/30min'
+   * @see https://help.calendly.com/hc/en-us/articles/223147027
+   */
+  url: optional(string()),
+  /**
+   * Pre-fill invitee fields on the booking form.
+   * @see https://help.calendly.com/hc/en-us/articles/360020052833
+   */
+  prefill: optional(object({
+    name: optional(string()),
+    email: optional(string()),
+    firstName: optional(string()),
+    lastName: optional(string()),
+    /** Custom answers keyed by `a1`, `a2`, ... matching custom question order. */
+    customAnswers: optional(record(string(), string())),
+  })),
+  /**
+   * UTM parameters appended to the booking URL for marketing attribution.
+   * @see https://help.calendly.com/hc/en-us/articles/360020052833
+   */
+  utm: optional(object({
+    utmCampaign: optional(string()),
+    utmSource: optional(string()),
+    utmMedium: optional(string()),
+    utmContent: optional(string()),
+    utmTerm: optional(string()),
+  })),
+  /**
+   * Theme and layout overrides applied to the booking page.
+   * @see https://help.calendly.com/hc/en-us/articles/360020052833
+   */
+  pageSettings: optional(object({
+    backgroundColor: optional(string()),
+    hideEventTypeDetails: optional(boolean()),
+    hideLandingPageDetails: optional(boolean()),
+    primaryColor: optional(string()),
+    textColor: optional(string()),
+  })),
+  /**
+   * CSS selector for the element that hosts the inline widget.
+   * Required when the widget is initialised inline; the element should have a
+   * minimum height of around 700px so the booking iframe is fully visible.
+   */
+  parentElement: optional(string()),
 })
 
 export const SegmentOptions = object({

@@ -5,8 +5,10 @@ import type {
 import type { Import } from 'unimport'
 import type { InferInput, ObjectEntries, ObjectSchema, UnionSchema, ValiError } from 'valibot'
 import type { ComputedRef, Ref } from 'vue'
+import type { AhrefsAnalyticsInput } from './registry/ahrefs-analytics'
 import type { BingUetInput } from './registry/bing-uet'
 import type { BlueskyEmbedInput } from './registry/bluesky-embed'
+import type { CalendlyInput } from './registry/calendly'
 import type { ClarityInput } from './registry/clarity'
 import type { CloudflareWebAnalyticsInput } from './registry/cloudflare-web-analytics'
 import type { CrispInput } from './registry/crisp'
@@ -23,6 +25,7 @@ import type { HotjarInput } from './registry/hotjar'
 import type { InstagramEmbedInput } from './registry/instagram-embed'
 import type { IntercomInput } from './registry/intercom'
 import type { LemonSqueezyInput } from './registry/lemon-squeezy'
+import type { LinkedInInsightInput } from './registry/linkedin-insight'
 import type { MatomoAnalyticsInput } from './registry/matomo-analytics'
 import type { MetaPixelInput } from './registry/meta-pixel'
 import type { MixpanelAnalyticsInput } from './registry/mixpanel-analytics'
@@ -37,6 +40,7 @@ import type { SnapTrPixelInput } from './registry/snapchat-pixel'
 import type { StripeInput } from './registry/stripe'
 import type { TikTokPixelInput } from './registry/tiktok-pixel'
 import type { UmamiAnalyticsInput } from './registry/umami-analytics'
+import type { UsercentricsInput } from './registry/usercentrics'
 import type { VercelAnalyticsInput } from './registry/vercel-analytics'
 import type { VimeoPlayerInput } from './registry/vimeo-player'
 import type { XEmbedInput } from './registry/x-embed'
@@ -70,6 +74,10 @@ export interface ConsentState {
   functionality_storage?: ConsentCategoryValue
   personalization_storage?: ConsentCategoryValue
   security_storage?: ConsentCategoryValue
+  /** Region/subdivision codes (ISO 3166-1 alpha-2 or `XX-YY`) this default applies to. */
+  region?: string[]
+  /** Milliseconds to wait for `consent.update()` before firing queued tags. */
+  wait_for_update?: number
 }
 
 export type UseScriptContext<T extends Record<symbol | string, any>, C = unknown> = VueScriptInstance<T> & {
@@ -219,9 +227,11 @@ export interface NuxtDevToolsScriptInstance {
 }
 
 export interface ScriptRegistry {
+  ahrefsAnalytics?: AhrefsAnalyticsInput
   bingUet?: BingUetInput
   blueskyEmbed?: BlueskyEmbedInput
   carbonAds?: true
+  calendly?: CalendlyInput
   crisp?: CrispInput
   clarity?: ClarityInput
   cloudflareWebAnalytics?: CloudflareWebAnalyticsInput
@@ -239,6 +249,7 @@ export interface ScriptRegistry {
   googleTagManager?: GoogleTagManagerInput
   hotjar?: HotjarInput
   intercom?: IntercomInput
+  linkedinInsight?: LinkedInInsightInput
   paypal?: PayPalInput
   posthog?: PostHogInput
   matomoAnalytics?: MatomoAnalyticsInput
@@ -255,6 +266,7 @@ export interface ScriptRegistry {
   vercelAnalytics?: VercelAnalyticsInput
   vimeoPlayer?: VimeoPlayerInput
   umamiAnalytics?: UmamiAnalyticsInput
+  usercentrics?: UsercentricsInput
   gravatar?: GravatarInput
   npm?: NpmInput
   [key: `${string}-npm`]: NpmInput
@@ -265,14 +277,14 @@ export interface ScriptRegistry {
  * Use this to type-check records that must enumerate all built-in scripts (logos, meta, etc.).
  */
 export type BuiltInRegistryScriptKey
-  = | 'bingUet' | 'blueskyEmbed' | 'carbonAds' | 'crisp' | 'clarity' | 'cloudflareWebAnalytics'
+  = | 'ahrefsAnalytics' | 'bingUet' | 'blueskyEmbed' | 'calendly' | 'carbonAds' | 'crisp' | 'clarity' | 'cloudflareWebAnalytics'
     | 'databuddyAnalytics' | 'metaPixel' | 'fathomAnalytics' | 'instagramEmbed'
     | 'plausibleAnalytics' | 'googleAdsense' | 'googleAnalytics' | 'googleMaps'
     | 'googleRecaptcha' | 'googleSignIn' | 'lemonSqueezy' | 'googleTagManager'
-    | 'hotjar' | 'intercom' | 'paypal' | 'posthog' | 'matomoAnalytics'
+    | 'hotjar' | 'intercom' | 'linkedinInsight' | 'paypal' | 'posthog' | 'matomoAnalytics'
     | 'mixpanelAnalytics' | 'rybbitAnalytics' | 'redditPixel' | 'segment' | 'stripe' | 'tiktokPixel'
     | 'xEmbed' | 'xPixel' | 'snapchatPixel' | 'youtubePlayer' | 'vercelAnalytics'
-    | 'vimeoPlayer' | 'umamiAnalytics' | 'gravatar' | 'npm'
+    | 'vimeoPlayer' | 'umamiAnalytics' | 'usercentrics' | 'gravatar' | 'npm'
 
 /**
  * Union of all explicit registry script keys (excludes npm pattern).
@@ -427,6 +439,13 @@ export type SdkPatch
    * the correct proxy path.
    */
     | { type: 'replace-src-split', separator: string, fromDomain: string, appendPath?: string }
+  /**
+   * Replace `new URL(<expr>).origin` with `self.location.origin + "<proxyPath>"`.
+   * Used by SDKs that derive their API host as `new URL(currentScript.src).origin + "/api/..."`.
+   * When bundled, the script src origin is the Nuxt origin, so the derived endpoint
+   * lands on a 404 instead of the proxy. This patch redirects it through the proxy.
+   */
+    | { type: 'replace-new-url-origin', fromDomain: string }
 
 /**
  * Partytown capability config. When present, the script can run in a

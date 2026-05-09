@@ -22,6 +22,7 @@ function getPlaygroundPath(script: any): string | null {
     'plausible-analytics': '/third-parties/plausible-analytics',
     'posthog': '/third-parties/posthog/nuxt-scripts',
     'matomo-analytics': '/third-parties/matomo-analytics/nuxt-scripts',
+    'ahrefs-analytics': '/third-parties/ahrefs-analytics/nuxt-scripts',
     'rybbit-analytics': '/third-parties/rybbit-analytics',
     'databuddy-analytics': '/third-parties/databuddy-analytics',
     'umami-analytics': '/third-parties/umami-analytics',
@@ -29,6 +30,7 @@ function getPlaygroundPath(script: any): string | null {
     'meta-pixel': '/third-parties/meta-pixel',
     'x-pixel': '/third-parties/x-pixel/nuxt-scripts',
     'reddit-pixel': '/third-parties/reddit-pixel/nuxt-scripts',
+    'linkedin-insight': '/third-parties/linkedin-insight/nuxt-scripts',
     'snapchat-pixel': '/third-parties/snapchat/nuxt-scripts',
     'tiktok-pixel': '/third-parties/tiktok-pixel/nuxt-scripts',
     'google-adsense': '/third-parties/google-adsense/nuxt-scripts',
@@ -44,6 +46,8 @@ function getPlaygroundPath(script: any): string | null {
     'youtube-player': '/third-parties/youtube/nuxt-scripts',
     'google-maps': '/third-parties/google-maps/nuxt-scripts',
     'google-recaptcha': '/third-parties/google-recaptcha/nuxt-scripts',
+    'calendly': '/third-parties/calendly/nuxt-scripts',
+    'usercentrics': '/third-parties/usercentrics/nuxt-scripts',
     'npm': '/npm/js-confetti',
   }
 
@@ -266,6 +270,22 @@ const benchmark = [
   {
     name: 'Reddit Pixel (Default)',
     path: '/third-parties/reddit-pixel/default',
+  },
+  {
+    name: 'LinkedIn Insight (Default)',
+    path: '/third-parties/linkedin-insight/default',
+  },
+  {
+    name: 'Calendly (Default)',
+    path: '/third-parties/calendly/default',
+  },
+  {
+    name: 'Ahrefs Analytics (Default)',
+    path: '/third-parties/ahrefs-analytics/default',
+  },
+  {
+    name: 'Usercentrics (Default)',
+    path: '/third-parties/usercentrics/default',
   },
   {
     name: 'Snapchat (Default)',

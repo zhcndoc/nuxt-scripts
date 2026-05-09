@@ -393,6 +393,23 @@ describe('proxy configs', () => {
       expect(config).toBeUndefined()
     })
 
+    it('returns proxy config for calendly', async () => {
+      const config = (await getProxyConfigs()).calendly
+      expect(config).toBeDefined()
+      expect(config?.domains).toContain('assets.calendly.com')
+      expect(config?.privacy.ip).toBe(true)
+    })
+
+    it('returns proxy config for ahrefsAnalytics (covers /analytics.js + /api/event beacon)', async () => {
+      const config = (await getProxyConfigs()).ahrefsAnalytics
+      expect(config).toBeDefined()
+      expect(config?.domains).toContain('analytics.ahrefs.com')
+      // Both the script (/analytics.js) and the beacon (/api/event, /api/error)
+      // are served from analytics.ahrefs.com, so a single domain entry covers
+      // both via the AST rewrite + runtime intercept.
+      expect(config?.privacy.ip).toBe(true)
+    })
+
     it('returns proxy config for vercelAnalytics', async () => {
       const config = (await getProxyConfigs()).vercelAnalytics
       expect(config).toBeDefined()
@@ -418,23 +435,26 @@ describe('proxy configs', () => {
       expect(configs).toHaveProperty('xPixel')
       expect(configs).toHaveProperty('snapchatPixel')
       expect(configs).toHaveProperty('redditPixel')
+      expect(configs).toHaveProperty('linkedinInsight')
       expect(configs).toHaveProperty('posthog')
       expect(configs).toHaveProperty('plausibleAnalytics')
       expect(configs).toHaveProperty('cloudflareWebAnalytics')
       expect(configs).toHaveProperty('rybbitAnalytics')
       expect(configs).toHaveProperty('umamiAnalytics')
       expect(configs).toHaveProperty('databuddyAnalytics')
+      expect(configs).toHaveProperty('ahrefsAnalytics')
       expect(configs).not.toHaveProperty('fathomAnalytics')
       expect(configs).toHaveProperty('intercom')
       expect(configs).not.toHaveProperty('crisp')
       expect(configs).toHaveProperty('vercelAnalytics')
       expect(configs).toHaveProperty('gravatar')
+      expect(configs).toHaveProperty('calendly')
     })
 
     it('all configs have valid structure', async () => {
       const configs = await getProxyConfigs()
-      const fullAnonymize = ['metaPixel', 'tiktokPixel', 'xPixel', 'snapchatPixel', 'redditPixel']
-      const ipOnly = ['posthog', 'plausibleAnalytics', 'cloudflareWebAnalytics', 'rybbitAnalytics', 'umamiAnalytics', 'databuddyAnalytics', 'fathomAnalytics', 'vercelAnalytics', 'matomoAnalytics', 'carbonAds', 'intercom', 'lemonSqueezy', 'vimeoPlayer', 'youtubePlayer', 'gravatar']
+      const fullAnonymize = ['metaPixel', 'tiktokPixel', 'xPixel', 'snapchatPixel', 'redditPixel', 'linkedinInsight']
+      const ipOnly = ['posthog', 'plausibleAnalytics', 'cloudflareWebAnalytics', 'rybbitAnalytics', 'umamiAnalytics', 'databuddyAnalytics', 'ahrefsAnalytics', 'fathomAnalytics', 'vercelAnalytics', 'matomoAnalytics', 'carbonAds', 'intercom', 'lemonSqueezy', 'vimeoPlayer', 'youtubePlayer', 'gravatar', 'calendly']
       for (const [key, config] of Object.entries(configs)) {
         expect(config, `${key} should have domains`).toHaveProperty('domains')
         expect(Array.isArray(config.domains), `${key}.domains should be an array`).toBe(true)
