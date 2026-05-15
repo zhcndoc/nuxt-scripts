@@ -5,16 +5,19 @@ import type {
   InferIfSchema,
   NuxtUseScriptOptions,
   RegistryScriptInput,
+  RegistryScriptKey,
   ScriptRegistry,
   UseFunctionType,
   UseScriptContext,
 } from '#nuxt-scripts/types'
+import type { GcmConsentContract } from './registry/_gcm-consent'
 import { defu } from 'defu'
 import { createError, useRuntimeConfig } from 'nuxt/app'
 import { parseQuery, parseURL, withQuery } from 'ufo'
 import { parse } from 'valibot'
 import { useScript } from './composables/useScript'
 import { createNpmScriptStub } from './npm-script-stub'
+import { attachGcmConsent } from './registry/_gcm-consent'
 
 // Dev-only: stack trace parsing for component location detection (only referenced inside import.meta.dev)
 const URL_MATCH_RE = /https?:\/\/[^/]+\/_nuxt\/(.+\.vue)(?:\?[^)]*)?:(\d+):(\d+)/
@@ -42,9 +45,14 @@ type OptionsFn<O> = (options: InferIfSchema<O>, ctx: { scriptInput?: UseScriptIn
   schema?: O extends ObjectSchema<any, any> | UnionSchema<any, any> ? O : undefined
   clientInit?: () => void | Promise<any>
   scriptMode?: 'external' | 'npm' // NEW: external = CDN script (default), npm = NPM package only
+  /**
+   * Opt-in: this script consumes GCMv2 Consent Mode. `useRegistryScript` auto-attaches
+   * a `consent: { default, update }` API + dev validation against the canonical schema.
+   */
+  gcmConsent?: GcmConsentContract
 })
 
-export function scriptRuntimeConfig<T extends keyof ScriptRegistry>(key: T) {
+export function scriptRuntimeConfig<T extends RegistryScriptKey>(key: T): ScriptRegistry[T] {
   return ((useRuntimeConfig().public.scripts || {}) as ScriptRegistry)[key]
 }
 
@@ -63,7 +71,7 @@ export function requireRegistryEndpoint(componentName: string, registryKey: stri
 }
 
 export function useRegistryScript<T extends Record<string | symbol, any>, O = EmptyOptionsSchema>(registryKey: keyof ScriptRegistry | string, optionsFn: OptionsFn<O>, _userOptions?: RegistryScriptInput<O>): UseScriptContext<UseFunctionType<NuxtUseScriptOptions<T>, T>> {
-  const scriptConfig = scriptRuntimeConfig(registryKey as keyof ScriptRegistry)
+  const scriptConfig = scriptRuntimeConfig(registryKey as RegistryScriptKey)
   const userOptions = defu(_userOptions || {}, typeof scriptConfig === 'object' ? scriptConfig : {})
   const options = optionsFn(userOptions as InferIfSchema<O>, { scriptInput: userOptions.scriptInput as UseScriptInput & { src?: string } })
 
@@ -173,5 +181,10 @@ export function useRegistryScript<T extends Record<string | symbol, any>, O = Em
       options.clientInit?.()
     }
   }
-  return useScript<T>(scriptInput, scriptOptions as NuxtUseScriptOptions<T>)
+  const instance = useScript<T>(scriptInput, scriptOptions as NuxtUseScriptOptions<T>)
+
+  if (import.meta.client && options.gcmConsent)
+    attachGcmConsent(instance as any, options.gcmConsent, String(registryKey))
+
+  return instance
 }

@@ -49,7 +49,7 @@ onLoaded(({ AhrefsAnalytics }) => {
 
 ## SPA 导航
 
-Ahrefs Analytics 原生跟踪单页应用的导航：加载后的 `analytics.js` 会补丁 `history.pushState` 并监听 `popstate`，每当 URL 发生变化时都会触发一次新的页面浏览。对于 Nuxt 路由变化，无需额外配置。
+Ahrefs Analytics 原生支持单页应用导航：加载的 `analytics.js` 会补丁 `history.pushState` 并监听 `popstate`，每当 URL 发生变化时就会触发一次新的页面浏览量。Nuxt 路由变化无需额外配置。
 
 ::script-types
 ::

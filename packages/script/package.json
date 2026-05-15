@@ -1,7 +1,7 @@
 {
   "name": "@nuxt/scripts",
   "type": "module",
-  "version": "1.0.6",
+  "version": "1.1.0",
   "description": "Load third-party scripts with better performance, privacy and DX in Nuxt Apps.",
   "author": {
     "name": "Harlan Wilton",
@@ -107,7 +107,6 @@
   },
   "dependencies": {
     "@nuxt/devtools-kit": "catalog:",
-    "@nuxt/kit": "catalog:",
     "@vueuse/core": "catalog:",
     "@vueuse/shared": "catalog:",
     "consola": "catalog:",
@@ -129,6 +128,10 @@
     "valibot": "catalog:"
   },
   "devDependencies": {
-    "@nuxt/module-builder": "catalog:"
+    "@nuxt/kit": "catalog:",
+    "@nuxt/module-builder": "catalog:",
+    "rollup": "catalog:",
+    "unbuild": "catalog:",
+    "unimport": "catalog:"
   }
 }

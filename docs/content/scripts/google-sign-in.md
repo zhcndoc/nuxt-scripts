@@ -29,7 +29,7 @@ Nuxt Scripts 提供了一个注册表脚本组合式函数 [`useScriptGoogleSign
 
 ## Composable API
 
-`useScriptGoogleSignIn()`{lang="ts"} 返回标准脚本上下文（`status`、`proxy`、`onLoaded` 等），以及三个用于封装最常见流程的辅助函数。传递给该 composable 的 schema 选项会合并到每次调用中，因此您无需重复传入 `clientId`、`loginUri`、`uxMode` 等。
+`useScriptGoogleSignIn()`{lang="ts"} 返回标准脚本上下文（`status`、`proxy`、`onLoaded` 等）以及三个帮助函数，用于封装最常见的流程。每次调用帮助函数时，都会与传递给 composable 的 schema 选项合并，因此您无需重复传入 `clientId`、`loginUri`、`uxMode` 等参数。
 
 ```ts
 const { initialize, renderButton, prompt, status, onLoaded, proxy } = useScriptGoogleSignIn({
@@ -41,7 +41,7 @@ const { initialize, renderButton, prompt, status, onLoaded, proxy } = useScriptG
 
 ### `initialize(config?)`{lang="ts"}
 
-使用与 `config` 合并后的 schema 选项调用 `google.accounts.id.initialize()`{lang="ts"}。内部已做保护，因此多次调用（例如跨页面导航和组件重新挂载）是安全的；如果在按钮已渲染后再次运行 `initialize()`{lang="ts"}，Google 的 API 会记录错误，因此该辅助函数只会转发第一次调用。
+使用与 `config` 合并后的 schema 选项调用 `google.accounts.id.initialize()`{lang="ts"}。内部已做防护，因此多次调用（例如跨导航和组件重新挂载）是安全的；如果 `initialize()`{lang="ts"} 在页面渲染按钮后再次运行，Google 的 API 会记录错误，因此该帮助函数只会转发第一次调用。
 
 ```ts
 initialize({

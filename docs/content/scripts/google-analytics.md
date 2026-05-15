@@ -32,7 +32,7 @@ proxy 暴露了 `gtag` 和 `dataLayer` 属性，你应当按照 Google Analytics
 
 ## 同意模式
 
-Google Analytics 原生支持 [GCMv2 同意状态](https://developers.google.com/tag-platform/security/guides/consent)。通过 `defaultConsent` 设置默认值（它会在 `gtag('js', ...)`{lang="ts"} 之前触发 `gtag('consent', 'default', state)`{lang="ts"}），并在运行时调用 `consent.update()`{lang="ts"} 来切换类别。
+Google Analytics 原生支持 [GCMv2 同意状态](https://developers.google.com/tag-platform/security/guides/consent)。使用 `defaultConsent` 设置默认值（会在 `gtag('js', ...)`{lang="ts"} 之前触发 `gtag('consent', 'default', state)`{lang="ts"}），并在运行时调用 `consent.update()`{lang="ts"} 来切换各项类别。对于需要在运行时动态推导默认值（例如在触发前等待地区/CMS 解析完成）的场景，可在客户端调用 `consent.default()`{lang="ts"}。
 
 ::callout{icon="i-heroicons-play" to="https://stackblitz.com/github/nuxt/scripts/tree/main/examples/regional-consent" target="_blank"}
 在 [StackBlitz](https://stackblitz.com) 上试用实时的 [区域同意示例](https://stackblitz.com/github/nuxt/scripts/tree/main/examples/regional-consent)。
@@ -70,7 +70,7 @@ function savePreferences(choices: { analytics: boolean, marketing: boolean }) {
 </script>
 ```
 
-`consent.update()`{lang="ts"} 接受任意 `Partial<ConsentState>`{lang="ts"}；缺失的类别将保持其当前值。对于除了同意默认值之外、在 `gtag('js')`{lang="ts"} 之前的设置，`onBeforeGtagStart` 仍可作为通用的逃生入口使用。
+`consent.update()`{lang="ts"} 和 `consent.default()`{lang="ts"} 都接受任何 `Partial<ConsentState>`{lang="ts"}；缺失的类别会保持当前值不变。两种方法都会根据标准的 GCMv2 模式验证输入，并在出现未知键或非 `granted`/`denied` 值时通过 `consola` 发出警告。对于除同意默认值之外、在 `gtag('js')`{lang="ts"} 之前进行的设置，`onBeforeGtagStart` 仍然可用作通用的逃生通道。
 
 ### 按地区的默认值
 

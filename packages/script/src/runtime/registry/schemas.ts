@@ -3,8 +3,11 @@ import { any, array, boolean, custom, literal, minLength, number, object, option
 // Shared GCMv2 consent category value.
 const consentCategoryValue = union([literal('granted'), literal('denied')])
 
-// Shared GCMv2 consent state (+ GA-only control fields).
-const gcmConsentState = object({
+// Shared GCMv2 consent state (+ GA-only control fields). Lenient at schema-parse
+// time (extra keys pass through); the runtime `consent.*` API rebuilds a strict
+// variant from these entries so typos surface as a `consola` warning without
+// breaking the dev schema check.
+export const gcmConsentState = object({
   ad_storage: optional(consentCategoryValue),
   ad_user_data: optional(consentCategoryValue),
   ad_personalization: optional(consentCategoryValue),
@@ -1046,6 +1049,12 @@ export const TikTokPixelOptions = object({
    * @see https://business-api.tiktok.com/portal/docs?id=1739585600931842
    */
   defaultConsent: optional(union([literal('granted'), literal('denied'), literal('hold')])),
+  /**
+   * Data residency region for the Pixel SDK.
+   * - `'global'` (default) -> `analytics.tiktok.com`
+   * - `'us'` -> `analytics.us.tiktok.com` (US enterprise data residency)
+   */
+  region: optional(union([literal('global'), literal('us')])),
 })
 
 export const UmamiAnalyticsOptions = object({

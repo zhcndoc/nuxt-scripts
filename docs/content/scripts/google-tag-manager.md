@@ -16,7 +16,7 @@ Nuxt Scripts 提供了许多功能，可以轻松地在 Nuxt 应用内实现。�
 ::  
 
 ::callout{icon="i-heroicons-information-circle"}
-Nuxt Scripts 只会加载 GTM **容器**。它不会自动跟踪页面浏览、点击、滚动或表单提交。实际跟踪哪些内容，取决于你在 GTM 工作区中配置的 **标签和触发器**（tagmanager.google.com），或者你在应用中调用的 `dataLayer.push`（参见 [发送页面事件](#guide-sending-page-events)）。如果你想自动跟踪页面/点击/滚动/视频，请在 GTM 中对应的 GA4 标签上启用 [GA4 增强型衡量](https://support.google.com/analytics/answer/9216061)。
+Nuxt Scripts 仅加载 GTM **容器**。它本身不会自动跟踪页面浏览、点击、滚动或表单提交。**你在 GTM 工作区中配置的标签和触发器**（tagmanager.google.com），或你从应用中发出的 `dataLayer.push` 调用，决定了会跟踪什么内容（参见 [发送页面事件](#guide-sending-page-events)）。如需自动进行页面/点击/滚动/视频跟踪，请在 GTM 中你的 GA4 标签上启用 [GA4 增强型衡量](https://support.google.com/analytics/answer/9216061)。
 ::
 
 ::script-stats
@@ -47,7 +47,7 @@ useScriptEventPage(({ title, path }) => {
 
 ## 同意模式
 
-Google Tag Manager 原生支持 [GCMv2 同意状态](https://developers.google.com/tag-platform/security/guides/consent?consentmode=basic)。使用 `defaultConsent` 设置默认值（会在 `gtm.js` 事件之前将 `['consent','default', state]` 推送到 dataLayer 中），并在运行时调用 `consent.update()`{lang="ts"}。向 `defaultConsent` 传入一个**数组**，即可触发多个默认设置，例如 [按地区设置默认值](https://developers.google.com/tag-platform/security/guides/consent?consentmode=advanced#region-specific-behavior)，其中每一项都可通过 `region` 针对不同国家/地区。
+Google Tag Manager 原生支持 [GCMv2 同意状态](https://developers.google.com/tag-platform/security/guides/consent?consentmode=basic)。使用 `defaultConsent` 设置默认值（会在 `gtm.js` 事件之前将 `['consent','default', state]` 推送到 dataLayer），并在运行时调用 `consent.update()`{lang="ts"}。向 `defaultConsent` 传入一个**数组**可以触发多个默认值，例如 [按地区设置默认值](https://developers.google.com/tag-platform/security/guides/consent?consentmode=advanced#region-specific-behavior)，其中每一项通过 `region` 针对不同国家。对于运行时推导出的默认值（在排队前等待地区/CMS 解析完成），请从客户端调用 `consent.default()`{lang="ts"}。
 
 ::callout{icon="i-heroicons-play" to="https://stackblitz.com/github/nuxt/scripts/tree/main/examples/cookie-consent" target="_blank"}
 试试在 [StackBlitz](https://stackblitz.com) 上运行的 [Cookie 同意示例](https://stackblitz.com/github/nuxt/scripts/tree/main/examples/cookie-consent)、[细粒度同意示例](https://stackblitz.com/github/nuxt/scripts/tree/main/examples/granular-consent) 或 [区域同意示例](https://stackblitz.com/github/nuxt/scripts/tree/main/examples/regional-consent)。
@@ -132,7 +132,7 @@ useScriptGoogleTagManager({
 
 该模块会按输入顺序逐项原样转发。区域限定与非限定默认值之间的优先级由运行时的 gtag 决定，而不是由顺序决定。
 
-`consent.update()`{lang="ts"} 接受任意 `Partial<ConsentState>`{lang="ts"}；缺失的类别会保持当前值不变。`onBeforeGtmStart` 仍然可用，作为在 `gtm.start` 之前执行其他初始化设置的通用逃生口（仅当 GTM ID 直接传给组合式函数时可用，而不是通过 `nuxt.config` 传入）。
+`consent.update()`{lang="ts"} 和 `consent.default()`{lang="ts"} 都接受任意 `Partial<ConsentState>`{lang="ts"}；缺失的类别会保持其当前值。两种方法都会根据规范的 GCMv2 schema 验证输入，并在遇到未知键或非 `granted`/`denied` 值时通过 `consola` 发出警告。`onBeforeGtmStart` 仍然可用，作为任何其他 `gtm.start` 之前设置的通用逃生舱口（仅当 GTM ID 直接传递给组合式函数时可用，而不是通过 `nuxt.config` 传入时）。
 
 ::script-types
 ::

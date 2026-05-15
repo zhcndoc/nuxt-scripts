@@ -301,6 +301,11 @@ export async function registry(resolve?: (path: string) => Promise<string>): Pro
       envDefaults: { domain: '' },
       bundle: {
         resolve: (options?: PlausibleAnalyticsInput) => {
+          // Self-hosted Plausible: when a custom `scriptInput.src` is provided,
+          // bundle from that origin instead of the default plausible.io CDN.
+          const userSrc = (options as any)?.scriptInput?.src
+          if (typeof userSrc === 'string' && userSrc.trim().length > 0)
+            return userSrc.trim()
           if (options?.scriptId)
             return `https://plausible.io/js/pa-${options.scriptId}.js`
           const extensions = Array.isArray(options?.extension) ? options.extension.join('.') : [options?.extension]
@@ -496,11 +501,12 @@ export async function registry(resolve?: (path: string) => Promise<string>): Pro
         resolve(options?: TikTokPixelInput) {
           if (!options?.id)
             return false
-          return withQuery('https://analytics.tiktok.com/i18n/pixel/events.js', { sdkid: options.id, lib: 'ttq' })
+          const host = options.region === 'us' ? 'analytics.us.tiktok.com' : 'analytics.tiktok.com'
+          return withQuery(`https://${host}/i18n/pixel/events.js`, { sdkid: options.id, lib: 'ttq' })
         },
       },
       proxy: {
-        domains: ['analytics.tiktok.com', 'mon.tiktok.com', 'mcs.tiktok.com'],
+        domains: ['analytics.tiktok.com', 'analytics.us.tiktok.com', 'mon.tiktok.com', 'mcs.tiktok.com'],
         privacy: PRIVACY_FULL,
       },
       partytown: { forwards: ['ttq.track', 'ttq.page', 'ttq.identify', 'ttq.grantConsent', 'ttq.revokeConsent', 'ttq.holdConsent'] },

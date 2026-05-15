@@ -120,7 +120,7 @@ async function logConsent() {
 
 ## 自动阻止
 
-如果你的 Usercentrics ruleset 配置为 **自动阻止**（而不是手动阻止），请设置 `autoblocker: true`，以便在加载器之前注入 autoblocker 模块：
+如果你的 Usercentrics ruleset 使用的是 **自动阻止**（而不是手动阻止），请设置 `autoblocker: true`，以便在加载器之前注入 autoblocker 模块：
 
 ```ts
 useScriptUsercentrics({
@@ -149,4 +149,4 @@ useScriptUsercentrics({
 
 ## Partytown
 
-Usercentrics 不支持在 Partytown 下运行。`__ucCmp` API 需要大量方法调用，不适合跨 worker 边界转发，而且 CMP 还需要主线程的 DOM 访问来渲染其 UI 覆盖层。
+不要在 Partytown 下运行 Usercentrics。`__ucCmp` API 的方法调用非常密集，且不适合跨 worker 边界转发；同时，CMP 需要主线程的 DOM 访问来渲染其 UI 覆层。
