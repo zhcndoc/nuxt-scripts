@@ -15,8 +15,8 @@ links:
 [Stripe](https://stripe.com) 是一个流行的支付网关，允许你在线接受付款。
 
 Nuxt Scripts 提供两个 Stripe 功能：
-- [`useScriptStripe()`{lang="ts"}](/scripts/stripe){lang="ts"} 组合函数，用于加载脚本 `https://js.stripe.com/basil/stripe.js`。
-- `ScriptStripePricingTable` 组件，允许你使用 `https://js.stripe.com/v3/pricing-table.js` 在你的网站上嵌入 [Stripe 价格表](https://docs.stripe.com/payments/checkout/pricing-table)。
+- [`useScriptStripe()`{lang="ts"}](/scripts/stripe){lang="ts"} 组合函数，默认会加载脚本 `https://js.stripe.com/basil/stripe.js`。使用 `version` 选项可以 [固定某个 Stripe.js SDK 版本](https://docs.stripe.com/sdks/stripejs-versioning)（例如 `acacia`、`clover`、`dahlia`）。
+- `ScriptStripePricingTable` 组件，允许你通过 `https://js.stripe.com/v3/pricing-table.js` 在你的网站上嵌入一个 [Stripe 定价表](https://docs.stripe.com/payments/checkout/pricing-table)。
 
 ## 类型
 

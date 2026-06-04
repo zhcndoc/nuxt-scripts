@@ -373,8 +373,12 @@ export interface ModuleOptions {
    *
    * The secret must be deterministic across deployments so that prerendered URLs
    * remain valid. Set it via `NUXT_SCRIPTS_PROXY_SECRET` or `security.secret`.
+   *
+   * Set to `false` to disable proxy security entirely: no secret is resolved or
+   * auto-generated, no page token is injected into the SSR payload, and proxy
+   * endpoints pass requests through without signature verification.
    */
-  security?: {
+  security?: false | {
     /**
      * HMAC secret used to sign proxy URLs.
      *
@@ -652,6 +656,32 @@ export default defineNuxtModule<ModuleOptions>({
       filename: 'nuxt-scripts-trigger-resolver.mjs',
       getContents() {
         return templateTriggerResolver(config.defaultScriptOptions)
+      },
+    })
+
+    // Build-time snippet sources inlined into `#build/nuxt-scripts-snippets` and
+    // imported by runtime composables. Every snippet is always exported (empty
+    // until its registry entry is configured) so the static import always
+    // resolves, even when the related script isn't registered.
+    const snippets: Record<string, () => string | Promise<string>> = {
+      async speedcurveLuxSnippet() {
+        if (!config.registry?.speedcurve)
+          return ''
+        const snippetPath = await resolvePath('@speedcurve/lux/dist/lux-snippet.js')
+        if (!existsSync(snippetPath)) {
+          throw new Error('[nuxt-scripts] useScriptSpeedCurve requires the @speedcurve/lux package. Install it with: npm i -D @speedcurve/lux')
+        }
+        return readFileSync(snippetPath, 'utf-8')
+      },
+    }
+    addTemplate({
+      filename: 'nuxt-scripts-snippets.mjs',
+      async getContents() {
+        const exports = await Promise.all(
+          Object.entries(snippets).map(async ([name, getSource]) =>
+            `export const ${name} = ${JSON.stringify(await getSource())}\n`),
+        )
+        return exports.join('')
       },
     })
 
@@ -1029,7 +1059,14 @@ export default defineNuxtModule<ModuleOptions>({
     const isStaticTarget = staticPresets.includes(nitroPreset)
     const isSpa = nuxt.options.ssr === false
 
-    if (anyHandlerRequiresSigning && (isSpa || isStaticTarget)) {
+    // Proxy security explicitly disabled: skip secret resolution and the page
+    // token plugin. `withSigning` passes requests through unverified.
+    if (config.security === false) {
+      if (anyHandlerRequiresSigning && !nuxt.options.dev) {
+        logger.info('[security] Proxy security disabled via `security: false`. Proxy endpoints will pass requests through without signature verification.')
+      }
+    }
+    else if (anyHandlerRequiresSigning && (isSpa || isStaticTarget)) {
       logger.warn(
         `[security] URL signing requires a server runtime${isStaticTarget ? ` (detected preset: ${nitroPreset})` : ' (ssr: false)'}.\n`
         + '  Proxy endpoints will work without signature verification.\n'

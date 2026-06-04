@@ -99,6 +99,10 @@ const props = withDefaults(defineProps<{
    * Additional attributes for the `<img>` element.
    */
   imgAttrs?: ImgHTMLAttributes & ReservedProps & Record<string, unknown>
+  /**
+   * Alt text for the map image. Override to provide a more descriptive label for screen readers.
+   */
+  alt?: string
 }>(), {
   zoom: 15,
   scale: 2,
@@ -106,6 +110,7 @@ const props = withDefaults(defineProps<{
   objectFit: 'cover',
   width: 640,
   height: 400,
+  alt: 'Google Maps',
 })
 
 defineSlots<{
@@ -232,7 +237,7 @@ const src = computed(() => {
 const imgAttributes = computed(() => {
   return defu(props.imgAttrs, {
     src: src.value,
-    alt: 'Google Maps',
+    alt: props.alt,
     loading: props.loading,
     style: {
       width: '100%',
@@ -250,14 +255,14 @@ const rootStyle = computed(() => ({
   overflow: 'hidden',
 }))
 
-if (import.meta.server) {
+if (import.meta.server && !useProxy) {
   useHead({
     link: [
       {
         rel: props.loading === 'eager' ? 'preconnect' : 'dns-prefetch',
-        href: useProxy ? undefined : 'https://maps.googleapis.com',
+        href: 'https://maps.googleapis.com',
       },
-    ].filter(l => l.href),
+    ],
   })
 }
 

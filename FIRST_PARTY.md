@@ -115,7 +115,7 @@ useScriptPlausibleAnalytics({
 | `PRIVACY_HEATMAP` | ip、language、hardware | GA、Clarity、Hotjar |
 | `PRIVACY_IP_ONLY` | 仅 ip | PostHog、Plausible、Umami、Rybbit、Databuddy、Ahrefs、Fathom、CF Web Analytics、Vercel、Matomo、Carbon Ads、Lemon Squeezy、Intercom、Gravatar、YouTube、Vimeo、Calendly |
 
-注意：GTM、Segment、Crisp、Mixpanel 和 Bing UET 仅打包（无代理能力），因此不应用隐私转换。
+注意：GTM、Segment、Crisp、Mixpanel、Bing UET 和 SpeedCurve 没有代理能力，因此不会应用隐私转换。
 
 ## 脚本支持
 
@@ -147,9 +147,10 @@ useScriptPlausibleAnalytics({
 | `intercom` | intercom | `PRIVACY_IP_ONLY` | Path A |
 | `gravatar` | gravatar | `PRIVACY_IP_ONLY` | Path A |
 | `calendly` | calendly | `PRIVACY_IP_ONLY` | Path A |
-| `googleTagManager` | googleTagManager | 不适用 | 仅打包 |
-| `segment` | segment | 不适用 | 仅打包 |
-| `crisp` | crisp | 不适用 | 仅打包 |
+| `googleTagManager` | googleTagManager | n/a | 仅打包 |
+| `segment` | segment | n/a | 仅打包 |
+| `crisp` | crisp | n/a | 仅打包 |
+| `speedcurve` | speedcurve | n/a | 无代理（ID 参数化的 CDN URL） |
 
 ### 从第一方模式排除（`proxy: false`）
 
