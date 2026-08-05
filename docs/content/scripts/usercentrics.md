@@ -8,9 +8,9 @@ links:
     size: xs
 ---
 
-[Usercentrics](https://usercentrics.com) 是一个同意管理平台（CMP），用于在 GDPR、CCPA 以及 IAB TCF v2 框架下收集、存储并传递终端用户对第三方脚本的同意。
+[Usercentrics](https://usercentrics.com) 是一个用于记录同意选择和控制第三方服务的同意管理平台（CMP）。
 
-Nuxt Scripts 提供了 [`useScriptUsercentrics()`{lang="ts"}](/scripts/usercentrics)，这样你就可以启动 CMP v3（“Web CMP”）加载器，暴露对 `window.__ucCmp` 程序化 API 的类型化访问，并将其他注册脚本的同意触发器直接连接到 Usercentrics 的 `UC_UI_CMP_EVENT` 浏览器事件。
+[`useScriptUsercentrics()`{lang="ts"}](/scripts/usercentrics) 加载 CMP v3（“Web CMP”）脚本，为 `window.__ucCmp` API 提供类型定义，并公开触发其他注册表脚本所需的 `UC_UI_CMP_EVENT` 变更。
 
 ::script-stats
 ::
@@ -18,11 +18,12 @@ Nuxt Scripts 提供了 [`useScriptUsercentrics()`{lang="ts"}](/scripts/usercentr
 ::script-docs
 ::
 
-这个组合式函数包含以下默认值：
-- **触发器：客户端** 当 Nuxt 正在进行 hydration 时，脚本将加载。
-- **Bundle / 代理：关闭** CMP 本身就是同意界面，因此它必须直接访问供应商源站。同时，它也不受同意门控限制。
+该组合式函数使用以下默认设置：
 
-你可以直接通过代理访问 `ucCmp` 对象，或者等待 `$script` promise。对于任何返回 void / Promise 的调用，建议使用代理。
+- **触发器：`onNuxtReady`。** 脚本在 Nuxt 水合后加载，使用模块级默认设置。
+- **捆绑和代理：关闭。** CMP 直接从 Usercentrics 加载，不受同意状态限制。
+
+需要访问已加载对象时，可以通过代理访问 `ucCmp`，或等待 `$script`。
 
 ::code-group
 
@@ -87,11 +88,11 @@ useScriptGoogleAnalytics({
 </template>
 ```
 
-`onConsentChange` 会返回一个清理函数，因此你可以在 `onScopeDispose` 中取消订阅。回调会接收原始的 `UC_UI_CMP_EVENT` 详情（例如 `{ type: 'ACCEPT_ALL' | 'DENY_ALL' | 'SAVE', ... }`）。
+`onConsentChange` 会返回一个 teardown 函数，可与 `onScopeDispose` 搭配使用。其回调接收原始的 `UC_UI_CMP_EVENT` 详情，例如 `{ type: 'ACCEPT_ALL' | 'DENY_ALL' | 'SAVE', ... }`。
 
 ## 打开同意界面
 
-在 CMP API 准备好之前，`__ucCmp` 的方法都不会生效。使用 `consent.whenReady()`{lang="ts"} 来等待它，或者直接调用 `consent` 上的辅助方法（在 CMP 启动期间它们不会生效）：
+当你需要等待初始化时，请在 CMP 的 `UC_CMP_API_READY` 事件之前调用 `consent.whenReady()`{lang="ts"}。当前的辅助函数只监听下一个事件；它不会检测已经准备就绪的 CMP，因此后续调用可能会一直处于等待状态。其他 `consent` 辅助函数会在 `window.__ucCmp` 存在时调用它，否则不执行任何操作。
 
 ```vue
 <script setup lang="ts">
@@ -120,7 +121,7 @@ async function logConsent() {
 
 ## 自动阻止
 
-如果你的 Usercentrics ruleset 使用的是 **自动阻止**（而不是手动阻止），请设置 `autoblocker: true`，以便在加载器之前注入 autoblocker 模块：
+如果您的 Usercentrics 规则集使用了**自动阻止**，请将 `autoblocker: true` 设置为在加载器之前注入自动阻止模块：
 
 ```ts
 useScriptUsercentrics({
@@ -129,24 +130,11 @@ useScriptUsercentrics({
 })
 ```
 
+Usercentrics 要求自动阻止模块在其他服务脚本之前运行；请参阅其[直接实施指南](https://support.usercentrics.com/hc/en-us/articles/19446626144540-Direct-implementation-and-markup-guide)。由于该组合式函数在客户端运行时会添加此选项，因此请在依赖它执行同意管理之前，验证其在渲染应用中的加载顺序。
+
 ::script-types
 ::
 
-## 示例
-
-在 Nuxt 就绪时，通过 `app.vue` 加载 Usercentrics。
-
-```vue [app.vue]
-<script setup lang="ts">
-useScriptUsercentrics({
-  rulesetId: 'your-ruleset-id',
-  scriptOptions: {
-    trigger: 'onNuxtReady'
-  }
-})
-</script>
-```
-
 ## Partytown
 
-不要在 Partytown 下运行 Usercentrics。`__ucCmp` API 的方法调用非常密集，且不适合跨 worker 边界转发；同时，CMP 需要主线程的 DOM 访问来渲染其 UI 覆层。
+不要在 Partytown 下运行 Usercentrics。其 CMP 会渲染 DOM 覆盖层，并且其 `__ucCmp` 方法未配置为转发到 Worker。

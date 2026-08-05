@@ -7,6 +7,7 @@ import { createResolver, extendViteConfig } from '@nuxt/kit'
 const DEVTOOLS_UI_ROUTE = '/__nuxt-scripts'
 const DEVTOOLS_UI_LOCAL_PORT = 3030
 const DEVTOOLS_API_STATE_ROUTE = '/__nuxt-scripts-api/state'
+const DEVTOOLS_API_MAX_BODY_SIZE = 2 * 1024 * 1024
 
 export interface DevtoolsOptions {
   standalone?: boolean
@@ -54,7 +55,7 @@ export async function setupDevtools(nuxt: Nuxt, options: DevtoolsOptions = {}) {
   })
 }
 
-function setupStandaloneApi(nuxt: Nuxt) {
+export function setupStandaloneApi(nuxt: Nuxt) {
   // In-memory store for serialized script state
   let scriptsState: { scripts: Record<string, any>, version?: string, firstPartyData?: any, updatedAt: number } = {
     scripts: {},
@@ -81,13 +82,49 @@ function setupStandaloneApi(nuxt: Nuxt) {
       }
 
       if (req.method === 'POST') {
-        let body = ''
-        req.on('data', (chunk: Buffer) => {
-          body += chunk.toString()
-        })
-        req.on('end', () => {
+        const chunks: Buffer[] = []
+        let size = 0
+        let finished = false
+
+        function cleanup() {
+          req.off('data', onData)
+          req.off('end', onEnd)
+          req.off('aborted', onAborted)
+          req.off('error', onAborted)
+        }
+        function onAborted() {
+          finished = true
+          chunks.length = 0
+          cleanup()
+        }
+        function onData(chunk: Buffer) {
+          if (finished)
+            return
+          size += chunk.byteLength
+          if (size > DEVTOOLS_API_MAX_BODY_SIZE) {
+            finished = true
+            chunks.length = 0
+            cleanup()
+            // Drain the remainder so the keep-alive connection can be reused.
+            // `cleanup()` removed the normal error handler, so keep one listener
+            // attached while the unread request bytes are being discarded.
+            req.once('error', () => {})
+            req.resume()
+            res.statusCode = 413
+            res.end('payload too large')
+            return
+          }
+          chunks.push(chunk)
+        }
+        function onEnd() {
+          if (finished)
+            return
+          finished = true
+          cleanup()
           try {
-            const data = JSON.parse(body)
+            // Decode once so a multi-byte UTF-8 sequence split across chunks
+            // is not replaced with invalid characters before JSON parsing.
+            const data = JSON.parse(Buffer.concat(chunks).toString('utf8'))
             scriptsState = { ...data, updatedAt: Date.now() }
             res.statusCode = 200
             res.end('ok')
@@ -96,7 +133,13 @@ function setupStandaloneApi(nuxt: Nuxt) {
             res.statusCode = 400
             res.end('invalid json')
           }
-        })
+          chunks.length = 0
+        }
+
+        req.on('data', onData)
+        req.on('end', onEnd)
+        req.on('aborted', onAborted)
+        req.on('error', onAborted)
         return
       }
 
@@ -129,6 +172,8 @@ export interface ProxyDevtoolsData {
   privacyMode: string
   scripts: ProxyDevtoolsScript[]
   totalDomains: number
+  /** Path alias → real domain, so devtools can attribute aliased proxy requests. */
+  aliasToDomain?: Record<string, string>
 }
 
 function computeDevtoolsPrivacyLevel(privacy: Record<string, boolean>): 'full' | 'partial' | 'none' {
@@ -178,6 +223,7 @@ export function buildDevtoolsData(
   proxyPrefix: string,
   privacyLabel: string,
   scripts: ProxyDevtoolsScript[],
+  aliasToDomain?: Record<string, string>,
 ): ProxyDevtoolsData {
   const allDomains = new Set<string>()
   for (const s of scripts) {
@@ -190,5 +236,6 @@ export function buildDevtoolsData(
     privacyMode: privacyLabel,
     scripts,
     totalDomains: allDomains.size,
+    aliasToDomain,
   }
 }

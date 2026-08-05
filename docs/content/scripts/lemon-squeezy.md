@@ -1,6 +1,6 @@
 ---
 title: Lemon Squeezy
-description: 在你的 Nuxt 应用中使用 Lemon Squeezy。
+description: 加载 Lemon.js，或将结账链接转换为延迟加载的覆盖层触发器。
 links:
   - label: useScriptLemonSqueezy
     icon: i-simple-icons-github
@@ -12,9 +12,9 @@ links:
     size: xs
 ---
 
-[Lemon Squeezy](https://www.lemonsqueezy.com/) 是一个流行的支付网关，允许你在线接受付款。
+[Lemon Squeezy](https://www.lemonsqueezy.com/) 是一个面向数字产品和订阅服务的名义商户平台。
 
-Nuxt Scripts 提供了一个 [`useScriptLemonSqueezy()`{lang="ts"}](#usescriptlemonsqueezy){lang="ts"} 组合函数和一个无头的外观组件 [`<ScriptLemonSqueezy>`{lang="html"}](#scriptlemonsqueezy){lang="html"} 组件，用于与 Lemon Squeezy 交互。
+使用 [`useScriptLemonSqueezy()`{lang="ts"}](#usescriptlemonsqueezy){lang="ts"} 调用 Lemon.js。 [`<ScriptLemonSqueezy>`{lang="html"}](#scriptlemonsqueezy){lang="html"} 会将结账链接转换为覆盖层触发器。
 
 ::script-stats
 ::
@@ -24,19 +24,19 @@ Nuxt Scripts 提供了一个 [`useScriptLemonSqueezy()`{lang="ts"}](#usescriptle
 
 ## [`<ScriptLemonSqueezy>`{lang="html"}](/scripts/lemon-squeezy){lang="html"}
 
-[`<ScriptLemonSqueezy>`{lang="html"}](/scripts/lemon-squeezy){lang="html"} 组件是一个无头的 [外观组件](/docs/guides/facade-components)，封装了 [`useScriptLemonSqueezy()`{lang="ts"}](/scripts/lemon-squeezy){lang="ts"} 组合函数，提供了一种简单且性能优化的方式在你的 Nuxt 应用中加载 Lemon Squeezy。
+这个无头[外观组件](/docs/guides/facade-components)会在挂载时扫描其中存在的链接。当组件根元素进入视口时，它会加载 [Lemon.js](https://docs.lemonsqueezy.com/guides/developer-guide/lemonjs)。
 
 ```vue
 <template>
   <ScriptLemonSqueezy>
     <NuxtLink href="https://harlantest.lemonsqueezy.com/buy/52a40427-36d2-4450-a514-ae80d9e1a333?embed=1">
-      购买我 - $9.99
+      以 9.99 美元购买
     </NuxtLink>
   </ScriptLemonSqueezy>
 </template>
 ```
 
-它通过向组件内的任何 `a` 标签注入 `.lemonsqueezy-button` 类，然后用 `visibility` [元素事件触发器](/docs/guides/script-triggers#element-event-triggers) 加载 Lemon Squeezy 脚本来工作。
+挂载时，它会为组件内的链接添加 `.lemonsqueezy-button` 类。之后插入的链接不会被扫描。在动态添加结账链接后，请自行添加该类并调用 `Refresh()`{lang="ts"}，或者重新挂载组件。
 
 ### 演示
 
@@ -55,10 +55,10 @@ const events = ref([])
     <div class="flex items-center justify-center p-5">
       <ScriptLemonSqueezy @lemon-squeezy-event="e => events.push(e)" @ready="ready = true">
         <UButton to="https://harlantest.lemonsqueezy.com/buy/52a40427-36d2-4450-a514-ae80d9e1a333?embed=1" class="block mb-3">
-          购买我 - $9.99
+          以 9.99 美元购买
         </UButton>
         <UButton to="https://harlantest.lemonsqueezy.com/buy/76bbfa74-a81a-4111-8449-4f5ad564ed76?embed=1" class="block">
-          购买我 - 想付多少就付多少
+          购买：自定义价格
         </UButton>
       </ScriptLemonSqueezy>
     </div>
@@ -89,40 +89,42 @@ const events = ref([])
 
 ***`lemon-squeezy-event`***
 
-Lemon.js 脚本发出的事件会通过此事件转发。载荷是一个包含 `event` 和 `data` 键的对象。
+组件会通过此事件转发 [Lemon.js 覆盖层事件](https://docs.lemonsqueezy.com/help/lemonjs/handling-events)。载荷包含一个 `event` 名称，以及对于 `Checkout.Success` 等事件而言的一个 `data` 对象。
 
-```ts
-export type LemonSqueezyEventPayload = { event: 'Checkout.Success', data: Record<string, any> }
-  & { event: 'Checkout.ViewCart', data: Record<string, any> }
-  & { event: 'GA.ViewCart', data: Record<string, any> }
-  & { event: 'PaymentMethodUpdate.Mounted' }
-  & { event: 'PaymentMethodUpdate.Closed' }
-  & { event: 'PaymentMethodUpdate.Updated' }
-  & { event: string }
-  ```
+::warning
+组件在运行时会发出正确的对象，但当前的 `LemonSqueezyEventPayload` TypeScript 定义将互斥的事件名称进行了交叉合并，可能会将载荷缩减为 `never`。在类型发生更改之前，请在处理函数边界处接受 `unknown`，然后将其缩小到你所使用的字段。
+::
 
 ## [`useScriptLemonSqueezy()`{lang="ts"}](/scripts/lemon-squeezy){lang="ts"}
 
-[`useScriptLemonSqueezy()`{lang="ts"}](/scripts/lemon-squeezy){lang="ts"} 组合函数让你可以细粒度地控制 Lemon Squeezy SDK。它提供了一种方式来加载 Lemon Squeezy SDK 并通过编程与之交互。
+当你需要 Lemon.js，但不使用结账链接组件时，请使用 [`useScriptLemonSqueezy()`{lang="ts"}](/scripts/lemon-squeezy){lang="ts"}。
 
 ```ts
 export function useScriptLemonSqueezy<T extends LemonSqueezyApi>(_options?: LemonSqueezyInput) {}
 ```
 
-请参阅 [注册脚本](/docs/guides/registry-scripts) 指南，了解更多关于高级用法的信息。
+有关触发器和加载选项，请参阅[脚本注册表](/docs/guides/registry-scripts)。
+
+如果你不使用该组合式函数中的组件，并在 Lemon.js 加载后添加结账链接，请调用 [`Refresh()`{lang="ts"}](https://docs.lemonsqueezy.com/help/lemonjs/methods)，以便 SDK 将叠加层监听器附加到新链接：
+
+```ts
+proxy.Refresh()
+```
 
 ::script-types
 ::
 
 ## 示例
 
-使用 Lemon Squeezy SDK 结合支付链接。
+为支付链接初始化 Lemon.js：
 
 ```vue
 <script setup lang="ts">
 const { proxy } = useScriptLemonSqueezy()
-onMounted(() => {
-  proxy.Setup()
+proxy.Setup({
+  eventHandler(event) {
+    console.log(event)
+  },
 })
 </script>
 

@@ -1,6 +1,6 @@
 ---
 title: Google reCAPTCHA
-description: 在你的 Nuxt 应用中使用 Google reCAPTCHA v3。
+description: 加载基于评分的 reCAPTCHA v3 或 Enterprise，并执行受保护的操作。
 links:
   - label: 源码
     icon: i-simple-icons-github
@@ -8,12 +8,12 @@ links:
     size: xs
 ---
 
-[Google reCAPTCHA](https://www.google.com/recaptcha/about/) 利用先进的风险分析技术保护你的网站免受垃圾信息和滥用。
+[Google reCAPTCHA](https://cloud.google.com/security/products/recaptcha) 会对请求进行评分，以判断其是否可能涉及垃圾信息和滥用行为，而不会显示复选框。
 
-Nuxt Scripts 提供了一个注册脚本组合式函数 `useScriptGoogleRecaptcha`，让你能轻松在 Nuxt 应用中集成 reCAPTCHA v3。
+[`useScriptGoogleRecaptcha()`{lang="ts"}](/scripts/google-recaptcha){lang="ts"} 会加载所选客户端并提供 `grecaptcha`。
 
-::callout  
-此集成仅支持 reCAPTCHA v3（基于得分的隐形验证）。若需使用 v2 复选框，请使用标准的 reCAPTCHA 集成方式。  
+::callout
+此注册表集成支持基于评分的 reCAPTCHA v3 和 Enterprise 流程。要渲染 v2 复选框，请使用 `useScript()`{lang="ts"} 单独加载，并遵循 Google 的 [v2 显示指南](https://developers.google.com/recaptcha/docs/display)。
 ::
 
 ::script-stats  
@@ -39,9 +39,25 @@ export default defineNuxtConfig({
 })
 ```
 
-## 中国支持
+Enterprise 将其方法暴露在 `grecaptcha.enterprise` 下，因此应使用该对象执行操作，而不是使用 `grecaptcha.execute`：
 
-需要支持中国大陆的网站，使用 `recaptchaNet: true`，从 `recaptcha.net` 而非 `google.com` 加载：
+```ts
+const { onLoaded } = useScriptGoogleRecaptcha({
+  siteKey: 'YOUR_SITE_KEY',
+  enterprise: true,
+})
+
+onLoaded(({ grecaptcha }) => {
+  grecaptcha.enterprise!.ready(async () => {
+    const token = await grecaptcha.enterprise!.execute('YOUR_SITE_KEY', { action: 'submit' })
+    // 将令牌发送到服务器进行评估。
+  })
+})
+```
+
+## 替代域名
+
+当 `google.com` 无法访问时，将 `recaptchaNet: true` 设置为启用。Google 将 `recaptcha.net` 记录为其[面向全球访问的替代域名](https://developers.google.com/recaptcha/docs/faq#can-i-use-recaptcha-globally)：
 
 ```ts
 export default defineNuxtConfig({
@@ -56,9 +72,9 @@ export default defineNuxtConfig({
 })
 ```
 
-## 服务器端验证
+## 服务端验证
 
-reCAPTCHA 令牌必须在服务器端进行验证。请创建一个 API 接口来校验令牌：
+务必在你的服务器上验证每个 reCAPTCHA 令牌。Google 建议同时检查分数和预期操作，然后根据你自己的流量调整分数阈值，而不要将 `0.5` 视为通用标准。请参阅 [reCAPTCHA v3 验证指南](https://developers.google.com/recaptcha/docs/v3#site_verify_response)。
 
 ::code-group
 
@@ -66,6 +82,8 @@ reCAPTCHA 令牌必须在服务器端进行验证。请创建一个 API 接口�
 export default defineEventHandler(async (event) => {
   const { token } = await readBody(event)
   const secretKey = process.env.RECAPTCHA_SECRET_KEY
+  if (!secretKey)
+    throw createError({ statusCode: 500, message: 'Missing reCAPTCHA secret key' })
 
   const response = await $fetch('https://www.google.com/recaptcha/api/siteverify', {
     method: 'POST',
@@ -75,7 +93,7 @@ export default defineEventHandler(async (event) => {
     }),
   })
 
-  if (!response.success || response.score < 0.5) {
+  if (!response.success || response.action !== 'submit' || response.score < 0.5) {
     throw createError({
       statusCode: 400,
       message: 'reCAPTCHA 验证失败',
@@ -86,12 +104,14 @@ export default defineEventHandler(async (event) => {
 })
 ```
 
-```ts [企业版 - server/api/verify-recaptcha.post.ts]
+```ts [Enterprise: server/api/verify-recaptcha.post.ts]
 export default defineEventHandler(async (event) => {
   const { token } = await readBody(event)
   const projectId = process.env.RECAPTCHA_PROJECT_ID
   const apiKey = process.env.RECAPTCHA_API_KEY
   const siteKey = process.env.NUXT_PUBLIC_SCRIPTS_GOOGLE_RECAPTCHA_SITE_KEY
+  if (!projectId || !apiKey || !siteKey)
+    throw createError({ statusCode: 500, message: 'Missing reCAPTCHA Enterprise configuration' })
 
   const response = await $fetch(
     `https://recaptchaenterprise.googleapis.com/v1/projects/${projectId}/assessments?key=${apiKey}`,
@@ -103,14 +123,15 @@ export default defineEventHandler(async (event) => {
     }
   )
 
-  if (!response.tokenProperties?.valid || response.riskAnalysis?.score < 0.5) {
+  const score = response.riskAnalysis?.score ?? 0
+  if (!response.tokenProperties?.valid || response.tokenProperties.action !== 'submit' || score < 0.5) {
     throw createError({
       statusCode: 400,
       message: 'reCAPTCHA 验证失败',
     })
   }
 
-  return { success: true, score: response.riskAnalysis.score }
+  return { success: true, score }
 })
 ```
 
@@ -120,9 +141,13 @@ export default defineEventHandler(async (event) => {
 切勿在客户端暴露你的密钥。请务必在服务器端验证令牌。  
 ::
 
+::callout{type="info"}
+令牌会在两分钟后过期。请在用户提交受保护的操作时调用 `execute`，而不是在页面加载时调用。请参阅 Google 的 [reCAPTCHA v3 放置指南](https://developers.google.com/recaptcha/docs/v3#placement_on_your_website)。
+::
+
 ## 隐藏徽章
 
-reCAPTCHA v3 会在网站角落显示徽章。你可以通过 CSS 将其隐藏，但必须在你的表单中包含归属声明：
+如果所需的归属声明在用户流程中仍然可见，Google [允许您隐藏 reCAPTCHA 徽章](https://developers.google.com/recaptcha/docs/faq#id-like-to-hide-the-recaptcha-badge.-what-is-allowed)：
 
 ```css
 .grecaptcha-badge { visibility: hidden; }
@@ -135,70 +160,54 @@ reCAPTCHA v3 会在网站角落显示徽章。你可以通过 CSS 将其隐藏�
 </p>
 ```
 
-## 测试密钥
+## 测试
 
-Google 提供了始终通过验证的测试密钥，适用于开发环境本地测试：
-
-| 密钥类型 | 值 |
-|----------|-------|
-| 网站密钥 | `6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI` |
-| 密钥秘钥 | `6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe` |
-
-::callout{type="info"}  
-测试密钥总是返回 `success: true` 且得分为 `0.9`。详情参见 [Google 常见问题](https://developers.google.com/recaptcha/docs/faq#id-like-to-run-automated-tests-with-recaptcha.-what-should-i-do)。  
-::
-
-```ts [nuxt.config.ts]
-export default defineNuxtConfig({
-  $development: {
-    scripts: {
-      registry: {
-        googleRecaptcha: {
-          siteKey: '6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI'
-        }
-      }
-    }
-  }
-})
-```
+对于 reCAPTCHA v3，Google 建议为[测试环境使用单独的密钥](https://developers.google.com/recaptcha/docs/faq#id-like-to-run-automated-tests-with-recaptcha.-what-should-i-do)。由于 v3 会从真实流量中学习，开发环境中的评分可能与生产环境不同。请勿在此处使用 Google 发布的始终通过验证的密钥；它们仅适用于 reCAPTCHA v2。
 
 ::script-types
 ::
 
 ## 示例
 
-使用 reCAPTCHA v3 保护表单提交并进行服务器端验证。
+此示例会对联系表单提交进行评分，并在服务器上验证令牌：
 
 ::code-group
 
 ```vue [ContactForm.vue]
 <script setup lang="ts">
-const { onLoaded } = useScriptGoogleRecaptcha()
+const { onLoaded, onError } = useScriptGoogleRecaptcha()
 
 const name = ref('')
 const email = ref('')
 const message = ref('')
 const status = ref<'idle' | 'loading' | 'success' | 'error'>('idle')
 
-async function onSubmit() {
+onError(() => {
+  status.value = 'error'
+})
+
+function onSubmit() {
   status.value = 'loading'
 
-  onLoaded(async ({ grecaptcha }) => {
-    // 获取 reCAPTCHA 令牌
-    const token = await grecaptcha.execute('YOUR_SITE_KEY', { action: 'contact' })
+  onLoaded(({ grecaptcha }) => {
+    grecaptcha.ready(async () => {
+      const token = await grecaptcha.execute('YOUR_SITE_KEY', { action: 'contact' })
 
-    // 发送表单数据和令牌到你的 API 进行验证
-    const result = await $fetch('/api/contact', {
-      method: 'POST',
-      body: {
-        token,
-        name: name.value,
-        email: email.value,
-        message: message.value
-      }
-    }).catch(() => null)
+      const result = await $fetch('/api/contact', {
+        method: 'POST',
+        body: {
+          token,
+          name: name.value,
+          email: email.value,
+          message: message.value
+        }
+      }).catch((error) => {
+        console.error('Failed to submit contact form', error)
+        return null
+      })
 
-    status.value = result ? 'success' : 'error'
+      status.value = result ? 'success' : 'error'
+    })
   })
 }
 </script>
@@ -227,6 +236,8 @@ export default defineEventHandler(async (event) => {
 
   // 验证 reCAPTCHA 令牌
   const secretKey = process.env.RECAPTCHA_SECRET_KEY
+  if (!secretKey)
+    throw createError({ statusCode: 500, message: 'Missing reCAPTCHA secret key' })
   const verification = await $fetch('https://www.google.com/recaptcha/api/siteverify', {
     method: 'POST',
     body: new URLSearchParams({
@@ -235,7 +246,7 @@ export default defineEventHandler(async (event) => {
     }),
   })
 
-  if (!verification.success || verification.score < 0.5) {
+  if (!verification.success || verification.action !== 'contact' || verification.score < 0.5) {
     throw createError({
       statusCode: 400,
       message: 'reCAPTCHA 验证失败',

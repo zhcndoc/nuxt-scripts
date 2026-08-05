@@ -2,7 +2,6 @@ import type { LuxGlobal, UserConfig } from '@speedcurve/lux'
 import type { RouteLocationNormalized } from 'vue-router'
 import type { RegistryScriptInput, UseScriptContext } from '#nuxt-scripts/types'
 import { useHead, useNuxtApp, useRouter } from 'nuxt/app'
-// @ts-expect-error virtual emitted by the Nuxt module
 import { speedcurveLuxSnippet } from '#build/nuxt-scripts-snippets'
 import { useRegistryScript } from '../utils'
 import { afterNextPaint } from '../utils/after-next-paint'
@@ -32,6 +31,7 @@ const LUX_USER_CONFIG_KEYS = Object.keys(SpeedCurveOptions.entries).filter(
 ) as (keyof UserConfig)[]
 
 let luxWired = false
+let teardownAutoTracker = () => {}
 
 export function useScriptSpeedCurve<T extends SpeedCurveApi>(_options?: SpeedCurveInput): UseScriptContext<T> {
   return useRegistryScript<T, typeof SpeedCurveOptions>('speedcurve', options => ({
@@ -101,7 +101,7 @@ export function installAutoTracker(options?: SpeedCurveInput): void {
       ? options.label
       : (to: RouteLocationNormalized) => String(to.name ?? to.path)
 
-  router.beforeEach((to) => {
+  const stopBeforeEach = router.beforeEach((to) => {
     const lux = window.LUX
     if (!lux)
       return
@@ -123,7 +123,7 @@ export function installAutoTracker(options?: SpeedCurveInput): void {
   })
 
   // If a guard cancels navigation, seal the phantom beacon with a filterable tag.
-  router.afterEach((_to, _from, failure) => {
+  const stopAfterEach = router.afterEach((_to, _from, failure) => {
     if (!failure)
       return
     const lux = window.LUX
@@ -133,7 +133,33 @@ export function installAutoTracker(options?: SpeedCurveInput): void {
     lux.addData('luxNavFailed', '1')
   })
 
-  nuxt.hook('page:finish', () => {
-    afterNextPaint(() => window.LUX?.markLoadTime())
+  const pendingPaints = new Set<{ cancel: () => void }>()
+  const stopPageFinish = nuxt.hook('page:finish', () => {
+    const pending = { cancel: () => {} }
+    pendingPaints.add(pending)
+    pending.cancel = afterNextPaint(() => {
+      pendingPaints.delete(pending)
+      window.LUX?.markLoadTime()
+    })
   })
+
+  let stopAppUnmount = () => {}
+  const cleanup = () => {
+    if (!luxWired)
+      return
+    luxWired = false
+    stopBeforeEach()
+    stopAfterEach()
+    stopPageFinish()
+    stopAppUnmount()
+    for (const pending of pendingPaints)
+      pending.cancel()
+    pendingPaints.clear()
+    teardownAutoTracker = () => {}
+  }
+  stopAppUnmount = nuxt.hook('app:unmount' as any, cleanup)
+  teardownAutoTracker = cleanup
 }
+
+if (import.meta.hot)
+  import.meta.hot.dispose(() => teardownAutoTracker())

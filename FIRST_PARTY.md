@@ -53,6 +53,22 @@ function proxyUrl(url) {
 
 注意：Google Analytics 以前需要 `postProcess` 正则表达式补丁来处理动态构建的 collect URL。现在不再需要，因为运行时拦截插件会在 `sendBeacon`/`fetch` 调用点捕获所有非同源 URL。
 
+## 路径别名（`proxy.alias`）
+
+默认情况下，代理路径会嵌入第三方主机名的原文（`/_scripts/p/us.i.posthog.com/e/`），这会泄露自托管/内部域名，并且很容易被广告拦截器识别。`scripts.proxy.alias` 会使用别名替换主机名部分：
+- `true` — 为每个域名自动生成一个简短的确定性哈希值（`sha256(domain).slice(0,8)`）
+- `Record<domain, alias>` — 使用显式别名；未列出的域名保持原文
+
+纯逻辑位于 `proxy-alias.ts`（`aliasForDomain`、`buildDomainAliasMap`、`invertAliasMap`、`aliasProxyValue`）中。该模块会根据所有代理域名（即 `domainPrivacy` 中的域名）构建 `domain → alias` 映射，并将其传递到所有生成代理路径的位置：
+- **构建时重写**（`transform.ts`）：`to: ${proxyPrefix}/${alias ?? domain}`
+- **自动注入**（`applyAutoInject`）：`aliasProxyValue` 会重写计算所得端点的主机部分
+- **运行时拦截**（`intercept.ts`）：嵌入别名映射；`proxyUrl` 将 `parsed.host → alias`
+- **Partytown**（`generatePartytownResolveUrl`）：嵌入别名映射；工作线程请求将 `url.host → alias`
+- **服务器处理程序**（`proxy-handler.ts`）：反向的 `aliasToDomain` 映射会在允许列表匹配和转发之前，将别名部分解析回真实域名（原文主机名仍可正常解析，因此使用别名不会造成破坏性影响）
+- **开发者工具**（`useScript.ts` 网络匹配器）：`aliasToDomain` 会暴露在开发者工具配置中，以便带别名的请求仍能归因到其脚本
+
+通配符域名（`*`）永远不会使用别名——它们没有可供重写的字面路径形式，仅用于运行时允许列表匹配。
+
 ## 键映射
 
 代理配置键与注册表键直接匹配 —— 没有间接层。脚本的 `registryKey` 用于从 `proxy-configs.ts` 查找其代理配置。
@@ -211,4 +227,4 @@ GA 默认值（`PRIVACY_HEATMAP`）：匿名化 ip/language/hardware，透传 us
 - `proxy.prefix` —— 代理端点路径前缀（默认：`/_scripts/p`）
 - `assets.prefix` —— 捆绑脚本资源路径（默认：`/_scripts/assets`）
 - 每个脚本的 `proxy: false` —— 在扁平配置或 scriptOptions 中用于退出单个脚本
-- 注册表级 `proxy: false` —— 在 registry.ts 中用于绝不应被代理的脚本（指纹识别要求）的能力
+- 注册表级 `proxy: false` —— 在 registry.ts 中用于绝不应被代理的脚本（指纹识别要求）的能力。

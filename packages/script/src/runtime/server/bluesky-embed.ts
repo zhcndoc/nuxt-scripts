@@ -1,8 +1,6 @@
-import { createError, defineEventHandler, getQuery, setHeader } from 'h3'
-import { useRuntimeConfig } from 'nitropack/runtime'
-import { createCachedJsonFetch } from './utils/cached-upstream'
+import { createError, defineEventHandler, getQuery, setHeader } from '#nuxt-scripts/h3'
+import { createCachedJsonFetch, isSafeHttpsUrl } from './utils/cached-upstream'
 import { rewriteBlueskyPostImages } from './utils/embed-rewriters'
-import { withSigning } from './utils/withSigning'
 
 interface PostThreadResponse {
   thread: {
@@ -25,6 +23,7 @@ interface PostThreadResponse {
 
 const BSKY_POST_URL_RE = /^https:\/\/bsky\.app\/profile\/([^/]+)\/post\/([^/?]+)$/
 const EMBED_BSKY_SUFFIX_RE = /\/embed\/bluesky$/
+const allowBlueskyApiUrl = (url: URL) => isSafeHttpsUrl(url) && url.hostname === 'public.api.bsky.app'
 
 // Handle → DID resolution is stable for the lifetime of the handle (renames
 // are rare); cache for 24h so repeated embeds of the same author skip the
@@ -33,6 +32,10 @@ const cachedProfileFetch = createCachedJsonFetch<{ did: string }>(
   'nuxt-scripts-bsky-profile',
   86400,
   url => url,
+  {
+    allowUrl: allowBlueskyApiUrl,
+    contentTypePrefixes: ['application/json'],
+  },
 )
 
 // Post threads are semi-fresh (like counts, reply counts change); 10min keeps
@@ -41,9 +44,13 @@ const cachedPostFetch = createCachedJsonFetch<PostThreadResponse>(
   'nuxt-scripts-bsky-post',
   600,
   url => url,
+  {
+    allowUrl: allowBlueskyApiUrl,
+    contentTypePrefixes: ['application/json'],
+  },
 )
 
-export default withSigning(defineEventHandler(async (event) => {
+export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const postUrl = query.url as string
 
@@ -110,17 +117,15 @@ export default withSigning(defineEventHandler(async (event) => {
     })
   }
 
-  // Rewrite CDN image URLs to proxied (HMAC-signed when a secret is set) URLs
-  // so the client can render them without tripping the `withSigning` 403.
+  // Rewrite CDN image URLs through the allowlisted image proxy.
   const handlerPath = event.path?.split('?')[0] || ''
   const prefix = handlerPath.replace(EMBED_BSKY_SUFFIX_RE, '') || '/_scripts'
   const imagePath = `${prefix}/embed/bluesky-image`
-  const secret = (useRuntimeConfig(event)['nuxt-scripts'] as { proxySecret?: string } | undefined)?.proxySecret
-  rewriteBlueskyPostImages(post, imagePath, secret)
+  rewriteBlueskyPostImages(post, imagePath)
 
   // Cache for 10 minutes
   setHeader(event, 'Content-Type', 'application/json')
   setHeader(event, 'Cache-Control', 'public, max-age=600, s-maxage=600')
 
   return post
-}))
+})

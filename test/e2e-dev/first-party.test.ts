@@ -563,8 +563,8 @@ describe('first-party privacy stripping', () => {
 
     it('bundled scripts contain rewritten collect URLs', async () => {
       // Check bundled scripts have proxy URLs
-      const cacheDir = join(fixtureDir, 'node_modules/.cache/nuxt/scripts/bundle-proxy')
-      expect(existsSync(cacheDir), `Bundle proxy cache dir should exist at ${cacheDir}`).toBe(true)
+      const cacheDir = join(fixtureDir, 'node_modules/.cache/nuxt/scripts/bundle-patched')
+      expect(existsSync(cacheDir), `Patched bundle cache dir should exist at ${cacheDir}`).toBe(true)
 
       const files = readdirSync(cacheDir).filter(f => f.endsWith('.js'))
       expect(files.length).toBeGreaterThan(0)
@@ -591,6 +591,7 @@ describe('first-party privacy stripping', () => {
       let serverOrigin = ''
       const proxyRequests: string[] = []
       const externalRequests: string[] = []
+      const sameOriginRequests: string[] = []
 
       page.on('request', (req) => {
         const reqUrl = req.url()
@@ -605,6 +606,9 @@ describe('first-party privacy stripping', () => {
         const parsed = new URL(reqUrl)
         if (parsed.pathname.startsWith('/_scripts/p/')) {
           proxyRequests.push(parsed.pathname)
+        }
+        else if (serverOrigin && reqUrl.startsWith(serverOrigin)) {
+          sameOriginRequests.push(parsed.pathname)
         }
         else if (serverOrigin && !reqUrl.startsWith(serverOrigin) && parsed.protocol.startsWith('http')) {
           externalRequests.push(reqUrl)
@@ -639,7 +643,7 @@ describe('first-party privacy stripping', () => {
 
       await page.close()
 
-      return { captures, rawCaptures, proxyRequests, externalRequests, preClickProxyCount, postClickProxyCount }
+      return { captures, rawCaptures, proxyRequests, externalRequests, sameOriginRequests, preClickProxyCount, postClickProxyCount }
     }
 
     /**
@@ -683,7 +687,7 @@ describe('first-party privacy stripping', () => {
       'googleAnalytics', // scope-resolved AST rewrite for sendBeacon/fetch/XHR/Image
       'snapchatPixel', // scope-resolved AST rewrite for sendBeacon/XHR
       // googleTagManager — uses createElement('script') injection, not interceptable via XHR/fetch/sendBeacon
-      'plausibleAnalytics', // bundled + auto-inject endpoint, sendBeacon interception (needs extension: 'local' + __plausible flag for headless)
+      'plausibleAnalytics', // bundled + auto-inject endpoint, sendBeacon interception
       'tiktokPixel', // AST rewrite for analytics.tiktok.com, sendBeacon/fetch interception
       // databuddyAnalytics — SDK doesn't fire events with demo clientId in test window
       // intercom — SDK doesn't fire events with test app_id in headless (0 external leaks, 0 proxy requests)
@@ -754,19 +758,26 @@ describe('first-party privacy stripping', () => {
       }
       else {
         // Bundle-only: document the gap, verify captures if they exist
-        if (captures.length > 0) {
-          const hasValidCapture = captures.some(c =>
-            opts.domains.some(d => isAllowedDomain(c.targetUrl, d))
-            && hasResolvedPrivacy(c),
-          )
-          expect(hasValidCapture, `${provider}: Captures exist but none valid`).toBe(true)
+        // Other globally configured scripts may emit captures on this page, so
+        // only validate captures that actually belong to the current provider.
+        const providerCaptures = captures.filter(c =>
+          opts.domains.some(d => isAllowedDomain(c.targetUrl, d)),
+        )
+        const providerRawCaptures = rawCaptures.filter(c =>
+          opts.domains.some(d => isAllowedDomain(c.targetUrl, d)),
+        )
+        if (providerCaptures.length > 0) {
+          expect(
+            providerCaptures.some(hasResolvedPrivacy),
+            `${provider}: Captures exist but none have resolved privacy`,
+          ).toBe(true)
 
-          for (const capture of rawCaptures) {
+          for (const capture of providerRawCaptures) {
             const leaked = verifyFingerprintingAnonymized(capture)
             expect(leaked, `${provider}: Leaked fingerprinting params`).toEqual([])
           }
 
-          await assertSnapshots(rawCaptures, captures, provider)
+          await assertSnapshots(providerRawCaptures, providerCaptures, provider)
         }
       }
     }
@@ -818,13 +829,17 @@ describe('first-party privacy stripping', () => {
     }, 30000)
 
     it('snapchatPixel', async () => {
-      const { captures, rawCaptures, proxyRequests, externalRequests, preClickProxyCount, postClickProxyCount } = await testProvider('snapchatPixel', '/snap', {
+      const { captures, rawCaptures, proxyRequests, externalRequests, sameOriginRequests, preClickProxyCount, postClickProxyCount } = await testProvider('snapchatPixel', '/snap', {
         clickSelectors: ['#trigger-pageview', '#trigger-event'],
       })
       await assertCaptures('snapchatPixel', captures, rawCaptures, proxyRequests, externalRequests, {
         proxyPrefix: '/_scripts/p/snap',
         domains: ['snapchat.com'],
       }, { pre: preClickProxyCount, post: postClickProxyCount })
+      expect(
+        sameOriginRequests.some(path => path.startsWith('/config/')),
+        `snapchatPixel: bundled SDK requested config from the app origin: ${JSON.stringify(sameOriginRequests.filter(path => path.startsWith('/config/')))}`,
+      ).toBe(false)
     }, 30000)
 
     it('clarity', async () => {
@@ -1027,6 +1042,10 @@ describe('first-party privacy stripping', () => {
         // Filter browser-level network noise (CORS, resource loading, MIME, etc.)
         if (text.startsWith('Failed to load resource') || text.includes('CORS policy'))
           return
+        // Chromium denies this API to reCAPTCHA in an automated top-level test
+        // context; it does not indicate a script or proxy failure.
+        if (text === 'requestStorageAccess: Permission denied.')
+          return
         // MIME type errors from proxy endpoints are SDK issues (e.g., PostHog config.js returned as JSON)
         if (text.includes('MIME type') && text.includes('/_scripts/p/'))
           return
@@ -1111,7 +1130,7 @@ describe('first-party privacy stripping', () => {
    */
   describe('bundled script integrity', () => {
     it('all cached proxy-rewritten scripts are syntactically valid', async () => {
-      const cacheDir = join(fixtureDir, 'node_modules/.cache/nuxt/scripts/bundle-proxy')
+      const cacheDir = join(fixtureDir, 'node_modules/.cache/nuxt/scripts/bundle-patched')
       if (!existsSync(cacheDir))
         return // skip if no cached scripts
 

@@ -1,6 +1,6 @@
 ---
 title: Plausible Analytics
-description: 在您的 Nuxt 应用中使用 Plausible Analytics。
+description: 加载 Plausible 的特定站点跟踪器，包括自托管端点。
 links:
   - label: 源码
     icon: i-simple-icons-github
@@ -8,7 +8,7 @@ links:
     size: xs
 ---
 
-[Plausible Analytics](https://plausible.io/) 是一个注重隐私的 Nuxt 应用分析解决方案，允许您在不侵犯用户隐私的前提下跟踪网站流量。
+[Plausible Analytics](https://plausible.io/) 是一个注重隐私的 Web 分析平台。此注册表条目支持其当前的特定站点脚本。
 
 ::script-stats  
 ::  
@@ -18,21 +18,23 @@ links:
 
 ### 自托管版 Plausible
 
-如果您使用自托管版 Plausible，请为脚本提供一个明确的 src 地址，以便浏览器将 API 事件发送到正确的端点。
+如果您使用的是自托管版本的 Plausible，请同时提供脚本 URL 和事件端点。仅更改脚本 URL 不会更改传递给 Plausible 的端点。
 
 ```ts
 useScriptPlausibleAnalytics({
+  scriptId: 'YOUR_SCRIPT_ID',
+  endpoint: 'https://my-self-hosted-plausible.io/api/event',
   scriptInput: {
     src: 'https://my-self-hosted-plausible.io/js/script.js'
   }
 })
 ```
 
-**注意：** 在您的 Plausible 仪表板的站点设置中的**站点安装**下找到 `scriptId`。
+对于 Plausible Cloud，请在站点设置的 **Site Installation** 下找到 `scriptId`。Plausible 的[脚本更新指南](https://plausible.io/docs/script-update-guide)解释了特定站点 URL 和 `plausible.init()`{lang="ts"} 选项。
 
-**提取您的 Script ID：**
+### 提取脚本 ID
 
-Plausible 会为您提供如下的脚本标签：
+当前的 Plausible 安装标签如下所示：
 
 ```html
 <script async src="https://plausible.io/js/pa-gYyxvZhkMzdzXBAtSeSNz.js"></script>

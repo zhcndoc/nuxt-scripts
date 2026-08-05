@@ -1,5 +1,5 @@
 ---
-title: Google Adsense
+title: Google AdSense
 description: 在您的 Nuxt 应用中展示 Google AdSense 广告。
 links:
   - label: useScriptGoogleAdsense
@@ -12,34 +12,29 @@ links:
     size: xs
 ---
 
-[Google AdSense](https://www.google.com/adsense/start/) 允许您通过展示与内容相关的 Google 广告来实现网站的盈利。
+[Google AdSense](https://www.google.com/adsense/start/) 会在您的网站上投放 Google 广告。
 
-Nuxt Scripts 提供：
+选择与展示位置相匹配的 API：
 
-- `useScriptGoogleAdsense`：用于动态管理 Google AdSense 的组合函数。  
-- `<ScriptGoogleAdsense>`：一个无头组件，用于将广告直接嵌入您的 Nuxt 应用。
+- [`useScriptGoogleAdsense()`{lang="ts"}](/scripts/google-adsense){lang="ts"} 加载 `adsbygoogle` 队列。
+- `<ScriptGoogleAdsense>`{lang="html"} 渲染一个广告单元。
 
 ## 全局配置
 
 ::script-docs
 ::
 
-## 在哪里找到 `<your-id>`{lang="html"}（发布者 ID）
+## 在哪里查找 `<your-id>`{lang="html"}（发布商 ID）
 
-您的 **Google AdSense 发布者 ID**（也称为 `ca-pub-XXXXXXX`）可以在您的 **Google AdSense 账户**中找到：
+在 **帐号 > 设置 > 帐户信息** 下查找您的 [Google AdSense 发布商 ID](https://support.google.com/adsense/answer/2923881?hl=en)。它在您的帐号中显示为 `pub-…`，在广告代码中显示为 `ca-pub-…`。将下方的 `<your-id>`{lang="html"} 替换为该值。
 
-1. 登录您的 **Google AdSense** 账户。  
-2. 进入 **账户 > 设置**（点击您的头像图标 > “账户信息”）。  
-3. 在 **账户信息** 下找到 **发布者 ID**。  
-4. 将上述配置中的 `<your-id>` 替换为您的实际 ID。  
-
-::callout{icon="i-heroicons-light-bulb" to="https://adsense.google.com/start/" target="_blank"}  
-您也可以在 **Google AdSense 控制台**中管理 **自动广告设置**，以控制*广告类型、广告位置及营收优化*。  
+::callout{icon="i-heroicons-light-bulb" to="https://adsense.google.com/start/" target="_blank"}
+从 AdSense 信息中心的 **自动广告** 设置中管理广告类型和展示位置。
 ::
 
-## 站点所有权验证
+## 网站所有权验证
 
-### 自动插入 Meta 标签
+### 自动插入 meta 标签
 
 如果提供了 `client`，页面将**自动**插入一个用于 Google 验证您站点所有权的 **meta 标签**。
 
@@ -72,11 +67,11 @@ Nuxt Scripts 提供：
   ::  
 ::  
 
-### 使用 `ads.txt` 进行验证
+### 添加 `ads.txt`
 
-Google 建议添加 `ads.txt` 文件以确保**广告收入资格**。
+Google 建议添加 `ads.txt` 文件，以识别获授权出售您广告资源的广告系统，并减少仿冒广告资源。
 
-#### 步骤：
+#### 步骤
 
 1. 新建文件：`public/ads.txt`  
 2. 添加以下内容：  
@@ -85,13 +80,13 @@ Google 建议添加 `ads.txt` 文件以确保**广告收入资格**。
    ```  
 3. 将 `<your-id>` 替换为您的 **AdSense 发布者 ID**。  
 
-::callout{icon="i-heroicons-light-bulb"}  
-**为什么使用 `ads.txt`？** 它有助于**防止广告欺诈**，确保**只有您的网站**可以展示您的广告。  
+::callout{icon="i-heroicons-light-bulb" to="https://support.google.com/adsense/answer/12171612" target="_blank"}
+`ads.txt` 文件不能替代 AdSense 的网站审核。发布该文件后，请在您的 AdSense 控制台中检查文件状态。
 ::
 
 ## 启用自动广告
 
-自动广告允许 Google **自动**投放广告，实现**更优的优化**。
+[自动广告](https://support.google.com/adsense/answer/9261805?hl=en)会根据网页的布局、内容和现有广告，由 Google 选择广告展示位置。您仍然可以在 AdSense 中控制广告格式，以及排除某些网页或区域。
 
 ::tabs  
   ::div  
@@ -128,9 +123,9 @@ Google 建议添加 `ads.txt` 文件以确保**广告收入资格**。
   ::  
 ::  
 
-## 使用 `ScriptGoogleAdsense` 组件
+## 使用 [`<ScriptGoogleAdsense>`{lang="html"}](/scripts/google-adsense){lang="html"} 组件
 
-它提供了一种简单方式，将广告嵌入您的 Nuxt 应用。
+`<ScriptGoogleAdsense>`{lang="html"} 会渲染一个广告单元：
 
 ```vue
 <template>
@@ -144,17 +139,17 @@ Google 建议添加 `ads.txt` 文件以确保**广告收入资格**。
 
 ### 组件属性
 
-| 属性                         | 说明                                                               |
+| 属性                         | 描述                                                               |
 | ---------------------------- | ------------------------------------------------------------------ |
-| `data-ad-client`             | 您的 **Google Adsense 发布者 ID**（`ca-pub-XXXXXXXXXX`）。          |
-| `data-ad-slot`               | 您的 **广告位 ID**（可在 AdSense 控制台获得）。                     |
-| `data-ad-format`             | 广告格式类型（`auto`，`rectangle`，`horizontal`，`vertical`，`fluid`，`autorelaxed`）。 |
-| `data-ad-layout`             | 布局（`in-article`，`in-feed`，`fixed`）。                          |
-| `data-full-width-responsive` | **设置为 `true`** 可使广告响应式。                                 |
+| `data-ad-client`             | 您的 **Google AdSense 发布商 ID**（`ca-pub-XXXXXXXXXX`）。          |
+| `data-ad-slot`               | 您的 **广告位 ID**（可在 AdSense 信息中心获取）。                   |
+| `data-ad-format`             | 广告格式类型（`auto`、`rectangle`、`horizontal`、`vertical`、`fluid`、`autorelaxed`）。 |
+| `data-ad-layout`             | 布局（`in-article`、`in-feed`、`fixed`）。                          |
+| `data-full-width-responsive` | **设置为 `true`** 以使广告具有响应式效果。                         |
 
 #### 使用 `data-ad-layout` 的示例
 
-若要为广告指定布局（如 "in-article"），可使用 `data-ad-layout` 属性：
+为 `in-article` 等布局设置 `data-ad-layout`：
 
 ```vue
 <template>
@@ -167,9 +162,9 @@ Google 建议添加 `ads.txt` 文件以确保**广告收入资格**。
 </template>
 ```
 
-## 如何处理广告屏蔽程序？
+## 处理广告拦截器
 
-如果用户启用了广告屏蔽程序，您可以显示**备用内容**。
+对于广告拦截器阻止脚本的访客，请使用 `error` 插槽：
 
 ```vue
 <template>
@@ -182,9 +177,9 @@ Google 建议添加 `ads.txt` 文件以确保**广告收入资格**。
 </template>
 ```
 
-## 使用 `useScriptGoogleAdsense` 组合函数
+## 使用 [`useScriptGoogleAdsense()`{lang="ts"}](/scripts/google-adsense){lang="ts"} 组合式函数
 
-`useScriptGoogleAdsense` 组合函数允许您对 AdSense 脚本进行**细粒度控制**。
+当你需要 `adsbygoogle` 队列而不需要广告单元组件时，请使用 [`useScriptGoogleAdsense()`{lang="ts"}](/scripts/google-adsense){lang="ts"}。
 
 ```ts
 export function useScriptGoogleAdsense<T extends GoogleAdsenseApi>(
@@ -192,10 +187,10 @@ export function useScriptGoogleAdsense<T extends GoogleAdsenseApi>(
 ) {}
 ```
 
-请参阅 [Registry Scripts 指南](/docs/guides/registry-scripts) 获取高级用法。
+请参阅[注册脚本指南](/docs/guides/registry-scripts)，了解触发和加载选项。
 
-::callout{icon="i-heroicons-light-bulb" to="https://support.google.com/adsense" target="_blank"}  
-需要更多帮助？请查看官方 **Google AdSense 指南**  
+::callout{icon="i-heroicons-light-bulb" to="https://support.google.com/adsense" target="_blank"}
+请参阅官方的 **Google AdSense 指南**。
 ::
 
 ::script-types

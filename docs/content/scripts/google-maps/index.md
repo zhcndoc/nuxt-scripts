@@ -1,6 +1,6 @@
 ---
-title: 谷歌地图
-description: 在你的 Nuxt 应用中展示性能优化的谷歌地图。
+title: Google 地图
+description: 按需加载交互式地图、静态地图和位置搜索。
 links:
   - label: useScriptGoogleMaps
     icon: i-simple-icons-github
@@ -12,16 +12,16 @@ links:
     size: xs
 ---
 
-[谷歌地图](https://maps.google.com/) 允许你在网站中嵌入地图，并使用你的内容对其进行自定义。
+[Google 地图](https://maps.google.com/) 为网站提供交互式地图和静态地图。
 
-Nuxt Scripts 提供了 [`useScriptGoogleMaps()`{lang="ts"}](/scripts/google-maps/api/use-script-google-maps){lang="ts"} 组合式函数和一个无头的 [`<ScriptGoogleMaps>`{lang="html"}](/scripts/google-maps/api/script-google-maps){lang="html"} 组件来与 Google Maps 交互。
+Nuxt Scripts 提供了一个 [`useScriptGoogleMaps()`{lang="ts"}](/scripts/google-maps/api/use-script-google-maps){lang="ts"} 可组合函数，以及一个无头 [`<ScriptGoogleMaps>`{lang="html"}](/scripts/google-maps/api/script-google-maps){lang="html"} 组件，用于使用 Google 地图。
 
 ::script-types{exclude-components}
 ::
 
 ## 类型
 
-要在 Google Maps 中使用完整的 TypeScript 支持，你需要安装 `@types/google.maps` 依赖。
+安装 `@types/google.maps` 以获得完整的 TypeScript 支持。
 
 ```bash
 pnpm add -D @types/google.maps
@@ -35,16 +35,9 @@ pnpm add -D @types/google.maps
 export default defineNuxtConfig({
   scripts: {
     registry: {
-      googleMaps: { trigger: 'onNuxtReady' },
-    },
-  },
-  runtimeConfig: {
-    public: {
-      scripts: {
-        googleMaps: {
-          apiKey: '', // 对应环境变量 NUXT_PUBLIC_SCRIPTS_GOOGLE_MAPS_API_KEY
-        },
-      },
+      // 注册基础设施，而不在每个页面上加载 Maps。
+      // <ScriptGoogleMaps> 将在其元素触发器触发后加载它。
+      googleMaps: {},
     },
   },
 })
@@ -54,16 +47,10 @@ export default defineNuxtConfig({
 NUXT_PUBLIC_SCRIPTS_GOOGLE_MAPS_API_KEY=<你的_API_密钥>
 ```
 
-你必须添加此配置。它会注册服务器代理路由，将你的 API 密钥保留在服务器端：
-- `/_scripts/proxy/google-static-maps` 用于占位图片
-- `/_scripts/proxy/google-maps-geocode` 用于位置搜索
+仅当你希望交互式 Maps API 全局加载时，才在注册表条目中添加 `trigger: 'onNuxtReady'`。由于共享脚本实例已经在加载，这会绕过组件默认的交互延迟。
 
 ::callout{color="amber"}
-你可以直接在 `<ScriptGoogleMaps>`{lang="html"} 组件上传递 `api-key`，但不推荐这样做，因为这会在客户端请求中暴露你的密钥。
-::
-
-::callout{type="info"}
-当你配置 `NUXT_SCRIPTS_PROXY_SECRET` 时，此脚本的代理端点会使用 [HMAC URL 签名](/docs/guides/first-party#proxy-endpoint-security)。有关设置说明，请参阅[安全指南](/docs/guides/first-party#proxy-endpoint-security)。
+Maps JavaScript API 和 Static Maps API 会将此密钥发送到浏览器。请遵循 Google 的 [API 安全指南](https://developers.google.com/maps/api-security-best-practices)：应用 Websites 应用限制，仅允许此网站使用的 API，并配置配额限制。运行时配置可以让部署值保持可配置；但它不会使 `NUXT_PUBLIC_` 密钥变为机密。
 ::
 
 有关 API 费用和所需权限，请参阅 [计费与权限](/scripts/google-maps/guides/billing)。

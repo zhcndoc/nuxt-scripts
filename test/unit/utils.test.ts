@@ -1,14 +1,26 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useRegistryScript } from '../../packages/script/src/runtime/utils'
+
+const runtimeConfig = vi.hoisted(() => ({
+  public: {
+    scripts: {},
+  },
+}))
+
+const useScriptMock = vi.hoisted(() => vi.fn((input, options) => ({ input, options, proxy: {} })))
 
 // Mock dependencies
 vi.mock('nuxt/app', () => ({
-  useRuntimeConfig: () => ({ public: { scripts: {} } }),
+  useRuntimeConfig: () => runtimeConfig,
 }))
 
 vi.mock('../../packages/script/src/runtime/composables/useScript', () => ({
-  useScript: vi.fn((input, options) => ({ input, options })),
+  useScript: useScriptMock,
 }))
+
+afterEach(() => {
+  useScriptMock.mockClear()
+})
 
 describe('useRegistryScript scriptOptions', () => {
   it('should not mutate user-provided scriptOptions', () => {
@@ -22,6 +34,63 @@ describe('useRegistryScript scriptOptions', () => {
     useRegistryScript('test', mockOptionsFunction, userOptions)
 
     expect(userScriptOptions).not.toHaveProperty('use')
+  })
+
+  it('replaces registry use() with a server-safe noop outside client builds', () => {
+    const unsafeUse = vi.fn(() => {
+      throw new Error('use() should not run server-side')
+    })
+    const mockOptionsFunction = vi.fn((_opts, _ctx) => ({
+      scriptInput: { src: 'https://example.com/script.js' },
+      scriptOptions: { use: unsafeUse },
+    }))
+
+    const result = useRegistryScript('test', mockOptionsFunction, {})
+
+    expect(result.options.use()).toBeUndefined()
+    expect(unsafeUse).not.toHaveBeenCalled()
+  })
+
+  it('does not call npm-mode use() outside client builds', () => {
+    const unsafeUse = vi.fn(() => {
+      throw new Error('use() should not run server-side')
+    })
+    const mockOptionsFunction = vi.fn((_opts, _ctx) => ({
+      scriptMode: 'npm' as const,
+      scriptOptions: { use: unsafeUse },
+    }))
+
+    const result = useRegistryScript('test', mockOptionsFunction, {})
+
+    expect(result.proxy).toBeTypeOf('function')
+    expect(unsafeUse).not.toHaveBeenCalled()
+  })
+
+  it('delegates npm mode to an Unhead source-less loader', async () => {
+    const api = { track: vi.fn(() => 'tracked') }
+    const clientInit = vi.fn(async () => api)
+    const use = vi.fn(() => api)
+    const result = useRegistryScript('posthog', () => ({
+      scriptMode: 'npm' as const,
+      scriptOptions: { use },
+      clientInit,
+    }), {
+      scriptOptions: { trigger: 'manual' },
+    }) as any
+
+    expect(result.input).toMatchObject({
+      key: 'posthog',
+      loader: expect.any(Function),
+    })
+    expect(result.input).not.toHaveProperty('src')
+    expect(result.options).toMatchObject({ trigger: 'manual' })
+    expect(result.options).not.toHaveProperty('use')
+
+    const signal = new AbortController().signal
+    await expect(result.input.loader({ signal })).resolves.toBe(api)
+    expect(result.proxy.track()).toBe('tracked')
+    expect(clientInit).toHaveBeenCalledWith({ signal })
+    expect(use).toHaveBeenCalledOnce()
   })
 })
 

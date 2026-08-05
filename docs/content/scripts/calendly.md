@@ -12,9 +12,9 @@ links:
     size: xs
 ---
 
-[Calendly](https://calendly.com) 是一个日程安排工具，可让访客无需反复发送邮件就能在你的日历上预约时间。Calendly 嵌入式小组件可将预约流程以内联、弹窗或浮动徽章按钮的形式呈现。
+[Calendly](https://calendly.com) 提供预约页面和可嵌入的日程安排小组件。其预约流程可以以内联方式、弹窗方式或浮动徽章按钮的形式呈现。
 
-Nuxt Scripts 提供了一个注册脚本组合式函数 [`useScriptCalendly()`{lang="ts"}](/scripts/calendly) 以及一个无头的 [`<ScriptCalendlyInlineWidget>`{lang="html"}](/scripts/calendly){lang="html"} 组件，方便你将其集成到 Nuxt 应用中。
+使用 [`useScriptCalendly()`{lang="ts"}](/scripts/calendly) 来实现弹窗和徽章小组件。对于内联预约流程，请使用无头组件 [`<ScriptCalendlyInlineWidget>`{lang="html"}](/scripts/calendly){lang="html"}。
 
 ::script-stats
 ::
@@ -22,15 +22,20 @@ Nuxt Scripts 提供了一个注册脚本组合式函数 [`useScriptCalendly()`{l
 ::script-docs
 ::
 
-该组合式函数包含以下默认值：
-- **触发时机：客户端** 脚本会在 Nuxt 进行 hydration 时加载。
-- **样式表：内联** 小组件样式表（以及其关闭图标的 SVG）会在首次使用时以内联方式注入，因此渲染时不会向 `assets.calendly.com` 泄露 IP。
+生成的架构还会列出 `url`、`prefill`、`utm` 和 `pageSettings`，但当前的组合式函数不会将这些顶层值应用于小组件。请按照下方示例将它们传递给初始化器，或使用 `<ScriptCalendlyInlineWidget>`{lang="html"}。
 
-你可以直接通过代理访问 `Calendly` 全局对象，或者等待 `onLoaded` 后再使用它。推荐在无需返回值的调用中使用代理；当你需要一个稳定的 DOM 引用时，`onLoaded` 会更方便。
+默认值：
+
+- **触发器：`onNuxtReady`** 直接调用组合式函数会在 Nuxt 应用准备就绪时加载脚本。内联组件则使用元素触发器。
+- **样式表：内联** 小组件的样式表（以及其关闭图标 SVG）会在首次使用时以内联方式加载，因此渲染小组件不会从 `assets.calendly.com` 请求这些资源。
+
+资源代理仅覆盖 `assets.calendly.com`。预约 iframe 仍会直接连接到 `calendly.com`。
+
+对于无返回值的调用，请使用代理。需要已加载的 `Calendly` 全局对象或稳定的 DOM 引用时，请使用 `onLoaded`。
 
 ::code-group
 
-```ts [Proxy]
+```ts [代理]
 const { proxy } = useScriptCalendly()
 function openBooking() {
   proxy.Calendly.initPopupWidget({
@@ -39,7 +44,7 @@ function openBooking() {
 }
 ```
 
-```ts [onLoaded]
+```ts [加载完成]
 const { onLoaded } = useScriptCalendly()
 onLoaded(({ Calendly }) => {
   Calendly.initInlineWidget({
@@ -49,13 +54,13 @@ onLoaded(({ Calendly }) => {
 })
 ```
 
-::
+::】【。
 
 ## [`<ScriptCalendlyInlineWidget>`{lang="html"}](/scripts/calendly){lang="html"}
 
-[`<ScriptCalendlyInlineWidget>`{lang="html"}](/scripts/calendly){lang="html"} 组件对 [`useScriptCalendly()`{lang="ts"}](/scripts/calendly){lang="ts"} 做了封装，用于最常见的嵌入形式：将内联预约流程挂载到你控制的宿主元素中。
+该组件会在你控制的宿主元素中挂载 Calendly 的内联预约流程。
 
-它通过使用 [Element Event Triggers](/docs/guides/script-triggers#element-event-triggers) 进行了性能优化，只有当宿主元素进入视口时才会加载 Calendly 小组件脚本。默认触发器为 `'visible'`。
+它会等待宿主元素进入视口后再加载组件脚本。默认的[元素触发器](/docs/guides/script-triggers#element-event-triggers)是 `'visible'`。
 
 ```vue
 <script setup lang="ts">
@@ -72,7 +77,7 @@ const ready = ref(false)
 
 ### 首屏加载
 
-如果小组件位于首屏内，并且你希望它在 hydration 时就开始加载，而不是等到可见时再加载，请设置 `above-the-fold`（这会向 `calendly.com` 添加预连接），并覆盖触发器。
+对于首屏可见的组件，请设置 `above-the-fold` 并将触发器切换为 hydration。这还会为 `calendly.com` 添加预连接。
 
 ```vue
 <ScriptCalendlyInlineWidget
@@ -99,11 +104,11 @@ const ready = ref(false)
 
 ## 弹窗和徽章小组件
 
-弹窗和徽章模式没有宿主元素，因此需要直接通过组合式函数驱动：
+弹窗和徽章小组件没有宿主元素。通过组合式函数打开它们：
 
 ::code-group
 
-```ts [Popup]
+```ts [弹窗]
 const { proxy } = useScriptCalendly()
 function open() {
   proxy.Calendly.initPopupWidget({
@@ -112,7 +117,7 @@ function open() {
 }
 ```
 
-```ts [Badge]
+```ts [徽章]
 const { onLoaded } = useScriptCalendly()
 onLoaded(({ Calendly }) => {
   Calendly.initBadgeWidget({
@@ -128,7 +133,7 @@ onLoaded(({ Calendly }) => {
 
 ## 预填邀请人信息和 UTM 参数
 
-四种小组件初始化器（`initInlineWidget`、`initPopupWidget`、`initBadgeWidget`、`initPopupWidgetWithText`）都接受 `prefill` 和 `utm` 选项，用于预先填写预约表单，并为该预约附加营销归因标签。
+所有四个小组件初始化器（`initInlineWidget`、`initPopupWidget`、`initBadgeWidget`、`initPopupWidgetWithText`）都接受 `prefill` 和 `utm` 选项，用于预填预约表单并为预约添加营销归因标签。Calendly 的 [UTM 指南](https://help.calendly.com/hc/en-us/articles/4406950779799?locale=en-us)介绍了 JavaScript 选项名称以及受支持的嵌入类型。
 
 ```vue
 <script setup lang="ts">
@@ -153,17 +158,3 @@ function bookFromCampaign(user: { name: string, email: string }) {
 
 ::script-types
 ::
-
-## 示例
-
-当 Nuxt 准备就绪时，通过 `app.vue` 加载 Calendly，并在预约页面上渲染内联小组件。
-
-```vue [app.vue]
-<script setup lang="ts">
-useScriptCalendly({
-  scriptOptions: {
-    trigger: 'onNuxtReady',
-  },
-})
-</script>
-```

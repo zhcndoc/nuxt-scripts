@@ -1,7 +1,8 @@
 import type { ProxyPrivacyInput, ResolvedProxyPrivacy } from './utils/privacy'
-import { createError, defineEventHandler, getHeaders, getQuery, getRequestIP, getRequestWebStream, readBody, setResponseHeader, setResponseStatus } from 'h3'
-import { useNitroApp, useRuntimeConfig } from 'nitropack/runtime'
+import { createError, defineEventHandler, getHeaders, getQuery, getRequestIP, getRequestWebStream, sendStream, setResponseHeader, setResponseStatus } from '#nuxt-scripts/h3'
+import { useNitroApp, useRuntimeConfig } from '#nuxt-scripts/nitro'
 import { matchDomain } from './utils/match-domain'
+import { closePublicNetworkDispatcher, createPublicNetworkDispatcher, isPrivateNetworkResolutionError, isPublicNetworkHostname } from './utils/network-host'
 import {
   anonymizeIP,
   mergePrivacy,
@@ -17,6 +18,8 @@ interface ProxyConfig {
   proxyPrefix: string
   /** Allowed domains with their privacy config */
   domainPrivacy: Record<string, ProxyPrivacyInput>
+  /** Reverse map of path alias → real third-party domain (when alias paths are enabled) */
+  aliasToDomain?: Record<string, string>
   /** Global user override — undefined means use per-script defaults */
   privacy?: ProxyPrivacyInput
   /** Enable verbose logging (default: only in dev) */
@@ -25,7 +28,29 @@ interface ProxyConfig {
 
 const COMPRESSION_RE = /gzip|deflate|br|compress|base64/i
 const CLIENT_HINT_VERSION_RE = /;v="(\d+)\.[^"]*"/g
-const SKIP_RESPONSE_HEADERS = new Set(['set-cookie', 'transfer-encoding', 'content-encoding', 'content-length'])
+const MAX_TRANSFORM_BODY_SIZE = 2 * 1024 * 1024
+const UPSTREAM_TIMEOUT_MS = 15000
+const SKIP_RESPONSE_HEADERS = new Set([
+  'alt-svc',
+  'clear-site-data',
+  'connection',
+  'content-encoding',
+  'content-length',
+  'keep-alive',
+  'nel',
+  'proxy-authenticate',
+  'proxy-authorization',
+  'report-to',
+  'reporting-endpoints',
+  'set-cookie',
+  'set-cookie2',
+  'strict-transport-security',
+  'te',
+  'trailer',
+  'transfer-encoding',
+  'upgrade',
+  'www-authenticate',
+])
 // Hop-by-hop request headers per RFC 7230 §6.1 — must not be forwarded by a proxy
 export const SKIP_REQUEST_HEADERS = new Set([
   'connection',
@@ -38,6 +63,107 @@ export const SKIP_REQUEST_HEADERS = new Set([
   'upgrade',
 ])
 
+async function readTransformBody(event: Parameters<typeof getRequestWebStream>[0]): Promise<string | undefined> {
+  const contentLength = Number(getHeaders(event)['content-length'] || 0)
+  if (Number.isFinite(contentLength) && contentLength > MAX_TRANSFORM_BODY_SIZE) {
+    throw createError({ statusCode: 413, statusMessage: 'Proxy request body too large' })
+  }
+
+  const stream = getRequestWebStream(event)
+  if (!stream)
+    return undefined
+  const reader = stream.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done)
+        break
+      if (!value)
+        continue
+      total += value.byteLength
+      if (total > MAX_TRANSFORM_BODY_SIZE) {
+        try {
+          await reader.cancel('Proxy request body too large')
+        }
+        catch {
+          // The size-limit response takes precedence over cancellation errors.
+        }
+        throw createError({ statusCode: 413, statusMessage: 'Proxy request body too large' })
+      }
+      chunks.push(value)
+    }
+  }
+  finally {
+    reader.releaseLock()
+  }
+
+  const body = new Uint8Array(total)
+  let offset = 0
+  for (const chunk of chunks) {
+    body.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return new TextDecoder().decode(body)
+}
+
+export function withResponseBodyIdleTimeout(
+  body: ReadableStream<Uint8Array>,
+  timeoutMs: number,
+  onTimeout: () => void,
+): ReadableStream<Uint8Array> {
+  const reader = body.getReader()
+  let stopped = false
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+
+  const clearIdleTimeout = () => {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId)
+      timeoutId = undefined
+    }
+  }
+
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      timeoutId = setTimeout(() => {
+        stopped = true
+        const error = createError({
+          statusCode: 504,
+          statusMessage: 'Gateway Timeout',
+          message: 'Upstream response body timed out',
+        })
+        onTimeout()
+        controller.error(error)
+        void reader.cancel(error).catch((cancelError) => {
+          Object.assign(error, { cause: cancelError })
+        })
+      }, timeoutMs)
+
+      const result = await reader.read().catch((error) => {
+        clearIdleTimeout()
+        if (!stopped)
+          controller.error(error)
+        return undefined
+      })
+      clearIdleTimeout()
+      if (!result || stopped)
+        return
+      if (result.done) {
+        stopped = true
+        controller.close()
+        return
+      }
+      controller.enqueue(result.value)
+    },
+    async cancel(reason) {
+      stopped = true
+      clearIdleTimeout()
+      await reader.cancel(reason)
+    },
+  })
+}
+
 /**
  * Strip fingerprinting from URL query string.
  * Returns both the query string and the stripped record (to avoid re-computing for hooks).
@@ -49,8 +175,10 @@ function stripQueryFingerprinting(
   const stripped = stripPayloadFingerprinting(query, privacy)
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(stripped)) {
-    if (value !== undefined && value !== null) {
-      params.set(key, typeof value === 'object' ? JSON.stringify(value) : String(value))
+    const values = Array.isArray(value) ? value : [value]
+    for (const item of values) {
+      if (item !== undefined && item !== null)
+        params.append(key, typeof item === 'object' ? JSON.stringify(item) : String(item))
     }
   }
   return { queryString: params.toString(), stripped }
@@ -71,7 +199,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const { proxyPrefix, domainPrivacy, privacy: globalPrivacy, debug = import.meta.dev } = proxyConfig
+  const { proxyPrefix, domainPrivacy, aliasToDomain, privacy: globalPrivacy, debug = import.meta.dev } = proxyConfig
   const path = event.path
   const log = debug
     ? (message: string, ...args: any[]) => {
@@ -80,11 +208,17 @@ export default defineEventHandler(async (event) => {
       }
     : () => {}
 
-  // Extract domain and remaining path from: /_scripts/p/<host>/<path>
+  // Extract domain and remaining path from: /_scripts/p/<host-or-alias>/<path>
   const afterPrefix = path.slice(proxyPrefix.length + 1) // +1 for the slash after prefix
   const slashIdx = afterPrefix.indexOf('/')
-  const domain = slashIdx > 0 ? afterPrefix.slice(0, slashIdx) : afterPrefix
+  const segment = slashIdx > 0 ? afterPrefix.slice(0, slashIdx) : afterPrefix
   const remainingPath = slashIdx > 0 ? afterPrefix.slice(slashIdx) : '/'
+
+  // Resolve path alias back to the real third-party domain. Falls back to the
+  // segment itself so verbatim-hostname paths keep working when aliasing is off.
+  // `Object.hasOwn` guard: a crafted segment like `toString`/`constructor` must not
+  // resolve to an inherited prototype member (which would break allowlist matching).
+  const domain = aliasToDomain && Object.hasOwn(aliasToDomain, segment) ? aliasToDomain[segment] : segment
 
   if (!domain) {
     log('[proxy] No domain in path:', path)
@@ -92,6 +226,14 @@ export default defineEventHandler(async (event) => {
       statusCode: 404,
       statusMessage: 'No proxy domain found',
       message: `No domain in proxy path: ${path}`,
+    })
+  }
+
+  if (!isPublicNetworkHostname(domain)) {
+    log('[proxy] Rejected local or non-public target:', domain)
+    throw createError({
+      statusCode: 403,
+      statusMessage: 'Local network targets are not allowed',
     })
   }
 
@@ -123,20 +265,29 @@ export default defineEventHandler(async (event) => {
   const privacy = globalPrivacy !== undefined ? mergePrivacy(perScriptResolved, globalPrivacy) : perScriptResolved
   const anyPrivacy = privacy.ip || privacy.userAgent || privacy.language || privacy.screen || privacy.timezone || privacy.hardware
 
-  // Detect binary/compressed bodies that cannot be safely parsed as text.
-  // These must be passed through as raw bytes to avoid corruption:
-  // - content-encoding: transport-level compression (gzip, br, etc.)
-  // - application/octet-stream: explicitly binary content
-  // - ?compression=gzip-js: client-side compression (e.g. PostHog sends gzip bytes as text/plain)
   const originalHeaders = getHeaders(event)
   const originalQuery = getQuery(event)
-  const contentType = originalHeaders['content-type'] || ''
+  const contentType = originalHeaders['content-type']?.toLowerCase() || ''
   const compressionParam = (originalQuery.compression as string) || ''
-  const isBinaryBody = Boolean(
+  const method = event.method?.toUpperCase()
+  const isWriteMethod = method === 'POST' || method === 'PUT' || method === 'PATCH'
+  const transformableBodyType = contentType.includes('application/x-www-form-urlencoded')
+    ? 'form'
+    : contentType.includes('json')
+      ? 'json'
+      : undefined
+
+  // Only parse formats whose structure is known. Opaque bodies may contain binary
+  // data despite a text content type, as with PostHog's gzip payloads.
+  const hasOpaqueBodyEncoding = Boolean(
     originalHeaders['content-encoding']
     || contentType.includes('octet-stream')
     || (compressionParam && COMPRESSION_RE.test(compressionParam)),
   )
+  const shouldTransformBody = isWriteMethod
+    && anyPrivacy
+    && !hasOpaqueBodyEncoding
+    && transformableBodyType !== undefined
 
   // Build target URL with stripped query params
   let targetUrl = targetBase + remainingPath
@@ -184,10 +335,9 @@ export default defineEventHandler(async (event) => {
     if (SENSITIVE_HEADERS.includes(lowerKey))
       continue
 
-    // Skip content-length when body will be modified by privacy transforms
-    // (preserved for binary passthrough and no-privacy paths)
+    // Skip content-length when body will be modified by privacy transforms.
     if (lowerKey === 'content-length') {
-      if (anyPrivacy && !isBinaryBody)
+      if (shouldTransformBody)
         continue
       headers[lowerKey] = value
       continue
@@ -258,107 +408,88 @@ export default defineEventHandler(async (event) => {
   }
 
   // Process request body: either stream through raw or read + transform
-  let body: string | Record<string, unknown> | unknown[] | undefined
+  let body: string | Record<string, unknown> | unknown[] | number | boolean | null | undefined
   let rawBody: unknown
   // When true, body is not read — the raw request stream is piped directly to upstream
   let passthroughBody = false
-  const method = event.method?.toUpperCase()
-  const isWriteMethod = method === 'POST' || method === 'PUT' || method === 'PATCH'
 
   if (isWriteMethod) {
-    if (isBinaryBody || !anyPrivacy) {
-      // No transforms needed — don't read the body at all, stream it through directly.
+    if (!shouldTransformBody) {
+      // No safe transforms available or needed. Stream the original bytes directly.
       passthroughBody = true
     }
-    else {
-      // Text body with privacy transforms — parse and strip fingerprinting
-      rawBody = await readBody(event)
+    else if (transformableBodyType === 'form') {
+      const formBody = await readTransformBody(event)
+      rawBody = formBody
 
-      if (rawBody != null) {
-        if (Array.isArray(rawBody)) {
-          // JSON array body (e.g. batch payloads) — strip each element individually
-          body = rawBody.map(item =>
-            item && typeof item === 'object' && !Array.isArray(item)
-              ? stripPayloadFingerprinting(item as Record<string, unknown>, privacy)
-              : item,
-          )
-        }
-        else if (typeof rawBody === 'object') {
-          // JSON object body - strip fingerprinting recursively
-          body = stripPayloadFingerprinting(rawBody as Record<string, unknown>, privacy)
-        }
-        else if (typeof rawBody === 'string') {
-          if (contentType.includes('application/x-www-form-urlencoded')) {
-            // URL-encoded form data — preserve repeated keys (e.g. ?tag=a&tag=b)
-            const params = new URLSearchParams(rawBody)
-            const obj: Record<string, unknown> = {}
-            for (const [key, value] of params.entries()) {
-              if (key in obj) {
-                // Repeated key → accumulate as array
-                const existing = obj[key]
-                obj[key] = Array.isArray(existing) ? [...existing, value] : [existing, value]
-              }
-              else {
-                obj[key] = value
-              }
-            }
-            const stripped = stripPayloadFingerprinting(obj, privacy)
-            // Reconstruct form data, expanding arrays back to repeated keys
-            const out = new URLSearchParams()
-            for (const [k, v] of Object.entries(stripped)) {
-              if (v === undefined || v === null)
-                continue
-              if (Array.isArray(v)) {
-                for (const item of v)
-                  out.append(k, typeof item === 'string' ? item : JSON.stringify(item))
-              }
-              else {
-                out.append(k, typeof v === 'string' ? v : JSON.stringify(v))
-              }
-            }
-            body = out.toString()
+      if (formBody != null) {
+        // Preserve repeated keys while applying privacy transforms to form fields.
+        const params = new URLSearchParams(formBody)
+        const formRecord: Record<string, unknown> = Object.create(null)
+        for (const [key, value] of params.entries()) {
+          if (Object.hasOwn(formRecord, key)) {
+            const existing = formRecord[key]
+            formRecord[key] = Array.isArray(existing) ? [...existing, value] : [existing, value]
           }
           else {
-            // Try parsing as JSON: explicit JSON content-type, or heuristic for
-            // sendBeacon payloads that send JSON with text/plain content-type
-            const maybeJson = contentType.includes('json')
-              || (rawBody.startsWith('{') || rawBody.startsWith('['))
-            if (maybeJson) {
-              let parsed: unknown = null
-              try {
-                parsed = JSON.parse(rawBody)
-              }
-              catch { /* not valid JSON — fall through to raw */ }
-
-              if (Array.isArray(parsed)) {
-                body = parsed.map(item =>
-                  item && typeof item === 'object' && !Array.isArray(item)
-                    ? stripPayloadFingerprinting(item as Record<string, unknown>, privacy)
-                    : item,
-                )
-              }
-              else if (parsed && typeof parsed === 'object') {
-                body = stripPayloadFingerprinting(parsed as Record<string, unknown>, privacy)
-              }
-              else {
-                body = rawBody
-              }
-            }
-            else {
-              body = rawBody
-            }
+            formRecord[key] = value
           }
         }
-        else {
-          body = rawBody as string
+
+        const stripped = stripPayloadFingerprinting(formRecord, privacy)
+        const transformedValues = new Map<string, unknown[]>()
+        for (const [key, value] of Object.entries(stripped)) {
+          transformedValues.set(key, Array.isArray(value) ? [...value] : [value])
         }
+
+        const transformed = new URLSearchParams()
+        for (const [key] of params.entries()) {
+          const value = transformedValues.get(key)?.shift()
+          if (value === undefined || value === null)
+            continue
+          transformed.append(key, typeof value === 'string' ? value : JSON.stringify(value))
+        }
+        body = transformed.toString()
+      }
+    }
+    else {
+      // JSON body with privacy transforms.
+      const jsonBody = await readTransformBody(event)
+      if (jsonBody !== undefined) {
+        try {
+          rawBody = JSON.parse(jsonBody)
+        }
+        catch (error) {
+          throw createError({
+            statusCode: 400,
+            statusMessage: 'Invalid JSON proxy request body',
+            cause: error,
+          })
+        }
+      }
+
+      if (Array.isArray(rawBody)) {
+        // JSON array body (e.g. batch payloads) — strip each element individually
+        body = rawBody.map(item =>
+          item && typeof item === 'object' && !Array.isArray(item)
+            ? stripPayloadFingerprinting(item as Record<string, unknown>, privacy)
+            : item,
+        )
+      }
+      else if (rawBody !== null && typeof rawBody === 'object') {
+        // JSON object body, strip fingerprinting recursively.
+        body = stripPayloadFingerprinting(rawBody as Record<string, unknown>, privacy)
+      }
+      else {
+        // JSON primitives do not contain fingerprinting fields, but must retain JSON encoding.
+        body = rawBody as string | number | boolean | null | undefined
       }
     }
   }
 
   // Emit hook for E2E testing — allows capturing before/after data
   const nitro = useNitroApp()
-  await (nitro.hooks.callHook as (name: string, ctx: any) => Promise<void>)('nuxt-scripts:proxy', {
+  await (nitro.hooks?.callHook as ((name: string, ctx: any) => Promise<void>) | undefined)?.('nuxt-scripts:proxy', {
     timestamp: Date.now(),
     path: event.path,
     targetUrl,
@@ -385,7 +516,7 @@ export default defineEventHandler(async (event) => {
   const timeoutId = setTimeout(() => {
     timedOut = true
     controller.abort()
-  }, 15000) // 15s timeout
+  }, UPSTREAM_TIMEOUT_MS)
 
   // Resolve the fetch body: passthrough streams the raw request, otherwise serialize
   let fetchBody: BodyInit | undefined
@@ -393,27 +524,34 @@ export default defineEventHandler(async (event) => {
     fetchBody = getRequestWebStream(event) as BodyInit | undefined
   }
   else if (body !== undefined) {
-    fetchBody = typeof body === 'string' ? body : JSON.stringify(body)
+    fetchBody = transformableBodyType === 'json' ? JSON.stringify(body) : String(body)
   }
 
   let response: Response
+  let network: Awaited<ReturnType<typeof createPublicNetworkDispatcher>> | undefined
   try {
-    response = await fetch(targetUrl, {
+    network = await createPublicNetworkDispatcher()
+    const requestInit: RequestInit & { duplex?: 'half' } = {
       method: method || 'GET',
       headers,
       body: fetchBody,
       credentials: 'omit', // Don't send cookies to third parties
       signal: controller.signal,
-      // @ts-expect-error Node fetch supports duplex for streaming request bodies
+      redirect: 'manual',
       duplex: passthroughBody ? 'half' : undefined,
-    })
+    }
+    response = await network.fetch(targetUrl, requestInit)
+    clearTimeout(timeoutId)
   }
   catch (err) {
+    clearTimeout(timeoutId)
+    await closePublicNetworkDispatcher(network, err)
     log('[proxy] Upstream error:', err)
+    const blockedPrivateNetwork = isPrivateNetworkResolutionError(err)
     throw createError({
-      statusCode: timedOut ? 504 : 502,
-      statusMessage: timedOut ? 'Gateway Timeout' : 'Bad Gateway',
-      message: `Proxy upstream request failed: ${targetUrl}`,
+      statusCode: blockedPrivateNetwork ? 403 : timedOut ? 504 : 502,
+      statusMessage: blockedPrivateNetwork ? 'Local network targets are not allowed' : timedOut ? 'Gateway Timeout' : 'Bad Gateway',
+      message: 'Proxy upstream request failed',
       cause: err,
       data: {
         errorName: (err as Error)?.name,
@@ -421,29 +559,60 @@ export default defineEventHandler(async (event) => {
       },
     })
   }
-  finally {
-    clearTimeout(timeoutId)
-  }
-
   log('[proxy] Response:', response.status, response.statusText)
 
-  // Forward response headers (except problematic ones)
+  if (response.status >= 300 && response.status < 400 && response.status !== 304) {
+    clearTimeout(timeoutId)
+    const redirectError = createError({
+      statusCode: 502,
+      statusMessage: 'Unsafe upstream redirect',
+      message: 'Proxy upstream returned a redirect that was not followed',
+    })
+    await response.body?.cancel(redirectError).catch(cancelError => Object.assign(redirectError, { cleanupError: cancelError }))
+    await closePublicNetworkDispatcher(network, redirectError)
+    throw redirectError
+  }
+
+  // Headers named by Connection are hop-by-hop too, including non-standard names.
+  const responseConnectionHeaders = new Set(
+    (response.headers.get('connection') || '')
+      .split(',')
+      .map(header => header.trim().toLowerCase())
+      .filter(Boolean),
+  )
+
+  // Forward response headers except hop-by-hop, framing, compression, and cookies.
   response.headers.forEach((value, key) => {
-    if (!SKIP_RESPONSE_HEADERS.has(key.toLowerCase())) {
+    const lowerKey = key.toLowerCase()
+    if (!SKIP_RESPONSE_HEADERS.has(lowerKey) && !responseConnectionHeaders.has(lowerKey)) {
       setResponseHeader(event, key, value)
     }
   })
 
+  // This route can expose broad vendor hosts under the application's origin.
+  // Sandbox direct document navigations while preserving subresource responses.
+  setResponseHeader(event, 'Content-Security-Policy', 'sandbox; default-src \'none\'; base-uri \'none\'; form-action \'none\'')
+  setResponseHeader(event, 'X-Content-Type-Options', 'nosniff')
+
   setResponseStatus(event, response.status, response.statusText)
 
-  // Return the body as text for text-based content, otherwise as buffer
-  const responseContentType = response.headers.get('content-type') || ''
-  const isTextContent = responseContentType.includes('text') || responseContentType.includes('javascript') || responseContentType.includes('json')
-
-  if (isTextContent) {
-    return await response.text()
+  if (!response.body) {
+    await closePublicNetworkDispatcher(network)
+    return null
   }
 
-  // For binary content (images, etc.)
-  return Buffer.from(await response.arrayBuffer())
+  // Stream rather than buffering potentially large upstream responses. This lowers
+  // memory pressure and lets the browser receive headers and chunks immediately.
+  const guardedBody = withResponseBodyIdleTimeout(response.body, UPSTREAM_TIMEOUT_MS, () => controller.abort())
+  let streamError: unknown
+  try {
+    return await sendStream(event, guardedBody)
+  }
+  catch (error) {
+    streamError = error
+    throw error
+  }
+  finally {
+    await closePublicNetworkDispatcher(network, streamError)
+  }
 })

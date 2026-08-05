@@ -1,6 +1,6 @@
 ---
 title: Gravatar
-description: 在你的 Nuxt 应用中使用 Gravatar。
+description: 从电子邮件地址或哈希值渲染经过服务器哈希处理并代理的 Gravatar 图片。
 links:
 - label: 源码
   icon: i-simple-icons-github
@@ -12,7 +12,7 @@ links:
   size: xs
 ---
 
-[Gravatar](https://gravatar.com) 提供与邮箱地址关联的全球通用头像。Nuxt Scripts 提供了一种保护隐私的集成方案，通过你自己的服务器代理头像请求，防止 Gravatar 追踪你的用户。
+[Gravatar](https://gravatar.com) 提供与电子邮件地址关联的全球通用头像。其[头像 API](https://docs.gravatar.com/sdk/images/) 使用标准化电子邮件地址的 SHA-256 哈希值。Nuxt Scripts 会在服务器上创建该哈希值，并代理图片请求。
 
 ::script-stats  
 ::
@@ -20,13 +20,15 @@ links:
 ::script-docs  
 ::
 
-::callout{type="info"}
-当配置了 `NUXT_SCRIPTS_PROXY_SECRET` 时，该脚本的代理端点会使用 [HMAC URL 签名](/docs/guides/first-party#proxy-endpoint-security)。请参阅 [安全指南](/docs/guides/first-party#proxy-endpoint-security) 获取设置说明。
-::
-
 ## [`<ScriptGravatar>`{lang="html"}](/scripts/gravatar){lang="html"}
 
-[`<ScriptGravatar>`{lang="html"}](/scripts/gravatar){lang="html"} 组件会为给定的邮箱地址渲染 Gravatar 头像。所有请求都会通过你的服务器代理发送 — Gravatar 永远不会看到你的用户的 IP 地址或请求头。
+[`<ScriptGravatar>`{lang="html"}](/scripts/gravatar){lang="html"} 组件会为指定的电子邮件地址渲染 Gravatar 头像。头像图片请求会通过您的服务器代理，因此 Gravatar 不会从该请求中获取用户的 IP 地址。
+
+传入 `email` 会在服务器对地址进行哈希处理之前，将原始地址放入同源图片 URL 中。该 URL 可能会出现在浏览器、CDN 和服务器访问日志中。当地址不应进入这些日志时，请传入预先计算的 `hash`。
+
+::callout{type="warning"}
+即使 `hovercards` 为 `false`，该集成仍会直接加载 Gravatar 的 `gprofiles.js` 以支持悬浮信息卡。因此，浏览器仍会连接到 Gravatar。
+::
 
 ### 演示
 
@@ -46,37 +48,33 @@ links:
 
 ::
 
-### 组件 API
-
-请查看 [Facade Component API](/docs/guides/facade-components#facade-components-api) 了解完整的属性、事件和插槽。
-
-### 属性
+### Props
 
 | 属性 | 类型 | 默认值 | 说明 |
 |------|------|---------|-------------|
-| `email` | `string` | - | 邮箱地址，发送到你的服务器代理进行哈希处理，不会发送给 Gravatar |
-| `hash` | `string` | - | 预先计算的邮箱 SHA256 哈希值（`email` 的替代选项） |
-| `size` | `number` | `80` | 头像尺寸（像素） |
-| `default` | `string` | `'mp'` | 当没有 Gravatar 存在时的默认头像样式 |
-| `rating` | `string` | `'g'` | 内容评级过滤器 |
-| `hovercards` | `boolean` | `false` | 悬停时启用悬停卡片 |
+| `email` | `string` | - | 电子邮件地址，会发送到您的服务器代理进行哈希处理，不会发送给 Gravatar |
+| `hash` | `string` | - | 预先计算的电子邮件 SHA-256 哈希值（`email` 的替代方案） |
+| `size` | `number` | `80` | 头像的像素尺寸 |
+| `default` | `string` | `'mp'` | 不存在 Gravatar 时使用的默认头像样式 |
+| `rating` | `string` | `'g'` | 内容分级过滤器 |
+| `hovercards` | `boolean` | `false` | 启用悬浮信息卡 |
 
 ## [`useScriptGravatar()`{lang="ts"}](/scripts/gravatar){lang="ts"}
 
-[`useScriptGravatar()`{lang="ts"}](/scripts/gravatar){lang="ts"} 组合式函数让你能够以编程方式与 Gravatar API 交互。
+[`useScriptGravatar()`{lang="ts"}](/scripts/gravatar){lang="ts"} 组合式函数可根据电子邮件地址或哈希值构建代理头像 URL。
 
 ```ts
 export function useScriptGravatar<T extends GravatarApi>(_options?: GravatarInput) {}
 ```
 
-请遵循 [Registry Scripts](/docs/guides/registry-scripts) 指南以了解更多高级用法。
+有关触发和加载选项，请参阅[注册表脚本](/docs/guides/registry-scripts)。
 
 ::script-types
 ::
 
 ## 示例
 
-使用组合式函数直接获取头像 URL。
+在 Gravatar 脚本加载后构建头像 URL：
 
 ```vue
 <script setup lang="ts">
@@ -90,6 +88,6 @@ onLoaded((api) => {
 </script>
 
 <template>
-  <img v-if="avatarUrl" :src="avatarUrl" alt="User avatar">
+  <img v-if="avatarUrl" :src="avatarUrl" alt="用户头像">
 </template>
 ```

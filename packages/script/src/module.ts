@@ -1,6 +1,7 @@
 import type { FetchOptions } from 'ofetch'
 import type { ProxyDevtoolsScript } from './devtools'
 import type { NormalizedRegistryEntry } from './normalize'
+import type { ProxyAliasConfig } from './proxy-alias'
 import type { ProxyPrivacyInput } from './runtime/server/utils/privacy'
 import type {
   FirstPartyPrivacy,
@@ -13,13 +14,12 @@ import type {
   RegistryScripts,
   ResolvedProxyAutoInject,
 } from './runtime/types'
-import { randomBytes } from 'node:crypto'
-import { appendFileSync, existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
+import { findPackageJSON } from 'node:module'
 import {
   addBuildPlugin,
   addComponentsDir,
   addImports,
-  addPlugin,
   addPluginTemplate,
   addServerHandler,
   addTemplate,
@@ -28,166 +28,43 @@ import {
   hasNuxtModule,
 } from '@nuxt/kit'
 import { defu } from 'defu'
-import { resolve as resolvePath_ } from 'pathe'
-import { readPackageJSON } from 'pkg-types'
+import { satisfies } from 'semver'
 import { setupPublicAssetStrategy } from './assets'
 import { buildDevtoolsData, buildDevtoolsEntry, setupDevtools } from './devtools'
 import { installNuxtModule } from './kit'
 import { logger } from './logger'
-import { extractRequiredFields, migrateDeprecatedRegistryKeys, normalizeRegistryConfig } from './normalize'
+import { setupNitroRuntimeCompatibility } from './nitro-compatibility'
+import { extractRequiredFields, normalizeRegistryConfig } from './normalize'
 import { NuxtScriptsCheckScripts } from './plugins/check-scripts'
 import { generateInterceptPluginContents } from './plugins/intercept'
 import { NuxtScriptBundleTransformer } from './plugins/transform'
+import { aliasProxyValue, buildDomainAliasMap, invertAliasMap, isSafeAliasSegment } from './proxy-alias'
 import { buildProxyConfigsFromRegistry, generatePartytownResolveUrl, getPartytownForwards, registry, resolveCapabilities } from './registry'
+import { ensureNuxtScriptsCacheStorage } from './runtime/server/utils/cache-config'
+import { isPublicNetworkHostname } from './runtime/server/utils/network-host'
 import { registerTypeTemplates, templatePlugin, templateTriggerResolver } from './templates'
 import { validateScriptsEnvVars } from './validate-env'
 
 export type { FirstPartyPrivacy }
 
-/**
- * Partytown forward config for registry scripts.
- * Scripts not listed here are likely incompatible due to DOM access requirements.
- * @see https://partytown.qwik.dev/forwarding-events
- */
-// Matches self-closing PascalCase or kebab-case tags starting with "Script"/"script-"
-// e.g. <ScriptYouTubePlayer video-id="x" /> or <script-youtube-player />
-const SELF_CLOSING_SCRIPT_RE = /<((?:Script[A-Z]|script-)\w[\w-]*)\b([^>]*?)\/\s*>/g
-
-/**
- * Expand self-closing `<Script*>` component tags in page files to work around
- * a Nuxt core regex issue (nuxt `SFC_SCRIPT_RE` uses case-insensitive matching).
- */
-function fixSelfClosingScriptComponents(nuxt: any) {
-  function expandTags(content: string): string | null {
-    SELF_CLOSING_SCRIPT_RE.lastIndex = 0
-    if (!SELF_CLOSING_SCRIPT_RE.test(content))
-      return null
-    SELF_CLOSING_SCRIPT_RE.lastIndex = 0
-    return content.replace(SELF_CLOSING_SCRIPT_RE, (_, tag, attrs) => `<${tag}${attrs.trimEnd()}></${tag}>`)
-  }
-
-  function fixFile(filePath: string) {
-    if (!existsSync(filePath))
-      return
-    const content = readFileSync(filePath, 'utf-8')
-    const fixed = expandTags(content)
-    if (fixed)
-      nuxt.vfs[filePath] = fixed
-  }
-
-  function scanDir(dir: string) {
-    if (!existsSync(dir))
-      return
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const fullPath = resolvePath_(dir, entry.name)
-      if (entry.isDirectory())
-        scanDir(fullPath)
-      else if (entry.name.endsWith('.vue'))
-        fixFile(fullPath)
-    }
-  }
-
-  const pagesDirs = new Set<string>()
-  for (const layer of nuxt.options._layers) {
-    pagesDirs.add(resolvePath_(
-      layer.config.srcDir,
-      layer.config.dir?.pages || 'pages',
-    ))
-  }
-  for (const dir of pagesDirs) scanDir(dir)
-
-  // Keep VFS entries fresh during dev HMR
-  if (nuxt.options.dev) {
-    nuxt.hook('builder:watch', (_event: string, relativePath: string) => {
-      if (!relativePath.endsWith('.vue'))
-        return
-      for (const layer of nuxt.options._layers) {
-        const fullPath = resolvePath_(layer.config.srcDir, relativePath)
-        for (const dir of pagesDirs) {
-          if (fullPath.startsWith(`${dir}/`)) {
-            fixFile(fullPath)
-            return
-          }
-        }
-      }
-    })
-  }
-}
-
 const UPPER_RE = /([A-Z])/g
 const toScreamingSnake = (s: string) => s.replace(UPPER_RE, '_$1').toUpperCase()
+const UNHEAD_VERSION_RANGE = '>=3.3.1 <4'
 
-const PROXY_SECRET_ENV_KEY = 'NUXT_SCRIPTS_PROXY_SECRET'
-const PROXY_SECRET_ENV_LINE_RE = /^NUXT_SCRIPTS_PROXY_SECRET=/m
-const PROXY_SECRET_ENV_VALUE_RE = /^NUXT_SCRIPTS_PROXY_SECRET=(.+)$/m
-
-export interface ResolvedProxySecret {
-  secret: string
-  /** True when the secret exists only in memory (dev-only fallback; won't survive restarts). */
-  ephemeral: boolean
-  /** Where the secret came from, for logging. */
-  source: 'config' | 'env' | 'dotenv-generated' | 'memory-generated'
-}
-
-/**
- * Resolve the HMAC signing secret used for proxy URL signing.
- *
- * Precedence:
- * 1. `scripts.security.secret` in nuxt.config
- * 2. `NUXT_SCRIPTS_PROXY_SECRET` env var
- * 3. Dev-only auto-generation: write to `.env` (or keep in memory as last resort)
- * 4. Empty string (prod without secret; caller decides whether this is fatal)
- */
-export function resolveProxySecret(
-  rootDir: string,
-  isDev: boolean,
-  configSecret?: string,
-  autoGenerate: boolean = true,
-): ResolvedProxySecret | undefined {
-  if (configSecret)
-    return { secret: configSecret, ephemeral: false, source: 'config' }
-
-  const envSecret = process.env[PROXY_SECRET_ENV_KEY]
-  if (envSecret)
-    return { secret: envSecret, ephemeral: false, source: 'env' }
-
-  if (!isDev || !autoGenerate)
-    return undefined
-
-  // Dev fallback: generate a 32-byte hex secret and try to persist to .env.
-  // Persisting matters because the same dev machine restarts many times and
-  // we don't want signed URLs cached in the browser to stop working across HMR.
-  const secret = randomBytes(32).toString('hex')
-  const envPath = resolvePath_(rootDir, '.env')
-  const line = `${PROXY_SECRET_ENV_KEY}=${secret}\n`
-
+function readInstalledPackageVersion(name: string): string | undefined {
+  let packagePath: string | undefined
   try {
-    if (existsSync(envPath)) {
-      const contents = readFileSync(envPath, 'utf-8')
-      // Safety: don't append if another process already wrote one between the read above
-      // and this branch. The regex check is cheap and idempotent.
-      if (PROXY_SECRET_ENV_LINE_RE.test(contents)) {
-        // Another instance already wrote it. Re-read and return that value.
-        const match = contents.match(PROXY_SECRET_ENV_VALUE_RE)
-        if (match?.[1])
-          return { secret: match[1].trim(), ephemeral: false, source: 'dotenv-generated' }
-      }
-      appendFileSync(envPath, contents.endsWith('\n') ? line : `\n${line}`)
-    }
-    else {
-      writeFileSync(envPath, `# Generated by @nuxt/scripts\n${line}`)
-    }
-    // Also populate process.env so that anything reading it later in the same
-    // dev process (e.g. child workers) sees the value without a restart.
-    process.env[PROXY_SECRET_ENV_KEY] = secret
-    return { secret, ephemeral: false, source: 'dotenv-generated' }
+    packagePath = findPackageJSON(name, import.meta.url)
   }
-  catch {
-    // Writing .env failed (read-only FS, permission denied). Fall back to
-    // in-memory only; URLs signed this session won't verify after restart.
-    process.env[PROXY_SECRET_ENV_KEY] = secret
-    return { secret, ephemeral: true, source: 'memory-generated' }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ERR_MODULE_NOT_FOUND')
+      return
+    throw error
   }
+  if (!packagePath)
+    return
+  const parsed = JSON.parse(readFileSync(packagePath, 'utf8')) as { version?: unknown }
+  return typeof parsed.version === 'string' ? parsed.version : undefined
 }
 
 export function isProxyDisabled(
@@ -215,6 +92,7 @@ export function applyAutoInject(
   proxyPrefix: string,
   registryKey: string,
   autoInject: ResolvedProxyAutoInject,
+  alias?: ProxyAliasConfig,
 ): void {
   if (isProxyDisabled(registryKey, registry, runtimeConfig))
     return
@@ -229,7 +107,7 @@ export function applyAutoInject(
   if (!config || config[autoInject.configField])
     return
 
-  const value = autoInject.computeValue(proxyPrefix, config)
+  const value = aliasProxyValue(autoInject.computeValue(proxyPrefix, config), proxyPrefix, alias)
   input[autoInject.configField] = value
 
   if (rtEntry && typeof rtEntry === 'object' && rtEntry !== input)
@@ -247,7 +125,10 @@ function resolveConfiguredProxyDomain(value: unknown): string | undefined {
     return
 
   try {
-    return new URL(trimmed, 'https://nuxt-scripts.local').hostname || undefined
+    const url = new URL(trimmed, 'https://nuxt-scripts.local')
+    if (url.protocol !== 'http:' && url.protocol !== 'https:')
+      return
+    return isPublicNetworkHostname(url.hostname) ? url.hostname : undefined
   }
   catch {
     // Invalid user-provided proxy domains cannot be normalized.
@@ -317,6 +198,23 @@ export interface ModuleOptions {
    */
   privacy?: FirstPartyPrivacy
   /**
+   * First-party proxy behaviour.
+   */
+  proxy?: {
+    /**
+     * Replace third-party hostnames in proxy paths with aliases, so the real domain
+     * (e.g. a self-hosted analytics host) never appears in client-facing URLs.
+     *
+     * - `false` (default): paths embed the verbatim hostname (`/_scripts/p/us.i.posthog.com/...`)
+     * - `true`: auto-generate a short opaque alias per domain (`/_scripts/p/a1b2c3d4/...`)
+     * - `Record<domain, alias>`: explicit aliases (domain → alias); unlisted domains stay verbatim
+     *
+     * @default false
+     * @example { 'us.i.posthog.com': 'ph', 'analytics.internal.example.com': 'a' }
+     */
+    alias?: ProxyAliasConfig
+  }
+  /**
    * The registry of supported third-party scripts. Presence enables infrastructure (proxy routes, types, bundling, composable auto-imports).
    * Scripts only auto-load globally when `trigger` is explicitly set in the config object.
    */
@@ -363,73 +261,6 @@ export interface ModuleOptions {
     integrity?: boolean | 'sha256' | 'sha384' | 'sha512'
   }
   /**
-   * Proxy endpoint security.
-   *
-   * Several proxy endpoints (Google Static Maps, Geocode, Gravatar, embed image proxies)
-   * inject server-side API keys or forward requests to third-party services. Without
-   * signing, these are open to cost/quota abuse. Enable signing to require that only
-   * URLs generated server-side (during SSR/prerender, or via `/_scripts/sign`) are
-   * accepted.
-   *
-   * The secret must be deterministic across deployments so that prerendered URLs
-   * remain valid. Set it via `NUXT_SCRIPTS_PROXY_SECRET` or `security.secret`.
-   *
-   * Set to `false` to disable proxy security entirely: no secret is resolved or
-   * auto-generated, no page token is injected into the SSR payload, and proxy
-   * endpoints pass requests through without signature verification.
-   */
-  security?: false | {
-    /**
-     * HMAC secret used to sign proxy URLs.
-     *
-     * Falls back to `process.env.NUXT_SCRIPTS_PROXY_SECRET` if unset. In dev,
-     * the module auto-generates a secret into your `.env` file when neither is
-     * provided (disable via `autoGenerateSecret: false`). In production, a
-     * missing secret logs a warning; proxy endpoints remain functional but unprotected.
-     *
-     * Generate one with: `npx @nuxt/scripts generate-secret`
-     */
-    secret?: string
-    /**
-     * Automatically generate and persist a signing secret to `.env` when running
-     * `nuxt dev` without one configured.
-     *
-     * @default true
-     */
-    autoGenerateSecret?: boolean
-    /**
-     * How long (in seconds) a page token issued during SSR remains valid on the
-     * client. Client-driven proxy requests (dynamic fetches, runtime image
-     * helpers) attach this token so `withSigning` accepts them without each URL
-     * being HMAC-signed up front.
-     *
-     * The default of 1 hour is safe for SSR; for SSG or prerendered routes,
-     * deployed HTML carries the build-time token, so bump this (e.g. `2592000`
-     * for 30 days) to keep client-side proxy calls working after the build.
-     * Longer TTLs widen the replay window if a token is scraped, so prefer the
-     * shortest value that covers your cache horizon.
-     *
-     * @default 3600
-     */
-    pageTokenMaxAge?: number
-  }
-  /**
-   * Google Static Maps proxy configuration.
-   * Proxies static map images through your server to fix CORS issues and enable caching.
-   */
-  googleStaticMapsProxy?: {
-    /**
-     * Enable proxying Google Static Maps through your own origin.
-     * @default false
-     */
-    enabled?: boolean
-    /**
-     * Cache duration for static map images in seconds.
-     * @default 3600 (1 hour)
-     */
-    cacheMaxAge?: number
-  }
-  /**
    * Enable standalone devtools mode.
    * When enabled, exposes a dev-only API endpoint that bridges script state
    * between the running Nuxt app and a standalone devtools UI.
@@ -463,7 +294,7 @@ export default defineNuxtModule<ModuleOptions>({
     name: '@nuxt/scripts',
     configKey: 'scripts',
     compatibility: {
-      nuxt: '>=3.16',
+      nuxt: '>=4.5.1',
     },
   },
   defaults: {
@@ -477,16 +308,12 @@ export default defineNuxtModule<ModuleOptions>({
         timeout: 15_000, // Configures the maximum time (in milliseconds) allowed for each fetch attempt.
       },
     },
-    googleStaticMapsProxy: {
-      enabled: false,
-      cacheMaxAge: 3600,
-    },
     enabled: true,
     debug: false,
   },
   async setup(config, nuxt) {
     const { resolve: resolveModule, resolvePath } = createResolver(import.meta.url)
-    const { version, name } = await readPackageJSON(await resolvePath('../package.json'))
+    const { version, name } = JSON.parse(readFileSync(await resolvePath('../package.json'), 'utf8')) as { version: string, name: string }
     nuxt.options.alias['#nuxt-scripts'] = await resolvePath('./runtime')
     logger.level = (config.debug || nuxt.options.debug) ? 4 : 3
     if (!config.enabled) {
@@ -494,6 +321,7 @@ export default defineNuxtModule<ModuleOptions>({
       logger.debug('The module is disabled, skipping setup.')
       return
     }
+    await setupNitroRuntimeCompatibility(nuxt)
     if (nuxt.options.dev) {
       setupDevtools(nuxt, { standalone: config._standaloneDevtools })
       if (config._standaloneDevtools) {
@@ -506,21 +334,27 @@ export default defineNuxtModule<ModuleOptions>({
         })
       }
     }
-    // couldn't be found for some reason, assume compatibility
-    const { version: unheadVersion } = await readPackageJSON('@unhead/vue', {
-      from: nuxt.options.modulesDir,
-    }).catch(() => ({ version: null }))
-    if (unheadVersion?.startsWith('1')) {
-      logger.error(`Nuxt Scripts requires Unhead >= 2, you are using v${unheadVersion}. Please run \`nuxi upgrade --clean\` to upgrade...`)
+    const unheadVersions = [
+      ['@unhead/vue', readInstalledPackageVersion('@unhead/vue')],
+      ['unhead', readInstalledPackageVersion('unhead')],
+    ] as const
+    const incompatibleUnheadPackages = unheadVersions.filter(([, dependencyVersion]) =>
+      !dependencyVersion || !satisfies(dependencyVersion, UNHEAD_VERSION_RANGE),
+    )
+    if (incompatibleUnheadPackages.length) {
+      const resolvedVersions = incompatibleUnheadPackages
+        .map(([dependency, dependencyVersion]) => `${dependency}=${dependencyVersion ? `v${dependencyVersion}` : 'missing'}`)
+        .join(', ')
+      throw new Error(
+        `[nuxt-scripts] Nuxt Scripts 2 requires @unhead/vue and unhead ${UNHEAD_VERSION_RANGE}; resolved ${resolvedVersions}. Run \`npx nuxi@latest upgrade --force\` to upgrade Nuxt and refresh its dependencies.`,
+      )
     }
     const scripts = await registry(resolvePath) as (RegistryScript & { _importRegistered?: boolean })[]
 
     // Normalize registry entries to [input, scriptOptions?] tuple form
-    // Eliminates 4-shape polymorphism (true | 'mock' | object | array) for all downstream consumers
+    // Converts the public flat object form to the internal tuple form.
     if (config.registry) {
-      const componentOnlyKeys = new Set(scripts.filter(s => !s.import).map(s => s.registryKey!))
-      migrateDeprecatedRegistryKeys(config.registry as Record<string, any>, msg => logger.warn(msg))
-      normalizeRegistryConfig(config.registry as Record<string, any>, msg => logger.warn(msg), componentOnlyKeys)
+      normalizeRegistryConfig(config.registry as Record<string, any>)
       nuxt.options.runtimeConfig.public = nuxt.options.runtimeConfig.public || {}
 
       // Auto-populate env var defaults for enabled registry scripts so that
@@ -570,34 +404,29 @@ export default defineNuxtModule<ModuleOptions>({
       Object.keys(config.globals || {}),
     )
 
-    // Setup runtimeConfig for proxies and devtools.
-    // Must run AFTER env var resolution above so the API key is populated.
-    const googleMapsEnabled = config.googleStaticMapsProxy?.enabled || !!config.registry?.googleMaps
     nuxt.options.runtimeConfig['nuxt-scripts'] = {
       version: version!,
-      // Private proxy config with API key (server-side only)
-      googleStaticMapsProxy: googleMapsEnabled
-        ? { apiKey: (nuxt.options.runtimeConfig.public.scripts as any)?.googleMaps?.apiKey }
-        : undefined,
     } as any
     nuxt.options.runtimeConfig.public['nuxt-scripts'] = {
       // expose for devtools
       version: nuxt.options.dev ? version : undefined,
       prefix: config.prefix || '/_scripts',
       defaultScriptOptions: config.defaultScriptOptions as any,
-      // Only expose enabled and cacheMaxAge to client, not apiKey
-      googleStaticMapsProxy: googleMapsEnabled
-        ? { enabled: true, cacheMaxAge: config.googleStaticMapsProxy?.cacheMaxAge ?? 3600 }
-        : undefined,
     } as any
 
-    // Build-time constant: `__NUXT_SCRIPTS_DEBUG__` is replaced inline by the
-    // bundler, so debug branches DCE away in production when `debug: false`.
+    // Build-time constants are replaced inline so internal capability choices
+    // cannot be changed through public runtime config.
     const debugConst = JSON.stringify(!!config.debug)
     nuxt.options.vite ||= {}
-    nuxt.options.vite.define = { ...nuxt.options.vite.define, __NUXT_SCRIPTS_DEBUG__: debugConst }
+    nuxt.options.vite.define = {
+      ...nuxt.options.vite.define,
+      __NUXT_SCRIPTS_DEBUG__: debugConst,
+    }
     nuxt.options.nitro ||= {}
-    nuxt.options.nitro.replace = { ...nuxt.options.nitro.replace, __NUXT_SCRIPTS_DEBUG__: debugConst }
+    nuxt.options.nitro.replace = {
+      ...nuxt.options.nitro.replace,
+      __NUXT_SCRIPTS_DEBUG__: debugConst,
+    }
 
     // Register proxy handler unconditionally. The handler rejects unknown domains
     // at runtime, so it's safe to register even when no scripts use proxy.
@@ -622,7 +451,6 @@ export default defineNuxtModule<ModuleOptions>({
     const composables = [
       'useScript',
       'useScriptEventPage',
-      'useScriptProxyToken',
       'useScriptProxyUrl',
       'useScriptTriggerConsent',
       'useScriptTriggerElement',
@@ -643,14 +471,6 @@ export default defineNuxtModule<ModuleOptions>({
       path: await resolvePath('./runtime/components'),
       pathPrefix: false,
     })
-
-    // Fix #613: Self-closing <Script*> tags break Nuxt's definePageMeta extraction.
-    // Nuxt's SFC_SCRIPT_RE regex uses case-insensitive matching, so <ScriptFoo /> is
-    // matched as a <script> opening tag. Without a closing </ScriptFoo>, the regex
-    // consumes the real </script> closing tag, losing definePageMeta. Expanding
-    // self-closing Script* tags to <ScriptFoo></ScriptFoo> provides the closing tag
-    // that the regex needs to scope its match correctly.
-    fixSelfClosingScriptComponents(nuxt)
 
     addTemplate({
       filename: 'nuxt-scripts-trigger-resolver.mjs',
@@ -853,6 +673,11 @@ export default defineNuxtModule<ModuleOptions>({
         }
       }
 
+      // Path alias config — maps real third-party domains to opaque/custom aliases so
+      // hostnames don't leak into client-facing proxy URLs. Shared with the transformer.
+      const proxyAlias = config.proxy?.alias
+      let domainAliases: Record<string, string> = {}
+
       // Finalize proxy setup: build configs, register intercept plugin, wire devtools
       if (anyNeedsProxy) {
         const builtConfigs = buildProxyConfigsFromRegistry(registryScripts, scriptByKey)
@@ -903,7 +728,7 @@ export default defineNuxtModule<ModuleOptions>({
           }
 
           if (proxyConfig.autoInject && config.registry)
-            applyAutoInject(config.registry, nuxt.options.runtimeConfig, proxyPrefix, key, proxyConfig.autoInject)
+            applyAutoInject(config.registry, nuxt.options.runtimeConfig, proxyPrefix, key, proxyConfig.autoInject, proxyAlias)
 
           if (nuxt.options.dev)
             devtoolsScripts.push(buildDevtoolsEntry(key, script, configKey, proxyConfig))
@@ -922,16 +747,37 @@ export default defineNuxtModule<ModuleOptions>({
           )
         }
 
+        // Build the domain → alias map from every proxied domain, then warn on any
+        // collision (two domains resolving to the same alias would mis-route at runtime).
+        domainAliases = buildDomainAliasMap(Object.keys(domainPrivacy), proxyAlias)
+        // Validate aliases at the build boundary so the runtime map is unambiguous:
+        // every alias must be a safe single path segment, unique, and must not equal a
+        // real proxied domain (else the verbatim-hostname fallback could pick the wrong one).
+        const realDomains = new Set(Object.keys(domainPrivacy))
+        const aliasOwner = new Map<string, string>()
+        for (const [domain, alias] of Object.entries(domainAliases)) {
+          if (!isSafeAliasSegment(alias))
+            throw new Error(`[nuxt-scripts] Invalid proxy alias "${alias}" for "${domain}": use a single URL-safe path segment (letters, digits, '-', '_', '.').`)
+          if (realDomains.has(alias))
+            throw new Error(`[nuxt-scripts] Proxy alias "${alias}" for "${domain}" collides with proxied domain "${alias}". Pick an alias that is not also a proxied hostname.`)
+          const prev = aliasOwner.get(alias)
+          if (prev)
+            throw new Error(`[nuxt-scripts] Proxy alias collision: "${prev}" and "${domain}" both map to "${alias}". Give each domain a unique alias.`)
+          aliasOwner.set(alias, domain)
+        }
+        const aliasToDomain = invertAliasMap(domainAliases)
+
         // Register intercept plugin
         addPluginTemplate({
           filename: 'nuxt-scripts-intercept.client.mjs',
-          getContents() { return generateInterceptPluginContents(proxyPrefix, { testMode: !!nuxt.options.test }) },
+          getContents() { return generateInterceptPluginContents(proxyPrefix, { testMode: !!nuxt.options.test, domainAliases }) },
         })
 
         // Server-side proxy config
         nuxt.options.runtimeConfig['nuxt-scripts-proxy'] = {
           proxyPrefix,
           domainPrivacy,
+          aliasToDomain,
           privacy: config.privacy,
         } as any
 
@@ -947,21 +793,21 @@ export default defineNuxtModule<ModuleOptions>({
         if (proxyStaticPresets.includes(proxyPreset)) {
           logger.warn(
             `Proxy collection endpoints require a server runtime (detected: ${proxyPreset || 'static'}).\n`
-            + 'Scripts will be bundled, but collection requests will not be proxied and URL signing will be unavailable.\n'
+            + 'Scripts will be bundled, but collection requests will not be proxied.\n'
             + 'Options: configure platform rewrites, switch to server-rendered mode, or disable with proxy: false.',
           )
         }
 
         // Expose devtools data
         if (nuxt.options.dev) {
-          nuxt.options.runtimeConfig.public['nuxt-scripts-devtools'] = buildDevtoolsData(proxyPrefix, privacyLabel, devtoolsScripts) as any
+          nuxt.options.runtimeConfig.public['nuxt-scripts-devtools'] = buildDevtoolsData(proxyPrefix, privacyLabel, devtoolsScripts, aliasToDomain) as any
         }
 
         // Auto-configure Partytown resolveUrl for proxy
         if (partytownScripts.size && hasNuxtModule('@nuxtjs/partytown')) {
           const partytownConfig = (nuxt.options as any).partytown || {}
           if (!partytownConfig.resolveUrl) {
-            partytownConfig.resolveUrl = generatePartytownResolveUrl(proxyPrefix)
+            partytownConfig.resolveUrl = generatePartytownResolveUrl(proxyPrefix, domainAliases)
             ;(nuxt.options as any).partytown = partytownConfig
             logger.info('[partytown] Auto-configured resolveUrl for proxy')
           }
@@ -977,10 +823,12 @@ export default defineNuxtModule<ModuleOptions>({
         dev: true,
       })
       addBuildPlugin(NuxtScriptBundleTransformer({
+        nuxt,
         scripts: registryScriptsWithImport,
         registryConfig: nuxt.options.runtimeConfig.public.scripts as Record<string, any> | undefined,
         proxyConfigs,
         proxyPrefix,
+        domainAliases,
         partytownScripts,
         moduleDetected(module) {
           if (nuxt.options.dev && module !== '@nuxt/scripts' && !moduleInstallPromises.has(module) && !hasNuxtModule(module))
@@ -1004,15 +852,11 @@ export default defineNuxtModule<ModuleOptions>({
     // Register server handlers for enabled registry scripts
     const scriptsPrefix = config.prefix || '/_scripts'
     const enabledEndpoints: Record<string, boolean> = {}
-    let anyHandlerRequiresSigning = false
     for (const script of scripts) {
       if (!script.serverHandlers?.length || !script.registryKey)
         continue
 
-      // googleMaps uses googleStaticMapsProxy config for backward compat
-      const isEnabled = script.registryKey === 'googleMaps'
-        ? config.googleStaticMapsProxy?.enabled || config.registry?.googleMaps
-        : config.registry?.[script.registryKey as keyof typeof config.registry]
+      const isEnabled = config.registry?.[script.registryKey as keyof typeof config.registry]
 
       if (!isEnabled)
         continue
@@ -1025,8 +869,6 @@ export default defineNuxtModule<ModuleOptions>({
           handler: handler.handler,
           middleware: handler.middleware,
         })
-        if (handler.requiresSigning)
-          anyHandlerRequiresSigning = true
       }
 
       // Script-specific runtimeConfig setup
@@ -1038,75 +880,17 @@ export default defineNuxtModule<ModuleOptions>({
           nuxt.options.runtimeConfig.public['nuxt-scripts'] as any,
         ) as any
       }
-      if (script.registryKey === 'googleMaps') {
-        nuxt.options.runtimeConfig['nuxt-scripts'] = defu(
-          { googleMapsGeocodeProxy: { apiKey: (nuxt.options.runtimeConfig.public.scripts as any)?.googleMaps?.apiKey } },
-          nuxt.options.runtimeConfig['nuxt-scripts'] as any,
-        ) as any
-      }
     }
+
+    // Nitro's default memory storage has no eviction policy. Every proxy and
+    // embed cache shares this bounded mount, including proxy-only registries
+    // without dedicated server handlers. Preserve application-supplied mounts.
+    ensureNuxtScriptsCacheStorage(nuxt.options.nitro as any)
 
     // Publish enabled endpoints to client for component opt-in checks
     nuxt.options.runtimeConfig.public['nuxt-scripts'] = defu(
       { endpoints: enabledEndpoints },
       nuxt.options.runtimeConfig.public['nuxt-scripts'] as any,
     ) as any
-
-    // Signing requires a server runtime to verify HMACs. Skip setup entirely
-    // for SPA mode or static presets where no Nitro server exists at runtime.
-    const staticPresets = ['static', 'github-pages', 'cloudflare-pages-static', 'netlify-static', 'azure-static', 'firebase-static']
-    const nitroPreset = process.env.NITRO_PRESET || ''
-    const isStaticTarget = staticPresets.includes(nitroPreset)
-    const isSpa = nuxt.options.ssr === false
-
-    // Proxy security explicitly disabled: skip secret resolution and the page
-    // token plugin. `withSigning` passes requests through unverified.
-    if (config.security === false) {
-      if (anyHandlerRequiresSigning && !nuxt.options.dev) {
-        logger.info('[security] Proxy security disabled via `security: false`. Proxy endpoints will pass requests through without signature verification.')
-      }
-    }
-    else if (anyHandlerRequiresSigning && (isSpa || isStaticTarget)) {
-      logger.warn(
-        `[security] URL signing requires a server runtime${isStaticTarget ? ` (detected preset: ${nitroPreset})` : ' (ssr: false)'}.\n`
-        + '  Proxy endpoints will work without signature verification.\n'
-        + '  To enable signing, deploy with a server-rendered target or configure platform-level rewrites.',
-      )
-    }
-    // Resolve the HMAC signing secret only when at least one handler needs it
-    // and a server runtime can actually verify signatures.
-    else if (anyHandlerRequiresSigning) {
-      const proxySecretResolved = resolveProxySecret(
-        nuxt.options.rootDir,
-        !!nuxt.options.dev,
-        config.security?.secret,
-        config.security?.autoGenerateSecret !== false,
-      )
-      if (proxySecretResolved?.source === 'dotenv-generated')
-        logger.info(`[security] Generated ${PROXY_SECRET_ENV_KEY} in .env for signed proxy URLs.`)
-      else if (proxySecretResolved?.source === 'memory-generated')
-        logger.warn(`[security] Generated an in-memory ${PROXY_SECRET_ENV_KEY} (could not write .env). Signed URLs will break across restarts.`)
-
-      if (proxySecretResolved?.secret) {
-        const scriptsRuntime = nuxt.options.runtimeConfig['nuxt-scripts'] as Record<string, unknown>
-        scriptsRuntime.proxySecret = proxySecretResolved.secret
-        if (config.security?.pageTokenMaxAge !== undefined)
-          scriptsRuntime.pageTokenMaxAge = config.security.pageTokenMaxAge
-        // Emit a per-request page token during SSR so client-driven proxy
-        // calls (reactive fetches, dynamic image helpers) authenticate via
-        // `_pt` + `_ts` without needing each URL to be HMAC-signed up front.
-        addPlugin({
-          src: await resolvePath('./runtime/plugins/proxy-token.server'),
-          mode: 'server',
-        })
-      }
-      else if (!nuxt.options.dev) {
-        logger.warn(
-          `[security] ${PROXY_SECRET_ENV_KEY} is not set. Proxy endpoints will pass requests through without signature verification.\n`
-          + '  Generate one with: npx @nuxt/scripts generate-secret\n'
-          + `  Then set the env var: ${PROXY_SECRET_ENV_KEY}=<secret>`,
-        )
-      }
-    }
   },
 })

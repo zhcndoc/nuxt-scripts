@@ -1,6 +1,6 @@
 ---
 title: X 嵌入
-description: 服务端渲染的 X（Twitter）嵌入，零客户端 API 调用。
+description: 在服务器端渲染 X 帖子，无需直接从浏览器向 X 请求帖子 JSON 或代理图片。
 links:
   - label: ScriptXEmbed
     icon: i-simple-icons-github
@@ -10,7 +10,7 @@ links:
 
 [X（前身为 Twitter）](https://x.com) 是一个用于分享帖子的社交媒体平台。
 
-Nuxt Scripts 提供了 [`<ScriptXEmbed>`{lang="html"}](/scripts/x-embed){lang="html"} 组件，它在服务器端获取推文数据，并通过插槽暴露出来，实现完全的样式控制。所有数据均通过你的服务器代理 —— 不进行任何客户端对 X 的 API 调用。
+[`<ScriptXEmbed>`{lang="html"}](/scripts/x-embed){lang="html"} 通过你的 Nuxt 服务器获取帖子数据，并通过插槽将其公开。帖子 JSON 和图片会通过你的源站传递，而不是加载 X 的小组件 JavaScript。
 
 ::script-stats
 ::
@@ -18,19 +18,15 @@ Nuxt Scripts 提供了 [`<ScriptXEmbed>`{lang="html"}](/scripts/x-embed){lang="h
 ::script-docs{embed}
 ::
 
-::callout{type="info"}
-This script's proxy endpoints use [HMAC URL signing](/docs/guides/first-party#proxy-endpoint-security) when you configure a `NUXT_SCRIPTS_PROXY_SECRET`. See the [security guide](/docs/guides/first-party#proxy-endpoint-security) for setup instructions.
-::
-
-This registers the required server API routes (`/_scripts/embed/x` and `/_scripts/embed/x-image`) that handle fetching tweet data and proxying images.
+这会注册所需的服务器 API 路由（`/_scripts/embed/x` 和 `/_scripts/embed/x-image`），用于处理推文数据的获取和图片代理。
 
 ## [`<ScriptXEmbed>`{lang="html"}](/scripts/x-embed){lang="html"}
 
-`<ScriptXEmbed>` 组件是一个无头组件，功能包括：
-- 通过 X 联合 API 在服务器端获取推文数据
-- 通过你的服务器代理所有图片以保护隐私
-- 通过作用域插槽暴露推文数据，实现自定义渲染
-- 缓存响应 10 分钟
+帖子端点会缓存联合响应 10 分钟，并通过图片端点重写个人资料照片、附加照片、实体媒体、引用帖子图片和视频海报。视频变体 URL 保持不变，因此在 `<video>`{lang="html"} 元素中渲染视频变体时，浏览器会直接向 X 发起请求。
+
+::callout{color="amber"}
+图片代理会验证初始主机名，但目前会在不验证每个目标的情况下跟随重定向。在重定向目标也经过检查之前，不要将该允许列表视为完整的 SSRF 边界。
+::
 
 ### 演示
 
@@ -54,7 +50,7 @@ This registers the required server API routes (`/_scripts/embed/x` and `/_script
 </template>
 ```
 
-<template [样式化推文卡片]>
+```vue [样式化推文卡片]
 <template>
   <ScriptXEmbed tweet-id="1754336034228171055">
     <template #default="{ userName, userHandle, userAvatar, text, datetime, likesFormatted, repliesFormatted, photos, isVerified }">
@@ -124,9 +120,8 @@ interface SlotProps {
   // 用户信息
   userName: string
   userHandle: string
-  userAvatar: string // 代理 URL
-  userAvatarOriginal: string // X 原始 URL
-  isVerified: boolean
+  userAvatar: string // 代理后的 URL
+  isVerified: boolean | undefined
   // 推文内容
   text: string
   // 格式化后数据
@@ -136,28 +131,25 @@ interface SlotProps {
   likesFormatted: string // "1.2K"
   replies: number
   repliesFormatted: string // "234"
-  // 媒体资源
-  photos?: Array<{
-    URL: string
+  // 媒体
+  photos?: Array<NonNullable<XEmbedTweetData['photos']>[number] & {
     proxiedUrl: string
-    width: number
-    height: number
   }>
-  video?: {
+  video: {
     poster: string
     posterProxied: string
     variants: Array<{ type: string, src: string }>
-  }
-  // Links
+  } | null
+  // 链接
   tweetUrl: string
   userUrl: string
-  // Quote tweet
+  // 引用推文
   quotedTweet?: XEmbedTweetData
   // 回复上下文
   isReply: boolean
   replyToUser?: string
-  // 辅助函数
-  proxyImage: (URL: string) => string
+  // 辅助方法
+  proxyImage: (imageUrl: string) => string
 }
 ```
 
@@ -169,22 +161,9 @@ interface SlotProps {
 | `loading` | 获取推文数据时展示                         |
 | `error`   | 推文数据获取失败时展示，接收 `{ error }`  |
 
-## 工作原理
+## 数据流
 
-1. **服务器端获取**：在服务器端渲染时从 `cdn.syndication.twimg.com` 获取推文数据
-2. **图片代理**：所有图片 URL 都被重写，通过 `/_scripts/embed/x-image` 代理
-3. **缓存**：响应在服务器层缓存 10 分钟
-4. **无客户端 API 调用**：用户浏览器不会直接联系 X
-
-此方案灵感来源于 [Cloudflare Zaraz 的嵌入实现](https://blog.cloudflare.com/zaraz-supports-server-side-rendering-of-embeds/)。
-
-## 隐私优势
-
-- 不加载第三方 JavaScript
-- X 不设置 Cookie
-- 浏览器与 X 无直接通信
-- 用户 IP 地址不会与 X 共享
-- 所有内容均从你的域名提供
+该实现遵循 [Cloudflare Zaraz 的服务器渲染嵌入方法](https://blog.cloudflare.com/zaraz-supports-server-side-rendering-of-embeds/)。页面中不会运行任何 X JavaScript，并且 X 不会收到访问者的 IP 地址，也不会收到帖子 JSON 或代理图片的请求。渲染后的视频变体以及指向 X 的链接仍会直接联系 X。
 
 ::script-types
 ::

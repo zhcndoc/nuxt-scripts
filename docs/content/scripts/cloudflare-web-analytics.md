@@ -1,6 +1,6 @@
 ---
-title: Cloudflare 网站分析
-description: 在你的 Nuxt 应用中使用 Cloudflare 网站分析。
+title: Cloudflare Web Analytics
+description: 在水合期间加载 Cloudflare Web Analytics，并启用其内置的 SPA 测量功能。
 links:
   - label: 源码
     icon: i-simple-icons-github
@@ -8,7 +8,7 @@ links:
     size: xs
 ---
 
-[Cloudflare 网站分析](https://developers.cloudflare.com/analytics/web-analytics/) 是适用于 Nuxt 的绝佳隐私保护分析解决方案。它为你的网站提供免费的、以隐私为中心的分析服务。它不会从访客那里收集任何个人身份信息，却能提供详细的洞察，展示页面在访客体验中的表现。
+[Cloudflare Web Analytics](https://developers.cloudflare.com/web-analytics/about/) 报告流量和 Web Vitals。其信标 [不使用 Cookie 或本地存储](https://developers.cloudflare.com/web-analytics/data-metrics/core-web-vitals/#information-collected)，并且该公司表示，该产品不会收集或使用访问者的个人数据。
 
 ::script-stats  
 ::
@@ -16,28 +16,34 @@ links:
 ::script-docs  
 ::
 
-该组合式函数具有以下默认设置：  
-- **客户端加载**  脚本将在 Nuxt 完成水合（hydration）时加载，以确保你的网页关键性能指标（Web Vitals）保持准确。
+默认：
+
+- **触发器：客户端** 脚本会在 Nuxt 水合期间加载，以保持 Web Vitals 指标的准确性。
+
+此注册表将触发器固定为 `client`。调用方传入的 `scriptOptions.trigger` 值会被覆盖，因此当前无法通过同意或元素触发器延迟此集成。
+
+::callout{type="warning"}
+当前运行时始终启用 SPA 跟踪，尽管 [Cloudflare 将 `spa: false` 记录为禁用 SPA 分析的开关](https://developers.cloudflare.com/web-analytics/get-started/web-analytics-spa/#disable-spa-analytics)。目前向此注册表传递 `spa: false` 不会产生任何效果。
+::
 
 ## 在 app.vue 中加载
 
-通过 `app.vue` 在 Nuxt 就绪时加载 Cloudflare 网站分析。
+在 `app.vue` 中注册 Beacon：
 
 ```vue [app.vue]
 <script setup lang="ts">
 useScriptCloudflareWebAnalytics({
   token: '12ee46bf598b45c2868bbc07a3073f58',
-  scriptOptions: {
-    trigger: 'onNuxtReady'
-  }
 })
 </script>
 ```
 
-Cloudflare 网站分析组合式函数会向全局作用域注入一个 `window.__cfBeacon` 对象。如果你需要访问它，可以等待脚本加载完成后获取。
+分析脚本会创建一个 `window.__cfBeacon` 对象。在脚本加载后访问它：
 
 ```ts
-const { onLoaded } = useScriptCloudflareWebAnalytics()
+const { onLoaded } = useScriptCloudflareWebAnalytics({
+  token: '12ee46bf598b45c2868bbc07a3073f58',
+})
 onLoaded(({ __cfBeacon }) => {
   console.log(__cfBeacon)
 })

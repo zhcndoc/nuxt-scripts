@@ -1,6 +1,6 @@
 ---
 title: Mixpanel
-description: 在你的 Nuxt 应用中使用 Mixpanel。
+description: 加载 Mixpanel 并跟踪产品事件、身份、用户画像和同意状态。
 links:
 - label: 源码
   icon: i-simple-icons-github
@@ -8,9 +8,9 @@ links:
   size: xs
 ---
 
-[Mixpanel](https://mixpanel.com) 是一个产品分析平台，通过事件追踪、漏斗分析和留存分析来帮助你了解用户如何与应用交互。
+[Mixpanel](https://mixpanel.com) 通过漏斗和留存报告分析产品事件。
 
-Nuxt Scripts 提供了一个注册表脚本组合式函数 [`useScriptMixpanelAnalytics()`{lang="ts"}](/scripts/mixpanel-analytics)，用于在你的 Nuxt 应用中轻松集成 Mixpanel。
+[`useScriptMixpanelAnalytics()`{lang="ts"}](/scripts/mixpanel-analytics) 初始化 SDK 并公开 `mixpanel` API。
 
 ::script-stats
 ::
@@ -57,7 +57,7 @@ function login(userId: string) {
 
 ### 注册超级属性
 
-Mixpanel 会将超级属性随每个后续事件一起发送：
+Mixpanel 会将[注册的超级属性](https://docs.mixpanel.com/docs/tracking-methods/sdks/javascript#setting-super-properties)添加到后续事件中：
 
 ```vue
 <script setup lang="ts">
@@ -70,9 +70,22 @@ proxy.mixpanel.register({
 </script>
 ```
 
+### 注销时重置身份
+
+当已识别的用户退出登录或其会话过期时，调用 `reset()`{lang="ts"}。Mixpanel [建议在注销时进行重置](https://docs.mixpanel.com/docs/tracking-methods/id-management/identifying-users-simplified#client-side-identity-management)，以避免共享同一设备的两个人被合并为同一个身份：
+
+```ts
+const { proxy } = useScriptMixpanelAnalytics()
+
+function logout() {
+  // 首先结束应用会话。
+  proxy.mixpanel.reset()
+}
+```
+
 ## 同意模式
 
-Mixpanel 提供了 [`opt_in_tracking` / `opt_out_tracking`](https://docs.mixpanel.com/docs/privacy/opt-out-of-tracking)。使用 `defaultConsent` 设置启动时默认状态，并在运行时调用 `consent.optIn()`{lang="ts"} / `consent.optOut()`{lang="ts"}。
+Mixpanel 提供 [`opt_in_tracking` / `opt_out_tracking`](https://docs.mixpanel.com/docs/tracking-methods/sdks/javascript#opt-out-of-tracking)。使用 `defaultConsent` 设置启动时的默认状态，并在运行时调用 `consent.optIn()`{lang="ts"} / `consent.optOut()`{lang="ts"}。
 
 ### `defaultConsent`
 
@@ -82,7 +95,7 @@ Mixpanel 提供了 [`opt_in_tracking` / `opt_out_tracking`](https://docs.mixpane
 | `'opt-out'` | 调用 `mixpanel.init(..., { opt_out_tracking_by_default: true })`{lang="ts"}，使 SDK 以未同意状态启动。 |
 
 ::callout{icon="i-heroicons-information-circle"}
-当你需要 SDK 以未同意状态启动时，请使用 `defaultConsent: 'opt-out'`。运行时的 `consent.optOut()`{lang="ts"} 会在初始化后调用 `opt_out_tracking()`{lang="ts"}，其效力弱于启动时标志；在初始化与退出同意调用之间捕获的任何事件仍会被发送。
+`defaultConsent: 'opt-out'` 会在第一个事件之前生效。之后调用 `consent.optOut()`{lang="ts"} 无法撤回 SDK 已捕获的事件。
 ::
 
 ### 示例

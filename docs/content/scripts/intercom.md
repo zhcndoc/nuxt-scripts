@@ -1,6 +1,6 @@
 ---
 title: Intercom
-description: 在你的 Nuxt 应用中使用 Intercom。
+description: 通过类型化命令队列或点击触发的自定义启动器加载 Intercom。
 links:
   - label: 源码
     icon: i-simple-icons-github
@@ -12,9 +12,9 @@ links:
     size: xs
 ---
 
-[Intercom](https://www.intercom.com/) 是一个客户消息交流平台，帮助你与客户建立更好的关系。
+[Intercom](https://www.intercom.com/) 为客户对话提供应用内消息工具。
 
-Nuxt Scripts 提供了一个 [`useScriptIntercom()`{lang="ts"}](#usescriptintercom){lang="ts"} 组合函数和一个无头的外观组件 [`<ScriptIntercom>`{lang="html"}](#scriptintercom){lang="html"} 组件用于与 Intercom 交互。
+使用 [`useScriptIntercom()`{lang="ts"}](#usescriptintercom){lang="ts"} 直接调用 API，或使用 [`<ScriptIntercom>`{lang="html"}](#scriptintercom){lang="html"} 创建自定义消息启动器。
 
 ::script-stats
 ::
@@ -24,13 +24,9 @@ Nuxt Scripts 提供了一个 [`useScriptIntercom()`{lang="ts"}](#usescriptinterc
 
 ## [`<ScriptIntercom>`{lang="html"}](/scripts/intercom){lang="html"}
 
-[`<ScriptIntercom>`{lang="html"}](/scripts/intercom){lang="html"} 组件是一个无头的外观组件，封装了 [`useScriptIntercom()`{lang="ts"}](#usescriptintercom){lang="ts"} 组合函数，提供了一种简单并且性能优化的方式，将 Intercom 加载到你的 Nuxt 应用中。
+无头外观组件会等待其[元素触发器](/docs/guides/script-triggers#element-event-triggers)触发后再加载 Intercom。默认监听 `click` 事件。
 
-它通过使用 [元素事件触发器](/docs/guides/script-triggers#element-event-triggers) 进行了性能优化，仅在特定元素事件发生时才加载 Intercom。
-
-默认情况下，它会在 `click` DOM 事件发生时加载。
-
-### 示例演示
+### 演示
 
 ::code-group
 
@@ -43,7 +39,7 @@ const isLoaded = ref(false)
 
 <template>
   <div>
-    <ScriptIntercom app-id="akg5rmxb" api-base="https://api-iam.intercom.io" alignment="left" :horizontal-padding="50" class="intercom" @ready="isLoaded = true">
+    <ScriptIntercom app-id="akg5rmxb" alignment="left" :horizontal-padding="50" class="intercom" @ready="isLoaded = true">
       <div style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px;">
         <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" fill="white" viewBox="0 0 28 32"><path d="M28 32s-4.714-1.855-8.527-3.34H3.437C1.54 28.66 0 27.026 0 25.013V3.644C0 1.633 1.54 0 3.437 0h21.125c1.898 0 3.437 1.632 3.437 3.645v18.404H28V32zm-4.139-11.982a.88.88 0 00-1.292-.105c-.03.026-3.015 2.681-8.57 2.681-5.486 0-8.517-2.636-8.571-2.684a.88.88 0 00-1.29.107 1.01 1.01 0 00-.219.708.992.992 0 00.318.664c.142.128 3.537 3.15 9.762 3.15 6.226 0 9.621-3.022 9.763-3.15a.992.992 0 00.317-.664 1.01 1.01 0 00-.218-.707z" /></svg>
       </div>
@@ -78,9 +74,20 @@ const isLoaded = ref(false)
 
 完整的 props、事件及插槽，请查看 [外观组件 API](/docs/guides/facade-components#facade-components-api)。
 
+::warning
+组件的 `api-base` prop 当前会传递 `app_base`，但 Intercom 需要 [`api_base`](https://developers.intercom.com/installing-intercom/web/installation)。在该映射发生变化之前，此 prop 无法选择欧盟或澳大利亚的数据主机。需要使用区域端点时，请直接使用组合式函数：
+
+```ts
+useScriptIntercom({
+  app_id: 'YOUR_APP_ID',
+  api_base: 'https://api-iam.eu.intercom.io',
+})
+```
+::
+
 #### 使用环境变量
 
-如果你想通过环境变量配置你的 app ID。
+启用注册表条目后，模块会创建其公共运行时配置字段。无需添加单独的 `runtimeConfig` 块，即可设置应用 ID：
 
 ```ts [nuxt.config.ts]
 export default defineNuxtConfig({
@@ -88,16 +95,6 @@ export default defineNuxtConfig({
     registry: {
       intercom: { trigger: 'onNuxtReady' },
     }
-  },
-  // 你需要提供运行时配置以访问环境变量
-  runtimeConfig: {
-    public: {
-      scripts: {
-        intercom: {
-          app_id: '', // NUXT_PUBLIC_SCRIPTS_INTERCOM_APP_ID
-        },
-      },
-    },
   },
 })
 ```
@@ -108,11 +105,12 @@ NUXT_PUBLIC_SCRIPTS_INTERCOM_APP_ID=<你的_APP_ID>
 
 ### 事件
 
-[`<ScriptIntercom>`{lang="html"}](/scripts/intercom){lang="html"} 组件在 Intercom 加载时触发一个 `ready` 事件。
+[`<ScriptIntercom>`{lang="html"}](/scripts/intercom){lang="html"} 组件在挂载消息工具后触发 `ready` 事件；如果脚本加载失败，则触发 `error` 事件。
 
 ```ts
 const emits = defineEmits<{
-  ready: [intercom: Intercom]
+  ready: [intercom: ReturnType<typeof useScriptIntercom>]
+  error: []
 }>()
 ```
 
@@ -124,42 +122,46 @@ function onReady(intercom) {
 </script>
 
 <template>
-  <ScriptIntercom @ready="onReady" />
+  <ScriptIntercom app-id="YOUR_APP_ID" @ready="onReady" />
 </template>
 ```
 
 ### Intercom API
 
-该组件暴露出一个 `intercom` 实例（`useScriptIntercom()`{lang="ts"} 的返回值），你可以使用它来调用 Intercom API。
+组件会暴露其 `intercom` 实例，该实例是 `useScriptIntercom()`{lang="ts"} 的返回值。通过其代理调用 [Intercom JavaScript API](https://developers.intercom.com/installing-intercom/web/methods)：
 
 ```vue
 <script setup lang="ts">
 const intercomEl = ref()
-onMounted(() => {
-  intercomEl.value.intercom.proxy.Intercom('show')
-})
+
+function showMessenger() {
+  intercomEl.value?.intercom.proxy.Intercom('show')
+}
 </script>
 
 <template>
-  <ScriptIntercom ref="intercomEl" />
+  <ScriptIntercom ref="intercomEl" app-id="YOUR_APP_ID" trigger="immediate" />
+  <button @click="showMessenger">
+    Open chat
+  </button>
 </template>
 ```
 
 ### 插槽
 
-该组件默认提供最简洁的界面，仅保证功能性和可访问性。你可以通过多个插槽自定义界面。
+使用插槽构建启动器及其加载状态。
 
 **default**
 
-默认插槽显示始终可见的内容。
+默认插槽会在外观组件可见时显示内容。
 
 **awaitingLoad**
 
-该插槽在 Intercom 未加载时显示内容。
+当 Intercom 等待其配置的触发器时，此插槽会显示内容。
 
 ```vue
 <template>
-  <ScriptIntercom>
+  <ScriptIntercom app-id="YOUR_APP_ID">
     <template #awaitingLoad>
       <div style="width: 54px; height: 54px; border-radius: 54px; cursor: pointer; background-color: #1972F5;">
         聊天！
@@ -173,11 +175,11 @@ onMounted(() => {
 
 该插槽在 Intercom 加载时显示内容。
 
-提示：建议默认使用 `ScriptLoadingIndicator`，提升无障碍和用户体验。
+`ScriptLoadingIndicator` 提供可见状态和状态标签：
 
 ```vue
 <template>
-  <ScriptIntercom>
+  <ScriptIntercom app-id="YOUR_APP_ID">
     <template #loading>
       <div class="bg-blue-500 text-white p-5">
         加载中...
@@ -187,9 +189,12 @@ onMounted(() => {
 </template>
 ```
 
+组件声明了 `error` 插槽，但在 `isReady` 为 `false` 时，其加载分支当前始终优先，包括加载失败之后。请使用触发的 `error` 事件在组件外部渲染备用内容，直到该分支顺序得到修复。
+
+
 ## [`useScriptIntercom()`{lang="ts"}](/scripts/intercom){lang="ts"}
 
-[`useScriptIntercom()`{lang="ts"}](/scripts/intercom){lang="ts"} 组合函数让你对 Intercom 在网站上的加载时机和方式拥有细粒度控制。
+当你需要命令队列而不需要启动器组件时，请使用 [`useScriptIntercom()`{lang="ts"}](/scripts/intercom){lang="ts"}。
 
 ```ts
 const { proxy } = useScriptIntercom({
@@ -201,23 +206,29 @@ proxy.Intercom('show')
 proxy.Intercom('update', { name: '张三' })
 ```
 
-请参阅 [注册脚本](/docs/guides/registry-scripts) 指南了解更多高级用法。
+当已识别的用户退出登录后，在其他人使用同一浏览器之前调用 `shutdown`。Intercom 建议这样做，以清除之前用户的 Messenger 会话：
+
+```ts
+proxy.Intercom('shutdown')
+```
+
+有关触发器和加载选项，请参阅[注册脚本](/docs/guides/registry-scripts)。
 
 ::script-types
 ::
 
 ## 示例
 
-仅在生产环境中使用 Intercom。
+通过按钮打开 Intercom：
 
 ::code-group
 
 ```vue [IntercomButton.vue]
 <script setup lang="ts">
-const { proxy } = useScriptIntercom()
+const { proxy } = useScriptIntercom({
+  app_id: 'YOUR_APP_ID',
+})
 
-// 在开发环境和 SSR 中无操作，
-// 仅在生产环境客户端生效
 function showIntercom() {
   proxy.Intercom('show')
 }

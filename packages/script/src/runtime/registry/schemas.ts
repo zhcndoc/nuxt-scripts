@@ -19,6 +19,34 @@ export const gcmConsentState = object({
   region: optional(array(string())),
 })
 
+export const LeafletOptions = object({
+  /**
+   * Inject the Leaflet 1.9.4 styles and default marker images when the script
+   * begins loading. Disable this when supplying your own Leaflet stylesheet.
+   * @default true
+   */
+  injectStyles: optional(boolean()),
+})
+
+export const MapLibreOptions = object({
+  /**
+   * Inject the MapLibre GL JS 5.24.0 stylesheet when the script begins
+   * loading. Disable this when supplying the stylesheet through Nuxt.
+   * @default true
+   */
+  injectStyles: optional(boolean()),
+  /**
+   * Stylesheet URL used when `injectStyles` is enabled.
+   * @default 'https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css'
+   */
+  stylesheetUrl: optional(string()),
+  /**
+   * Worker URL for the CSP-compatible MapLibre build. Pair this with a custom
+   * `scriptInput.src` that loads `maplibre-gl-csp.js`.
+   */
+  workerUrl: optional(string()),
+})
+
 export const AhrefsAnalyticsOptions = object({
   /**
    * Your Ahrefs Web Analytics project key. Set as the `data-key` attribute
@@ -593,11 +621,6 @@ export const MatomoAnalyticsOptions = object({
    * A custom tracker URL. Overrides the default tracker endpoint derived from `matomoUrl` or `cloudId`.
    */
   trackerUrl: optional(string()),
-  /**
-   * Whether to track the initial page view on load.
-   * @deprecated Use `watch: true` (default) for automatic page view tracking.
-   */
-  trackPageView: optional(boolean()),
   /**
    * Enable download and outlink tracking.
    */

@@ -12,9 +12,9 @@ links:
     size: xs
 ---
 
-[Vimeo](https://vimeo.com/) 是一个视频托管平台，允许你上传和分享视频。
+[Vimeo](https://vimeo.com/) 托管视频并提供 JavaScript 播放器 API。
 
-Nuxt Scripts 提供了一个 `useScriptVimeoPlayer` 组合式函数和一个无 UI 的 `ScriptVimeoPlayer` 组件，用于与 Vimeo 播放器交互。
+Nuxt Scripts 提供了一个 [`useScriptVimeoPlayer()`{lang="ts"}](/scripts/vimeo-player){lang="ts"} 可组合函数，以及一个无头 [`<ScriptVimeoPlayer>`{lang="html"}](/scripts/vimeo-player){lang="html"} 组件，用于与 Vimeo 播放器交互。
 
 ::script-stats
 ::
@@ -24,8 +24,7 @@ Nuxt Scripts 提供了一个 `useScriptVimeoPlayer` 组合式函数和一个无 
 
 ## 类型
 
-要使用具有完整 TypeScript 支持的视频播放器，你需要
-安装 `@vimeo/player` 依赖，其中包含了其自身的类型定义。
+安装包含自身类型的 `@vimeo/player`，以获得完整的 TypeScript 支持。
 
 ```bash
 pnpm add -D @vimeo/player
@@ -33,11 +32,15 @@ pnpm add -D @vimeo/player
 
 ## [`<ScriptVimeoPlayer>`{lang="html"}](/scripts/vimeo-player){lang="html"}
 
-`ScriptVimeoPlayer` 组件是 `useScriptVimeoPlayer` 组合式函数的封装。它提供了一种简便方式在你的 Nuxt 应用中嵌入 Vimeo 视频。
+[`<ScriptVimeoPlayer>`{lang="html"}](/scripts/vimeo-player){lang="html"} 使用延迟占位符和无头播放器 UI 封装了 [`useScriptVimeoPlayer()`{lang="ts"}](/scripts/vimeo-player){lang="ts"}。
 
-通过利用 [元素事件触发](/docs/guides/script-triggers#element-event-triggers)，仅在特定元素事件发生时加载 Vimeo 播放器，从而优化性能。
+[元素事件触发器](/docs/guides/script-triggers#element-event-triggers) 会将 Vimeo 播放器的加载延迟到配置的事件触发之后。
 
-默认情况下，它会在 `mousedown` 事件时加载。
+默认事件为 `mousedown`。
+
+::callout{color="amber"}
+播放器接受 `id` 或 `url`，但当前的 oEmbed 缩略图请求只读取 `id`。当你仅传入 `url` 时，请提供自己的 `#placeholder` 内容，或同时传入数字格式的视频 ID。
+::
 
 ### 演示
 
@@ -67,7 +70,7 @@ async function play() {
       </ScriptVimeoPlayer>
     </div>
     <div class="text-center">
-      <UAlert v-if="!isLoaded" class="mb-5" size="sm" color="blue" variant="soft" title="点击视频！" description="点击视频会加载 Vimeo iframe 并开始播放视频。" />
+      <UAlert v-if="!isLoaded" class="mb-5" size="sm" color="blue" variant="soft" title="点击视频！" description="点击视频将加载 Vimeo iframe 并开始播放视频。" />
       <UButton v-if="isLoaded && !isPlaying" @click="play">
         播放视频
       </UButton>
@@ -80,50 +83,7 @@ async function play() {
 
 ### 属性（Props）
 
-`ScriptVimeoPlayer` 组件接收以下属性：
-
-- `trigger`：触发加载 Vimeo 播放器的事件，默认是 `mousedown`。更多信息请参见 [元素事件触发](/docs/guides/script-triggers#element-event-triggers)。
-- `aboveTheFold`：优化折叠上方内容的占位图像，默认是 `false`。
-- `rootAttrs`：覆盖自动设置的根节点属性。
-- `placeholderAttrs`：占位图像的属性，默认是 `{ loading: 'lazy' }`。
-- `id`：`vimeoOptions.id` 的简写。
-- `url`：`vimeoOptions.url` 的简写。
-- `vimeoOptions`：支持 Player SDK 的所有选项，完整文档请参考 [嵌入选项](https://developer.vimeo.com/player/sdk/embed)。
-
-```ts
-interface VimeoPlayerProps {
-  id: number | undefined
-  url?: string | undefined
-  autopause?: boolean | undefined
-  autoplay?: boolean | undefined
-  background?: boolean | undefined
-  byline?: boolean | undefined
-  color?: string | undefined
-  controls?: boolean | undefined
-  dnt?: boolean | undefined
-  height?: number | undefined
-  interactive_params?: string | undefined
-  keyboard?: boolean | undefined
-  loop?: boolean | undefined
-  maxheight?: number | undefined
-  maxwidth?: number | undefined
-  muted?: boolean | undefined
-  pip?: boolean | undefined
-  playsinline?: boolean | undefined
-  portrait?: boolean | undefined
-  responsive?: boolean | undefined
-  speed?: boolean | undefined
-  quality?: VimeoVideoQuality | undefined
-  texttrack?: string | undefined
-  title?: boolean | undefined
-  transparent?: boolean | undefined
-  width?: number | undefined
-}
-```
-
-#### 预加载（Eager Loading）占位图
-
-Vimeo 视频的占位图默认是懒加载的。如果你的视频是折叠上方内容，建议修改此行为，或者使用 `#placeholder` 插槽自定义占位图。
+默认情况下，Vimeo 视频占位图会延迟加载。对于首屏视频，请立即加载图像，或通过 `#placeholder` 插槽替换它。
 
 ::code-group
 
@@ -147,7 +107,7 @@ Vimeo 视频的占位图默认是懒加载的。如果你的视频是折叠上�
 
 ### 事件
 
-`ScriptVimeoPlayer` 组件会触发 Vimeo 播放器 SDK 的所有事件。完整文档请查看 [播放器事件](https://developer.vimeo.com/player/sdk/reference#about-player-events)。
+该组件会转发以下 Vimeo Player SDK 事件。有关负载详情，请参阅[播放器事件](https://developer.vimeo.com/player/sdk/reference#about-player-events)。加载 SDK 失败时也会触发 `error`，但不会提供 Vimeo 自有 `error` 事件所声明的事件和播放器参数。
 
 ```ts
 const emits = defineEmits<{
@@ -181,11 +141,11 @@ const emits = defineEmits<{
 
 ### 插槽（Slots）
 
-由于该组件为无 UI 组件，你可以通过多个插槽自定义播放器的加载前展示。
+使用插槽来控制播放器周围的 facade。
 
 **default**
 
-默认插槽用来显示始终可见的内容。
+始终可见。
 
 ```vue
 <template>
@@ -199,7 +159,7 @@ const emits = defineEmits<{
 
 **awaitingLoad**
 
-该插槽用于视频加载时显示内容。
+组件等待元素触发器时显示。
 
 ```vue
 <template>
@@ -215,7 +175,7 @@ const emits = defineEmits<{
 
 **loading**
 
-该插槽用于视频加载过程中显示的内容。
+Vimeo SDK 加载时显示。
 
 ```vue
 <template>
@@ -231,7 +191,7 @@ const emits = defineEmits<{
 
 **placeholder**
 
-该插槽用于视频加载前显示的占位图。默认情况下，它会展示 Vimeo 视频的缩略图。你可以根据需求自定义显示。
+替换默认的 Vimeo 缩略图。该插槽会接收解析后的 `placeholder` URL。
 
 ```vue
 <template>
@@ -245,13 +205,13 @@ const emits = defineEmits<{
 
 ## [`useScriptVimeoPlayer()`{lang="ts"}](/scripts/vimeo-player){lang="ts"}
 
-`useScriptVimeoPlayer` 组合式函数让你可以更细粒度地控制 Vimeo 播放器 SDK。它提供了加载 Vimeo 播放器 SDK 并以编程方式交互的方式。
+当你需要加载 Vimeo Player SDK 并以编程方式创建播放器时，请使用 [`useScriptVimeoPlayer()`{lang="ts"}](/scripts/vimeo-player){lang="ts"}。
 
 ```ts
 export function useScriptVimeoPlayer<T extends VimeoPlayerApi>(_options?: VimeoPlayerInput) {}
 ```
 
-请参考 [脚本注册表](/docs/guides/registry-scripts) 指南以获取更多高级用法。
+有关触发器、代理和其他脚本选项，请参阅[注册脚本](/docs/guides/registry-scripts)。
 
 ::script-types
 ::
@@ -279,12 +239,16 @@ onLoaded(({ Vimeo }) => {
     id: 331567154
   })
 })
+
+function play() {
+  player?.play()
+}
 </script>
 
 <template>
   <div>
     <div ref="video" />
-    <button @click="player.play()">
+    <button @click="play">
       播放
     </button>
   </div>

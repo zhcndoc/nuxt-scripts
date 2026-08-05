@@ -1,6 +1,6 @@
 ---
-title: TikTok 像素
-description: 在你的 Nuxt 应用中使用 TikTok 像素。
+title: TikTok Pixel
+description: 在获得用户同意的情况下，通过去重和高级匹配跟踪 TikTok 转化。
 links:
 - label: 源码
   icon: i-simple-icons-github
@@ -8,9 +8,9 @@ links:
   size: xs
 ---
 
-[TikTok 像素](https://ads.tiktok.com/help/article/tiktok-pixel) 让你能够衡量、优化并为你的 TikTok 广告活动构建受众。
+[TikTok Pixel](https://ads.tiktok.com/help/article/tiktok-pixel) 会将浏览器事件报告给 TikTok Ads，用于转化衡量和受众分析。
 
-Nuxt Scripts 提供了一个注册表脚本组合式函数 [`useScriptTikTokPixel()`{lang="ts"}](/scripts/tiktok-pixel){lang="ts"}，方便你在 Nuxt 应用中集成 TikTok 像素。
+使用 [`useScriptTikTokPixel()`{lang="ts"}](/scripts/tiktok-pixel){lang="ts"} 加载像素并访问其 `ttq` API。
 
 ::script-stats
 ::
@@ -18,33 +18,14 @@ Nuxt Scripts 提供了一个注册表脚本组合式函数 [`useScriptTikTokPixe
 ::script-docs
 ::
 
-## 识别用户
+## 禁用自动页面浏览
 
-你可以识别用户以进行高级匹配：
-
-```ts
-const { proxy } = useScriptTikTokPixel()
-
-proxy.ttq('identify', {
-  email: 'user@example.com',
-  phone_number: '+1234567890'
-})
-```
-
-## 禁用自动页面浏览追踪
-
-默认情况下，TikTok 像素会自动追踪页面浏览。若要禁用：
+默认情况下，TikTok Pixel 会在初始化期间跟踪页面浏览。可在组合式函数调用中禁用此功能：
 
 ```ts
-export default defineNuxtConfig({
-  scripts: {
-    registry: {
-      tiktokPixel: {
-        id: 'YOUR_PIXEL_ID',
-        trackPageView: false
-      }
-    }
-  }
+useScriptTikTokPixel({
+  id: 'YOUR_PIXEL_ID',
+  trackPageView: false,
 })
 ```
 
@@ -68,11 +49,13 @@ function rejectAds() {
 </script>
 ```
 
-有关完整行为，请参阅 [TikTok cookie 同意文档](https://business-api.tiktok.com/portal/docs?id=1739585600931842)。
+完整行为请参阅 [TikTok Cookie 同意文档](https://business-api.tiktok.com/portal/docs?id=1739585600931842)。
 
-## 数据驻留区域
+初始同意命令会在像素初始化之前排队，但不会延迟 SDK 请求。如果你的政策要求在用户选择同意之前不得向 TikTok 发起请求，请为脚本本身使用[同意触发器](/docs/guides/consent#binary-load-gate)。
 
-有美国数据驻留要求的企业可以通过设置 `region: 'us'`（默认值为 `'global'`）将 Pixel SDK 路由至 `analytics.us.tiktok.com`：
+## 数据驻留端点
+
+设置 `region: 'us'`，即可从 `analytics.us.tiktok.com` 而非全局主机加载 Pixel SDK：
 
 ```ts
 useScriptTikTokPixel({
@@ -80,6 +63,8 @@ useScriptTikTokPixel({
   region: 'us',
 })
 ```
+
+此选项仅用于选择 SDK 主机。它本身并不能证明您的其余跟踪设置符合数据驻留或隐私要求。
 
 ## 服务端事件去重
 
@@ -92,7 +77,7 @@ const { proxy } = useScriptTikTokPixel({ id: 'YOUR_PIXEL_ID' })
 async function checkout(order: { id: string, total: number }) {
   const eventId = crypto.randomUUID()
 
-  proxy.ttq('track', 'Purchase', { value: order.total, currency: 'USD', order_id: order.id }, { event_id: eventId })
+  proxy.ttq.track('Purchase', { value: order.total, currency: 'USD', order_id: order.id }, { event_id: eventId })
 
   await $fetch('/api/tiktok/event', {
     method: 'POST',
@@ -104,27 +89,31 @@ async function checkout(order: { id: string, total: number }) {
 
 有关完整规则，请参阅 [TikTok 的事件去重指南](https://ads.tiktok.com/help/article/event-deduplication?lang=en)。
 
-## 测试事件沙盒
+## 测试浏览器事件
 
-在第 4 个 `track` 参数中设置 `test_event_code`，即可将事件路由到 TikTok 的测试事件面板，而不会影响生产环境报告：
+TikTok 的[浏览器 Pixel 测试指南](https://ads.us.tiktok.com/help/article/test-tiktok-pixel-events-video-walkthrough?lang=en)使用 Events Manager 中的 Test Events 选项卡：输入网站 URL，通过生成的测试流程打开该网站，然后执行你想要检查的操作。
 
-```ts
-proxy.ttq('track', 'Purchase', { value: 99 }, { test_event_code: 'TEST12345' })
-```
+当前的 Nuxt Scripts 类型还接受第四个 `track` 参数中的 `test_event_code`，并将其转发给 SDK。TikTok 为服务端 Events API 记录了该字段，但并未将其用于浏览器 `ttq.track` 签名，因此不要依赖它来进行浏览器测试。
 
 ## 高级匹配
 
-TikTok 要求识别字段（`email`、`phone_number`、`external_id`、`first_name`、`last_name`、`city`、`state`、`country`、`zip_code`）必须是经过 SHA-256 哈希处理的小写值。TikTok 会静默丢弃原始值；在开发环境中，如果 Nuxt Scripts 检测到未哈希的值，会记录警告：
+Nuxt Scripts 要求每个识别字段（`email`、`phone_number`、`external_id`、`first_name`、`last_name`、`city`、`state`、`country`、`zip_code`）都使用 64 个字符的 SHA-256 十六进制摘要。TikTok 的[高级匹配指南](https://ads.tiktok.com/help/article/advanced-matching-web?lang=en)介绍了规范化和哈希处理。在开发环境中，当某个值看起来不像经过哈希处理时，该组合式函数会发出警告。
 
 ```ts
-import { sha256 } from 'ohash'
+async function sha256(value: string) {
+  const input = new TextEncoder().encode(value)
+  const digest = await crypto.subtle.digest('SHA-256', input)
+  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('')
+}
 
 const { proxy } = useScriptTikTokPixel({ id: 'YOUR_PIXEL_ID' })
-proxy.ttq('identify', {
-  email: sha256('user@example.com'.trim().toLowerCase()),
-  phone_number: sha256('+15551234567'),
+proxy.ttq.identify({
+  email: await sha256('user@example.com'.trim().toLowerCase()),
+  phone_number: await sha256('+15551234567'),
 })
 ```
+
+[`crypto.subtle.digest()`{lang="ts"}](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest) 在浏览器中仅可用于安全上下文。本地主机在开发环境中会被视为安全环境；请通过 HTTPS 部署此示例。
 
 ::script-types
 ::

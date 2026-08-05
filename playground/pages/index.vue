@@ -45,6 +45,8 @@ function getPlaygroundPath(script: any): string | null {
     'vimeo-player': '/third-parties/vimeo/nuxt-scripts',
     'youtube-player': '/third-parties/youtube/nuxt-scripts',
     'google-maps': '/third-parties/google-maps/nuxt-scripts',
+    'leaflet': '/third-parties/leaflet',
+    'maplibre-gl-js': '/third-parties/maplibre',
     'google-recaptcha': '/third-parties/google-recaptcha/nuxt-scripts',
     'calendly': '/third-parties/calendly/nuxt-scripts',
     'usercentrics': '/third-parties/usercentrics/nuxt-scripts',
@@ -76,12 +78,6 @@ const analytics = registryScripts
       name: 'Google Analytics (DataLayers)',
       path: '/third-parties/google-analytics/datalayers',
       logo: registryScripts.find(s => s.label === 'Google Analytics')?.logo,
-      registryScript: null,
-    },
-    {
-      name: 'Plausible Analytics v2 (Oct 2025)',
-      path: '/third-parties/plausible-analytics-v2',
-      logo: registryScripts.find(s => s.label === 'Plausible Analytics')?.logo,
       registryScript: null,
     },
   ])

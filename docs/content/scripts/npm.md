@@ -16,13 +16,13 @@ links:
 
 ## 背景
 
-使用 NPM 文件时，通常会将它们作为 `package.json` 文件中的 node_module 依赖包含进来。然而，优化这些脚本的加载较为困难，需要从单独的代码块动态导入模块，并且仅在需要时加载。它还会拖慢构建速度，因为模块需要被转译。
+通常，你会安装一个 [npm](https://www.npmjs.com/) 软件包，并将其与应用一起打包。仅在需要时加载它则需要更多工作：你需要一个[动态 `import()`{lang="ts"}](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import)、一个单独的代码块，以及构建期间所需的任何转译。
 
-`useScriptNpm` 注册脚本抽象了这一过程，使你可以通过一行代码加载那些已经导出为立即调用函数（IIFE）的脚本。
+[`useScriptNpm()`{lang="ts"}](/scripts/npm){lang="ts"} 注册脚本抽象了这一过程，让你只需一行代码即可加载立即调用函数表达式（IIFE）构建版本。
 
-在许多情况下，将脚本作为 `package.json` 文件中的依赖可能更合理，但对于不常用或对应用不关键的脚本，这可以是一个很好的替代方案。
+请将经常使用或关键的软件包保留在 `package.json` 中。通过 CDN 加载最适合偶尔使用的非关键 IIFE。
 
-一开始，我们可以将使用此脚本视为 `useHead` 组合式函数的替代方案。以下代码示例展示了该抽象层次。
+下面的三个示例通过注册脚本、`useScript` 和 `useHead` 加载同一个文件。
 
 ::code-group
 
@@ -31,6 +31,7 @@ useScriptNpm({
   packageName: 'js-confetti',
   file: 'dist/js-confetti.browser.js',
   version: '0.12.0',
+  provider: 'jsdelivr',
 })
 ```
 
@@ -41,7 +42,7 @@ useScript('https://cdn.jsdelivr.net/npm/js-confetti@0.12.0/dist/js-confetti.brow
 ```ts [useHead]
 useHead({
   script: [
-    { src: 'https://cdn.jsdelivr.net/npm/js-confetti@latest/dist/js-confetti.browser.js' }
+    { src: 'https://cdn.jsdelivr.net/npm/js-confetti@0.12.0/dist/js-confetti.browser.js' }
   ]
 })
 ```
@@ -50,37 +51,34 @@ useHead({
 
 ## [`useScriptNpm()`{lang="ts"}](/scripts/npm){lang="ts"}
 
-`useScriptNpm` 组合式函数让你可以精细地控制你的网站上 NPM 脚本何时以及如何加载。
+[`useScriptNpm()`{lang="ts"}](/scripts/npm){lang="ts"} 组合式函数默认使用 unpkg。将 `provider` 设置为 `'jsdelivr'` 或 `'cdnjs'`，即可使用其他受支持的 URL 格式。
 
 ```ts
 function useScriptNpm<T extends Record<string | symbol, any>>(_options: NpmInput) {}
 ```
 
-请参考 [注册脚本指南](/docs/guides/registry-scripts) 了解更多进阶用法。
+有关触发器、代理和其他脚本选项，请参阅[注册表脚本](/docs/guides/registry-scripts)。
 
-### NpmOptions
+### 映射已加载的全局变量
 
-```ts
-export const NpmOptions = object({
-  packageName: string(),
-  file: optional(string()),
-  version: optional(string()),
-  type: optional(string()),
-})
-```
-
-### 返回值
-
-要获取所加载脚本的类型，你需要扩展 `useScriptNpm` 函数的类型定义。
+泛型类型描述了代理，但不会发现浏览器全局变量。使用 `scriptOptions.use` 显式映射已加载的库：
 
 ```ts
 interface SomeApi {
   doSomething: () => void
 }
-useScriptNpm<SomeApi>({
-  packageName: 'some-api'
+
+const { proxy } = useScriptNpm<SomeApi>({
+  packageName: 'some-api',
+  scriptOptions: {
+    use: () => (window as Window & { SomeApi: SomeApi }).SomeApi,
+  },
 })
+
+proxy.doSomething()
 ```
+
+如果没有 `scriptOptions.use`，IIFE 仍会加载，但组合式函数不会通过 `proxy` 或 `onLoaded` 暴露其全局 API。
 
 ::script-types
 ::

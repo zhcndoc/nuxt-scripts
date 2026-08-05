@@ -1,6 +1,6 @@
 ---
 title: Umami 分析
-description: 在你的 Nuxt 应用中使用 Umami 分析。
+description: 加载 Umami、识别会话，并在事件负载发送前检查或过滤它们。
 links:
   - label: 源码
     icon: i-simple-icons-github
@@ -8,7 +8,7 @@ links:
     size: xs
 ---
 
-[Umami](https://umami.is/) 收集你关注的所有指标，帮助你做出更好的决策。
+[Umami](https://umami.is/) 是一个开源的网站分析平台，可以在 Umami Cloud 上运行，也可以部署在你自己的服务器上。
 
 ::script-stats
 ::
@@ -18,7 +18,7 @@ links:
 
 ### 自托管的 Umami
 
-如果你使用自托管版本的 Umami，请将 `hostUrl` 设置为你的 Umami 源站。这是告诉 Umami 将事件发送到哪里的、该提供程序特有的方式。
+如果你使用的是自托管版本的 Umami，请将 `hostUrl` 设置为你的 Umami 源站地址。此设置对应于 Umami 文档中的 [`data-host-url`](https://docs.umami.is/docs/tracker-configuration#data-host-url) 配置，并告知跟踪器将事件发送到何处。
 
 ```ts
 useScriptUmamiAnalytics({
@@ -29,37 +29,37 @@ useScriptUmamiAnalytics({
 
 仅当你还需要覆盖脚本 URL 本身时，才使用 `scriptInput.src`。
 
-## 高级功能
+## 识别会话和筛选数据
 
-### 会话识别
+### 识别会话
 
-Umami v2.18.0 及以上版本支持使用 `identify` 函数设置唯一的会话 ID。你可以传递一个字符串（唯一 ID）或者带有会话数据的对象：
+Umami 的 [`identify`](https://docs.umami.is/docs/tracker-functions#sessions) 函数接受唯一 ID 或包含会话数据的对象：
 
 ```ts
 const { proxy } = useScriptUmamiAnalytics({
   websiteId: 'YOUR_WEBSITE_ID'
 })
 
-// 使用唯一字符串 ID
+// 设置唯一 ID
 proxy.identify('user-12345')
 
-// 使用会话数据对象
+// 向会话附加数据
 proxy.identify({
   userId: 'user-12345',
   plan: 'premium'
 })
 ```
 
-### 使用 beforeSend 进行数据过滤
+### 使用 `beforeSend` 筛选数据
 
-`beforeSend` 选项允许你在数据发送到 Umami 之前检查、修改或取消数据。这对于实现自定义隐私控制或数据过滤非常有用：
+使用 [`beforeSend`](https://docs.umami.is/docs/tracker-configuration#data-before-send) 在 Umami 接收数据前检查、修改或取消发送的数据：
 
 ```ts
 useScriptUmamiAnalytics({
   websiteId: 'YOUR_WEBSITE_ID',
   beforeSend: (type, payload) => {
-    // 记录发送内容（用于调试）
-    console.log('发送到 Umami:', type, payload)
+    // 调试时记录正在发送的数据
+    console.log('Sending to Umami:', type, payload)
 
     // 过滤敏感数据
     if (payload.url && payload.url.includes('private')) {
@@ -69,7 +69,7 @@ useScriptUmamiAnalytics({
     // 发送前修改数据
     return {
       ...payload,
-      referrer: '' // 隐私考虑移除来源
+      referrer: '' // 出于隐私考虑移除来源
     }
   }
 })

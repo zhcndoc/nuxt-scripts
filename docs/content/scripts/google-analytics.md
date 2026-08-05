@@ -1,6 +1,6 @@
 ---
-title: 谷歌分析
-description: 在 Nuxt 应用中使用 Google Analytics。
+title: Google Analytics
+description: 使用类型化的同意控制发送 Google Analytics 页面浏览和事件。
 links:
   - label: 源码
     icon: i-simple-icons-github
@@ -8,9 +8,7 @@ links:
     size: xs
 ---
 
-[谷歌分析](https://marketingplatform.google.com/about/analytics/) 是适用于 Nuxt 应用的分析解决方案。
-
-它提供了详尽的洞察，帮助你了解网站的性能表现、用户如何与你的内容互动，以及他们如何浏览你的网站。
+[Google Analytics](https://marketingplatform.google.com/about/analytics/) 用于记录页面浏览和事件，以分析流量和受众。
 
 ::script-stats
 ::
@@ -20,22 +18,24 @@ links:
 
 ### 使用方法
 
-为了与 Google Analytics API 交互，推荐使用脚本的 [proxy](/docs/guides/key-concepts#understanding-proxied-functions)。
+通过脚本 [代理](/docs/guides/key-concepts#understanding-proxied-functions) 调用 [`gtag`](https://developers.google.com/tag-platform/gtagjs/reference)：
 
 ```ts
-const { proxy } = useScriptGoogleAnalytics()
+const { proxy } = useScriptGoogleAnalytics({ id: 'G-XXXXXXXX' })
 
 proxy.gtag('event', 'page_view')
 ```
 
-proxy 暴露了 `gtag` 和 `dataLayer` 属性，你应当按照 Google Analytics 的最佳实践使用它们。
+代理还会公开 `dataLayer`。
+
+下面省略 `id` 的示例假定已通过 `scripts.registry.googleAnalytics` 提供该参数。
 
 ## 同意模式
 
-Google Analytics 原生支持 [GCMv2 同意状态](https://developers.google.com/tag-platform/security/guides/consent)。使用 `defaultConsent` 设置默认值（会在 `gtag('js', ...)`{lang="ts"} 之前触发 `gtag('consent', 'default', state)`{lang="ts"}），并在运行时调用 `consent.update()`{lang="ts"} 来切换各项类别。对于需要在运行时动态推导默认值（例如在触发前等待地区/CMS 解析完成）的场景，可在客户端调用 `consent.default()`{lang="ts"}。
+Google Analytics 接受 [GCMv2 同意状态](https://developers.google.com/tag-platform/security/guides/consent)。`defaultConsent` 会在 `gtag('js', ...)`{lang="ts"} 之前触发；对于之后的选择，请使用 `consent.update()`{lang="ts"}。在组合式函数返回后调用 `consent.default()`{lang="ts"} 会将新的默认值排入队列，但无法复现这种初始化前的顺序。
 
 ::callout{icon="i-heroicons-play" to="https://stackblitz.com/github/nuxt/scripts/tree/main/examples/regional-consent" target="_blank"}
-在 [StackBlitz](https://stackblitz.com) 上试用实时的 [区域同意示例](https://stackblitz.com/github/nuxt/scripts/tree/main/examples/regional-consent)。
+在 [StackBlitz](https://stackblitz.com) 上打开[按地区设置同意的示例](https://stackblitz.com/github/nuxt/scripts/tree/main/examples/regional-consent)。
 ::
 
 ```vue
@@ -74,7 +74,7 @@ function savePreferences(choices: { analytics: boolean, marketing: boolean }) {
 
 ### 按地区的默认值
 
-向 `defaultConsent` 传入一个数组，即可为每个条目分别触发一次 `gtag('consent','default', state)`{lang="ts"}。这与 Google 的 [特定地区同意模式](https://developers.google.com/tag-platform/security/guides/consent?consentmode=advanced#region-specific-behavior) 一致：更具体的地区（例如 `US-CA`）会覆盖更宽泛的地区（`US`）；没有 `region` 的条目则是不带范围的全局回退值。
+向 `defaultConsent` 传入一个数组，即可为每个条目分别触发一次 `gtag('consent','default', state)`{lang="ts"}。这与 Google 的[特定地区同意模式](https://developers.google.com/tag-platform/security/guides/consent?consentmode=advanced#region-specific-behavior)一致：更具体的地区（例如 `US-CA`）会覆盖更宽泛的地区（`US`）；没有 `region` 的条目则是不带范围的全局回退值。
 
 ```vue
 <script setup lang="ts">
@@ -82,7 +82,7 @@ useScriptGoogleAnalytics({
   id: 'G-XXXXXXXX',
   defaultConsent: [
     {
-      // 欧盟 + 英国 + 瑞士——默认拒绝，等待用户选择 500 毫秒
+      // 欧洲经济区 + 英国 + 瑞士：初始设为拒绝，并等待 500 毫秒以获取选择。
       ad_storage: 'denied',
       ad_user_data: 'denied',
       ad_personalization: 'denied',
@@ -91,7 +91,7 @@ useScriptGoogleAnalytics({
       wait_for_update: 500,
     },
     {
-      // 其他所有地区——默认授予
+      // 其他所有地区：默认设为同意。
       ad_storage: 'granted',
       ad_user_data: 'granted',
       ad_personalization: 'granted',
@@ -104,9 +104,9 @@ useScriptGoogleAnalytics({
 
 模块会按输入顺序原样转发每个条目。区域作用域默认值与无作用域默认值之间的优先级由运行时的 gtag 负责处理，而不是由顺序决定。
 
-## 客户/消费者 ID 跟踪
+## 客户专属 GA 属性
 
-对于需要在主追踪之外进行客户特定数据追踪的电商或多租户应用：
+对于市场平台或多租户应用，第二个标签可以将事件发送到客户的 GA 属性：
 
 ```vue [ProductPage.vue]
 <script setup lang="ts">
@@ -114,38 +114,36 @@ useScriptGoogleAnalytics({
 const route = useRoute()
 const pageData = await $fetch(`/api/product/${route.params.id}`)
 
-// 使用自定义 dataLayer 名称加载 gtag 以进行客户追踪
-const { proxy: customerGtag, load } = useScriptGoogleAnalytics({
+const consumerGtagId = pageData.gtag
+
+// 使用自定义数据层名称加载 gtag，以进行客户追踪。
+const { proxy: customerGtag } = useScriptGoogleAnalytics({
   key: 'gtag-customer',
-  l: 'customerDataLayer', // 自定义 dataLayer 名称
+  id: consumerGtagId,
+  l: 'customerDataLayer',
 })
 
-// 当可用时配置客户的追踪 ID
-const consumerGtagId = computed(() => pageData?.gtag)
-
-if (consumerGtagId.value) {
-  // 配置客户的 GA4 属性
-  customerGtag.gtag('config', consumerGtagId.value)
-
-  // 发送客户特定事件
-  customerGtag.gtag('event', 'product_view', {
-    item_id: pageData.id,
-    customer_id: pageData.customerId,
-    value: pageData.price
-  })
-}
+customerGtag.gtag('event', 'product_view', {
+  item_id: pageData.id,
+  customer_id: pageData.customerId,
+  value: pageData.price,
+})
 </script>
 ```
 
 ## 自定义维度和用户属性
 
+Google 在[此处](https://developers.google.com/tag-platform/gtagjs/reference#parameter_scope)记录了 [`config`、`set` 和事件参数](https://developers.google.com/tag-platform/gtagjs/reference#parameter_scope)的作用域。对于与单个 GA 属性相关联的值，请使用 `config`；对于全局默认值，请使用 `set`。
+
 ```ts
 const { proxy } = useScriptGoogleAnalytics()
 
-// 用户属性（跨会话持久化）
-proxy.gtag('set', 'user_properties', {
-  user_tier: 'premium',
-  account_type: 'business'
+// 此 GA4 属性的用户属性
+proxy.gtag('config', 'G-XXXXXXXX', {
+  user_properties: {
+    user_tier: 'premium',
+    account_type: 'business',
+  },
 })
 
 // 事件中的自定义维度（需在 GA4 管理后台 > 自定义定义中注册）
@@ -160,26 +158,41 @@ proxy.gtag('event', 'purchase', {
 proxy.gtag('set', { country: 'US', currency: 'USD' })
 ```
 
-## 手动页面浏览追踪（单页应用）
+## 跟踪 SPA 页面浏览量
 
-GA4 默认自动追踪页面浏览。若需禁用并手动追踪：
+该注册表会配置 Google 标签并发送初始页面浏览量。`useScriptEventPage` 会监听 Nuxt 的 `page:finish` 钩子，其中包括初始客户端渲染期间触发的钩子（前提是你足够早地注册它）。在 `app.vue` 这类长生命周期组件中，应忽略该初始回调，但不要在稍后注册时误丢弃第一次导航。按照 Google 的 [SPA 测量指南](https://developers.google.com/analytics/devguides/collection/ga4/single-page-applications)中的说明，将之前的 URL 保留为 `page_referrer`：
 
 ```ts
 const { proxy } = useScriptGoogleAnalytics()
+const initialPath = useRoute().fullPath
+let initialPageSeen = false
+let previousLocation: string | undefined
 
-// 禁用自动页面浏览
-proxy.gtag('config', 'G-XXXXXXXX', { send_page_view: false })
+useScriptEventPage(({ title, path }) => {
+  const pageLocation = new URL(path, window.location.origin).href
 
-// 路由变化时追踪
-const router = useRouter()
-router.afterEach((to) => {
-  proxy.gtag('event', 'page_view', { page_path: to.fullPath })
+  // page:finish 可能会在初始客户端渲染时触发。
+  if (!initialPageSeen && path === initialPath) {
+    initialPageSeen = true
+    previousLocation = pageLocation
+    return
+  }
+
+  previousLocation ||= new URL(initialPath, window.location.origin).href
+  proxy.gtag('event', 'page_view', {
+    page_title: title,
+    page_location: pageLocation,
+    page_referrer: previousLocation,
+  })
+  previousLocation = pageLocation
 })
 ```
 
-## 代理排队机制
+如果你的 Web 数据流的增强型衡量功能已经[跟踪浏览器历史记录变化](https://developers.google.com/analytics/devguides/collection/ga4/views)，请不要添加手动页面浏览量，否则会记录重复事件。
 
-proxy 会将所有 `gtag` 调用排队，直到脚本加载完成。调用是 SSR 安全的，对广告屏蔽器友好，并且保持调用顺序。
+## 代理队列
+
+代理会在脚本加载完成前将 `gtag` 调用排队，并保留其调用顺序。
 
 ```ts
 const { proxy, onLoaded } = useScriptGoogleAnalytics()
@@ -193,7 +206,9 @@ onLoaded(({ gtag }) => {
 })
 ```
 
-## 常见事件模式
+## 常见事件
+
+当某个操作有对应的事件时，请使用 Google 的[推荐事件](https://developers.google.com/analytics/devguides/collection/ga4/events)；对于应用特定的行为，仍然可以使用自定义名称。
 
 ```ts
 const { proxy } = useScriptGoogleAnalytics()
@@ -216,13 +231,13 @@ proxy.gtag('event', 'feature_used', { feature_name: 'dark_mode' })
 
 ## 调试
 
-通过配置或 URL 参数 `?debug_mode=true` 启用调试模式：
+为标签配置启用调试模式：
 
 ```ts
 proxy.gtag('config', 'G-XXXXXXXX', { debug_mode: true })
 ```
 
-在 GA4 查看事件：**管理 > DebugView**。安装 [GA Debugger 扩展](https://chrome.google.com/webstore/detail/google-analytics-debugger/jnkmfdileelhofjcijamephohjechhna) 以在控制台中查看日志。
+使用 [DebugView、Tag Assistant 或浏览器的网络面板](https://developers.google.com/analytics/devguides/collection/ga4/troubleshoot) 验证标签。在网络面板中，查找对 `google-analytics.com/g/collect` 或 `analytics.google.com/g/collect` 的成功请求。
 
 关于同意模式设置，请参阅 [同意指南](/docs/guides/consent)。
 

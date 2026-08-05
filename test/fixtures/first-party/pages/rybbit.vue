@@ -3,16 +3,16 @@ import { useHead, useScriptRybbitAnalytics } from '#imports'
 import { ref } from 'vue'
 
 useHead({ title: 'Rybbit - First Party' })
-const { status, proxy } = useScriptRybbitAnalytics({ siteId: '874' })
+const { status, proxy } = useScriptRybbitAnalytics({ siteId: '874', scriptOptions: { trigger: 'client' } })
 const result = ref('')
 
 function trackPageview() {
-  proxy.rybbit.pageview()
+  proxy.pageview()
   result.value = 'Pageview tracked'
 }
 
 function trackEvent() {
-  proxy.rybbit.event('test_click', { button: 'primary' })
+  proxy.event('test_click', { button: 'primary' })
   result.value = 'Event tracked'
 }
 </script>

@@ -332,11 +332,6 @@
         "name": "GoogleAnalyticsOptions",
         "kind": "const",
         "code": "export const GoogleAnalyticsOptions = object({\n  /**\n   * The GA4 measurement ID.\n   * @example 'G-XXXXXXXX'\n   * @see https://developers.google.com/analytics/devguides/collection/gtagjs\n   */\n  id: optional(string()),\n  /**\n   * Global name for the dataLayer variable.\n   * @default 'dataLayer'\n   * @see https://developers.google.com/analytics/devguides/collection/gtagjs/setting-up-gtag#rename_the_data_layer\n   */\n  l: optional(string()),\n  /**\n   * Default GCMv2 consent state(s) fired as `gtag('consent', 'default', state)` before\n   * `gtag('js', ...)`. Pass an array to fire multiple defaults — for example, different\n   * defaults per `region` (more specific regions override broader ones at runtime).\n   * @see https://developers.google.com/tag-platform/security/guides/consent?consentmode=advanced#region-specific-behavior\n   */\n  defaultConsent: optional(union([gcmConsentState, array(gcmConsentState)])),\n})"
-      },
-      {
-        "name": "GoogleAnalyticsConsent",
-        "kind": "type",
-        "code": "export type GoogleAnalyticsConsent = GcmConsentApi"
       }
     ],
     "google-maps": [
@@ -348,17 +343,32 @@
       {
         "name": "MapsNamespace",
         "kind": "type",
-        "code": "type MapsNamespace = typeof window.google.maps"
+        "code": "type MapsNamespace = typeof google.maps"
+      },
+      {
+        "name": "GoogleMapsWindow",
+        "kind": "type",
+        "code": "type GoogleMapsWindow = Window & {\n  google: {\n    maps: MapsNamespace & { __ib__?: () => void }\n  }\n}"
       },
       {
         "name": "GoogleMapsApi",
         "kind": "interface",
-        "code": "export interface GoogleMapsApi {\n  maps: Promise<MapsNamespace>\n}"
+        "code": "export interface GoogleMapsApi {\n  maps: MapsNamespace\n}"
       },
       {
         "name": "ScriptGoogleMapsProps",
         "kind": "interface",
-        "code": "interface ScriptGoogleMapsProps ScriptGoogleMapsProps"
+        "code": "interface ScriptGoogleMapsProps {\n  /**\n   * Defines the trigger event to load the script.\n   * @default ['mouseenter', 'mouseover', 'mousedown']\n   */\n  trigger?: ElementScriptTrigger\n  /**\n   * Defines the Google Maps API key. Must have access to the Static Maps API as well.\n   */\n  apiKey?: string\n  /**\n   * Options for the map.\n   */\n  mapOptions?: google.maps.MapOptions\n  /**\n   * Defines the region of the map.\n   */\n  region?: string\n  /**\n   * Defines the language of the map.\n   */\n  language?: string\n  /**\n   * Defines the version of google maps js API.\n   */\n  version?: string\n  /**\n   * Defines the width of the map.\n   * @default 640\n   */\n  width?: number | string\n  /**\n   * Defines the height of the map.\n   * @default 400\n   */\n  height?: number | string\n  /**\n   * Customize the root element attributes.\n   */\n  rootAttrs?: HTMLAttributes & ReservedProps & Record<string, unknown>\n  /**\n   * Map IDs for light and dark color modes.\n   * When provided, the map will automatically switch styles based on color mode.\n   * Requires @nuxtjs/color-mode or manual colorMode prop.\n   */\n  mapIds?: { light?: string, dark?: string }\n  /**\n   * Manual color mode control. When provided, overrides auto-detection from @nuxtjs/color-mode.\n   * Accepts 'light' or 'dark'.\n   */\n  colorMode?: 'light' | 'dark'\n}"
+      },
+      {
+        "name": "ScriptGoogleMapsEvents",
+        "kind": "interface",
+        "code": "interface ScriptGoogleMapsEvents {\n  ready: ScriptGoogleMapsExpose\n  error: -\n}"
+      },
+      {
+        "name": "ScriptGoogleMapsSlots",
+        "kind": "interface",
+        "code": "interface ScriptGoogleMapsSlots {\n  default?: () => any\n  loading?: () => any\n  awaitingLoad?: () => any\n  error?: () => any\n  placeholder?: () => any\n}"
       },
       {
         "name": "ScriptGoogleMapsCircleProps",
@@ -379,11 +389,6 @@
         "name": "ScriptGoogleMapsGeoJsonEvents",
         "kind": "interface",
         "code": "interface ScriptGoogleMapsGeoJsonEvents {\n  click: google.maps.Data.MouseEvent\n  contextmenu: google.maps.Data.MouseEvent\n  dblclick: google.maps.Data.MouseEvent\n  mousedown: google.maps.Data.MouseEvent\n  mousemove: google.maps.Data.MouseEvent\n  mouseout: google.maps.Data.MouseEvent\n  mouseover: google.maps.Data.MouseEvent\n  mouseup: google.maps.Data.MouseEvent\n  addfeature: google.maps.Data.AddFeatureEvent\n  removefeature: google.maps.Data.RemoveFeatureEvent\n  setgeometry: google.maps.Data.SetGeometryEvent\n  setproperty: google.maps.Data.SetPropertyEvent\n  removeproperty: google.maps.Data.RemovePropertyEvent\n}"
-      },
-      {
-        "name": "ScriptGoogleMapsHeatmapLayerProps",
-        "kind": "interface",
-        "code": "interface ScriptGoogleMapsHeatmapLayerProps {\n  /**\n   * Configuration options for the heatmap layer visualization.\n   * @deprecated Google deprecated the Maps JavaScript API `HeatmapLayer` (May 2025) and removed it in v3.65 (May 2026). Consider [deck.gl HeatmapLayer](https://deck.gl/docs/api-reference/aggregation-layers/heatmap-layer) instead.\n   * @see https://developers.google.com/maps/documentation/javascript/reference/visualization#HeatmapLayerOptions\n   */\n  options?: Omit<HeatmapLayerOptions, 'map'>\n}"
       },
       {
         "name": "ScriptGoogleMapsInfoWindowProps",
@@ -433,7 +438,12 @@
       {
         "name": "ScriptGoogleMapsOverlayViewProps",
         "kind": "interface",
-        "code": "interface ScriptGoogleMapsOverlayViewProps ScriptGoogleMapsOverlayViewProps"
+        "code": "interface ScriptGoogleMapsOverlayViewProps {\n  /**\n   * Geographic position for the overlay. Falls back to parent marker position if omitted.\n   *\n   * Accepts either a plain `LatLngLiteral` (`{ lat, lng }`) or a\n   * `google.maps.LatLng` instance.\n   * @see https://developers.google.com/maps/documentation/javascript/reference/overlay-view#OverlayView\n   */\n  position?: google.maps.LatLng | google.maps.LatLngLiteral\n  /**\n   * Initial open state for the uncontrolled mode (when `v-model:open` is not\n   * bound). When omitted, the overlay opens on mount, matching v0 behaviour.\n   *\n   * Has no effect when `v-model:open` is used; pass an initial value to the\n   * bound ref instead.\n   * @default true\n   */\n  defaultOpen?: boolean\n  /**\n   * Anchor point of the overlay relative to its position.\n   * @default 'bottom-center'\n   */\n  anchor?: ScriptGoogleMapsOverlayAnchor\n  /**\n   * Pixel offset from the anchor position.\n   */\n  offset?: { x: number, y: number }\n  /**\n   * The map pane on which to render the overlay.\n   * @default 'floatPane'\n   * @see https://developers.google.com/maps/documentation/javascript/reference/overlay-view#MapPanes\n   */\n  pane?: ScriptGoogleMapsOverlayPane\n  /**\n   * CSS z-index for the overlay element.\n   */\n  zIndex?: number\n  /**\n   * Whether to block map click and gesture events from passing through the overlay.\n   * @default true\n   */\n  blockMapInteraction?: boolean\n  /**\n   * Pan the map so the overlay is fully visible when opened, similar to InfoWindow behavior.\n   * Set to `true` for default 40px padding, or a number for custom padding.\n   * @default true\n   */\n  panOnOpen?: boolean | number\n  /**\n   * Automatically hide the overlay when its parent marker joins a cluster (on zoom out).\n   * Only applies when nested inside a ScriptGoogleMapsMarkerClusterer.\n   * @default true\n   */\n  hideWhenClustered?: boolean\n}"
+      },
+      {
+        "name": "ScriptGoogleMapsOverlayViewSlots",
+        "kind": "interface",
+        "code": "interface ScriptGoogleMapsOverlayViewSlots {\n  default?: () => any\n}"
       },
       {
         "name": "ScriptGoogleMapsPolygonProps",
@@ -575,11 +585,6 @@
         "name": "GoogleTagManagerOptions",
         "kind": "const",
         "code": "export const GoogleTagManagerOptions = object({\n  /**\n   * GTM container ID (format: GTM-XXXXXX)\n   * @see https://developers.google.com/tag-platform/tag-manager/web#install-the-container\n   */\n  id: string(),\n\n  /**\n   * Optional dataLayer variable name\n   * @default 'dataLayer'\n   * @see https://developers.google.com/tag-platform/tag-manager/web/datalayer#rename_the_data_layer\n   */\n  l: optional(string()),\n\n  /**\n   * Authentication token for environment-specific container versions\n   * @see https://support.google.com/tagmanager/answer/6328337\n   */\n  auth: optional(string()),\n\n  /**\n   * Preview environment name\n   * @see https://support.google.com/tagmanager/answer/6328337\n   */\n  preview: optional(string()),\n\n  /** Forces GTM cookies to take precedence when true */\n  cookiesWin: optional(union([boolean(), literal('x')])),\n\n  /**\n   * Enables debug mode when true\n   * @see https://support.google.com/tagmanager/answer/6107056\n   */\n  debug: optional(union([boolean(), literal('x')])),\n\n  /**\n   * No Personal Advertising - disables advertising features when true\n   * @see https://developers.google.com/tag-platform/tag-manager/templates/consent-apis\n   */\n  npa: optional(union([boolean(), literal('1')])),\n\n  /** Custom dataLayer name (alternative to \"l\" property) */\n  dataLayer: optional(string()),\n\n  /**\n   * Environment name for environment-specific container\n   * @see https://support.google.com/tagmanager/answer/6328337\n   */\n  envName: optional(string()),\n\n  /** Referrer policy for analytics requests */\n  authReferrerPolicy: optional(string()),\n\n  /**\n   * Default GCMv2 consent state(s) fired as `['consent','default', state]` onto the dataLayer\n   * before the `gtm.js` event. Pass an array to fire multiple defaults — for example,\n   * different defaults per `region` (more specific regions override broader ones at runtime).\n   * @see https://developers.google.com/tag-platform/tag-manager/templates/consent-apis\n   * @see https://developers.google.com/tag-platform/security/guides/consent?consentmode=advanced#region-specific-behavior\n   */\n  defaultConsent: optional(union([gcmConsentState, array(gcmConsentState)])),\n})"
-      },
-      {
-        "name": "GoogleTagManagerConsent",
-        "kind": "type",
-        "code": "export type GoogleTagManagerConsent = GcmConsentApi"
       }
     ],
     "gravatar": [
@@ -650,6 +655,83 @@
         "code": "interface ScriptIntercomSlots {\n  default?: (props: { ready: boolean }) => any\n  awaitingLoad?: () => any\n  loading?: () => any\n  error?: () => any\n}"
       }
     ],
+    "leaflet": [
+      {
+        "name": "LeafletOptions",
+        "kind": "const",
+        "code": "export const LeafletOptions = object({\n  /**\n   * Inject the Leaflet 1.9.4 styles and default marker images when the script\n   * begins loading. Disable this when supplying your own Leaflet stylesheet.\n   * @default true\n   */\n  injectStyles: optional(boolean()),\n})"
+      },
+      {
+        "name": "LeafletApi",
+        "kind": "interface",
+        "code": "export interface LeafletApi {\n  L: typeof Leaflet\n}"
+      },
+      {
+        "name": "ScriptLeafletGeoJsonProps",
+        "kind": "interface",
+        "code": "interface ScriptLeafletGeoJsonProps {\n  /** GeoJSON object, feature, or feature collection. Replace it to update the layer. */\n  data: GeoJsonObject | GeoJsonObject[]\n  /** Options passed to `L.geoJSON`. */\n  options?: Leaflet.GeoJSONOptions\n}"
+      },
+      {
+        "name": "ScriptLeafletGeoJsonEvents",
+        "kind": "interface",
+        "code": "interface ScriptLeafletGeoJsonEvents {\n  click: Leaflet.LeafletMouseEvent\n  dblclick: Leaflet.LeafletMouseEvent\n  mousedown: Leaflet.LeafletMouseEvent\n  mouseover: Leaflet.LeafletMouseEvent\n  mouseout: Leaflet.LeafletMouseEvent\n  contextmenu: Leaflet.LeafletMouseEvent\n  layeradd: Leaflet.LayerEvent\n  layerremove: Leaflet.LayerEvent\n}"
+      },
+      {
+        "name": "ScriptLeafletMapProps",
+        "kind": "interface",
+        "code": "interface ScriptLeafletMapProps {\n  /**\n   * Defines when the Leaflet script loads.\n   * @default 'visible'\n   */\n  trigger?: ElementScriptTrigger\n  /** Initial and reactively controlled map center. */\n  center: Leaflet.LatLngExpression\n  /** Initial and reactively controlled zoom level. @default 13 */\n  zoom?: number\n  /** Options passed to `L.map`. `center` and `zoom` use their dedicated props. */\n  options?: Leaflet.MapOptions\n  /** Inject Leaflet's styles and embedded default marker images. @default true */\n  injectStyles?: boolean\n  /** Width reserved before the map loads. @default 640 */\n  width?: number | string\n  /** Height reserved before the map loads. @default 400 */\n  height?: number | string\n  /** Accessible name for an interactive map. @default 'Interactive map' */\n  ariaLabel?: string\n  /** Disable map input and remove it from the accessibility tree when decorative. @default true */\n  interactive?: boolean\n  /** Attributes applied to the outer layout container. */\n  rootAttrs?: HTMLAttributes & ReservedProps & Record<string, unknown>\n}"
+      },
+      {
+        "name": "ScriptLeafletMapEvents",
+        "kind": "interface",
+        "code": "interface ScriptLeafletMapEvents {\n  ready: ScriptLeafletMapExpose\n  error: Error\n  click: Leaflet.LeafletMouseEvent\n  move: Leaflet.LeafletEvent\n  moveend: Leaflet.LeafletEvent\n  zoom: Leaflet.LeafletEvent\n  zoomend: Leaflet.LeafletEvent\n  update:center: Leaflet.LatLng\n  update:zoom: number\n}"
+      },
+      {
+        "name": "ScriptLeafletMapSlots",
+        "kind": "interface",
+        "code": "interface ScriptLeafletMapSlots {\n  default?: () => any\n  loading?: () => any\n  awaitingLoad?: () => any\n  error?: (props: { error: Error }) => any\n  placeholder?: () => any\n}"
+      },
+      {
+        "name": "ScriptLeafletMarkerProps",
+        "kind": "interface",
+        "code": "interface ScriptLeafletMarkerProps {\n  /** Reactive marker position. */\n  position: Leaflet.LatLngExpression\n  /** Unique text alternative for the marker icon. */\n  alt?: string\n  /** Tooltip text for the marker icon. */\n  title?: string\n  /** Options passed to `L.marker`. */\n  options?: Leaflet.MarkerOptions\n}"
+      },
+      {
+        "name": "ScriptLeafletMarkerEvents",
+        "kind": "interface",
+        "code": "interface ScriptLeafletMarkerEvents {\n  click: Leaflet.LeafletMouseEvent\n  dblclick: Leaflet.LeafletMouseEvent\n  mousedown: Leaflet.LeafletMouseEvent\n  mouseover: Leaflet.LeafletMouseEvent\n  mouseout: Leaflet.LeafletMouseEvent\n  contextmenu: Leaflet.LeafletMouseEvent\n  dragstart: Leaflet.LeafletEvent\n  drag: Leaflet.LeafletEvent\n  dragend: Leaflet.DragEndEvent\n  move: Leaflet.LeafletEvent\n}"
+      },
+      {
+        "name": "ScriptLeafletMarkerSlots",
+        "kind": "interface",
+        "code": "interface ScriptLeafletMarkerSlots {\n  default?: () => any\n}"
+      },
+      {
+        "name": "ScriptLeafletPopupProps",
+        "kind": "interface",
+        "code": "interface ScriptLeafletPopupProps {\n  /** Position for a standalone popup. Omit when nested inside a marker. */\n  position?: Leaflet.LatLngExpression\n  /** Whether the popup is open. @default false */\n  open?: boolean\n  /** Options passed to `L.popup`. */\n  options?: Leaflet.PopupOptions\n}"
+      },
+      {
+        "name": "ScriptLeafletPopupEvents",
+        "kind": "interface",
+        "code": "interface ScriptLeafletPopupEvents {\n  open: Leaflet.LeafletEvent\n  close: Leaflet.LeafletEvent\n}"
+      },
+      {
+        "name": "ScriptLeafletPopupSlots",
+        "kind": "interface",
+        "code": "interface ScriptLeafletPopupSlots {\n  default?: () => any\n}"
+      },
+      {
+        "name": "ScriptLeafletTileLayerProps",
+        "kind": "interface",
+        "code": "interface ScriptLeafletTileLayerProps {\n  /** Tile URL template, for example `https://tile.openstreetmap.org/{z}/{x}/{y}.png`. */\n  url: string\n  /** Tile layer options. Include the provider's required `attribution`. */\n  options?: Leaflet.TileLayerOptions\n}"
+      },
+      {
+        "name": "ScriptLeafletTileLayerEvents",
+        "kind": "interface",
+        "code": "interface ScriptLeafletTileLayerEvents {\n  loading: Leaflet.LeafletEvent\n  load: Leaflet.LeafletEvent\n  tileloadstart: Leaflet.TileEvent\n  tileload: Leaflet.TileEvent\n  tileabort: Leaflet.TileEvent\n  tileerror: Leaflet.TileErrorEvent\n}"
+      }
+    ],
     "lemon-squeezy": [
       {
         "name": "LemonSqueezyEventPayload",
@@ -704,11 +786,78 @@
         "code": "export interface LinkedInInsightApi {\n  lintrk: LintrkFns & { q?: unknown[] }\n}"
       }
     ],
+    "maplibre": [
+      {
+        "name": "MapLibreOptions",
+        "kind": "const",
+        "code": "export const MapLibreOptions = object({\n  /**\n   * Inject the MapLibre GL JS 5.24.0 stylesheet when the script begins\n   * loading. Disable this when supplying the stylesheet through Nuxt.\n   * @default true\n   */\n  injectStyles: optional(boolean()),\n  /**\n   * Stylesheet URL used when `injectStyles` is enabled.\n   * @default 'https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css'\n   */\n  stylesheetUrl: optional(string()),\n  /**\n   * Worker URL for the CSP-compatible MapLibre build. Pair this with a custom\n   * `scriptInput.src` that loads `maplibre-gl-csp.js`.\n   */\n  workerUrl: optional(string()),\n})"
+      },
+      {
+        "name": "MapLibreApi",
+        "kind": "interface",
+        "code": "export interface MapLibreApi {\n  maplibregl: typeof MapLibre\n}"
+      },
+      {
+        "name": "ScriptMapLibreGeoJsonProps",
+        "kind": "interface",
+        "code": "interface ScriptMapLibreGeoJsonProps {\n  /** MapLibre source ID. Changing it rebuilds the owned source and layers. */\n  sourceId: string\n  /** Inline GeoJSON data or a URL returning GeoJSON. */\n  data: GeoJSON | string\n  /** GeoJSON source options. `type` and `data` are supplied by the component. */\n  sourceOptions?: Omit<MapLibreGl.GeoJSONSourceSpecification, 'type' | 'data'>\n  /** Style layers backed by this source. */\n  layers: ScriptMapLibreGeoJsonLayer[]\n  /** Existing layer ID before which the layers are inserted. */\n  beforeId?: string\n}"
+      },
+      {
+        "name": "ScriptMapLibreMapProps",
+        "kind": "interface",
+        "code": "interface ScriptMapLibreMapProps {\n  /**\n   * Defines when the MapLibre script loads.\n   * @default 'visible'\n   */\n  trigger?: ElementScriptTrigger\n  /** MapLibre style URL or inline style specification. */\n  mapStyle: string | MapLibre.StyleSpecification\n  /** Initial and reactively controlled map center. */\n  center: MapLibre.LngLatLike\n  /** Initial and reactively controlled zoom level. @default 12 */\n  zoom?: number\n  /** Initial and reactively controlled bearing in degrees. @default 0 */\n  bearing?: number\n  /** Initial and reactively controlled pitch in degrees. @default 0 */\n  pitch?: number\n  /** Options passed to `new maplibregl.Map()`. Dedicated props take precedence. */\n  options?: Omit<MapLibre.MapOptions, 'container'>\n  /** Inject MapLibre's stylesheet when the script begins loading. @default true */\n  injectStyles?: boolean\n  /** Custom MapLibre stylesheet URL. */\n  stylesheetUrl?: string\n  /** Worker URL used with MapLibre's CSP-compatible build. */\n  workerUrl?: string\n  /** Width reserved before the map loads. @default 640 */\n  width?: number | string\n  /** Height reserved before the map loads. @default 400 */\n  height?: number | string\n  /** Accessible name for an interactive map. @default 'Interactive map' */\n  ariaLabel?: string\n  /** Disable map input and remove it from the accessibility tree when decorative. @default true */\n  interactive?: boolean\n  /** Attributes applied to the outer layout container. */\n  rootAttrs?: HTMLAttributes & ReservedProps & Record<string, unknown>\n}"
+      },
+      {
+        "name": "ScriptMapLibreMapEvents",
+        "kind": "interface",
+        "code": "interface ScriptMapLibreMapEvents {\n  ready: ScriptMapLibreMapExpose\n  error: Error\n  click: MapLibre.MapEventType['click']\n  move: MapLibre.MapEventType['move']\n  moveend: MapLibre.MapEventType['moveend']\n  zoom: MapLibre.MapEventType['zoom']\n  zoomend: MapLibre.MapEventType['zoomend']\n  rotate: MapLibre.MapEventType['rotate']\n  rotateend: MapLibre.MapEventType['rotateend']\n  pitch: MapLibre.MapEventType['pitch']\n  pitchend: MapLibre.MapEventType['pitchend']\n  update:center: MapLibre.LngLat\n  update:zoom: number\n  update:bearing: number\n  update:pitch: number\n}"
+      },
+      {
+        "name": "ScriptMapLibreMapSlots",
+        "kind": "interface",
+        "code": "interface ScriptMapLibreMapSlots {\n  default?: () => any\n  loading?: () => any\n  awaitingLoad?: () => any\n  error?: (props: { error: Error }) => any\n  placeholder?: () => any\n  description?: () => any\n}"
+      },
+      {
+        "name": "ScriptMapLibreMarkerProps",
+        "kind": "interface",
+        "code": "interface ScriptMapLibreMarkerProps {\n  /** Reactive marker position in `[longitude, latitude]` order. */\n  position: MapLibre.LngLatLike\n  /** Accessible name for the marker element. */\n  ariaLabel?: string\n  /** Tooltip text for the marker element. */\n  title?: string\n  /** Options passed to `new maplibregl.Marker()`. Options with public setters also update reactively. */\n  options?: MapLibre.MarkerOptions\n}"
+      },
+      {
+        "name": "ScriptMapLibreMarkerEvents",
+        "kind": "interface",
+        "code": "interface ScriptMapLibreMarkerEvents {\n  click: MouseEvent\n  dragstart: MapLibre.Event\n  drag: MapLibre.Event\n  dragend: MapLibre.Event\n}"
+      },
+      {
+        "name": "ScriptMapLibreMarkerSlots",
+        "kind": "interface",
+        "code": "interface ScriptMapLibreMarkerSlots {\n  default?: () => any\n}"
+      },
+      {
+        "name": "ScriptMapLibreNavigationControlProps",
+        "kind": "interface",
+        "code": "interface ScriptMapLibreNavigationControlProps {\n  /** Position of the navigation control. */\n  position?: MapLibre.ControlPosition\n  /** Options passed to `new maplibregl.NavigationControl()`. */\n  options?: MapLibre.NavigationControlOptions\n}"
+      },
+      {
+        "name": "ScriptMapLibrePopupProps",
+        "kind": "interface",
+        "code": "interface ScriptMapLibrePopupProps {\n  /** Position for a standalone popup. Omit when nested inside a marker. */\n  position?: MapLibre.LngLatLike\n  /** Whether the popup is open. @default false */\n  open?: boolean\n  /** Options passed to `new maplibregl.Popup()`. Options with public setters also update reactively. */\n  options?: MapLibre.PopupOptions\n}"
+      },
+      {
+        "name": "ScriptMapLibrePopupEvents",
+        "kind": "interface",
+        "code": "interface ScriptMapLibrePopupEvents {\n  open: MapLibre.Event\n  close: MapLibre.Event\n}"
+      },
+      {
+        "name": "ScriptMapLibrePopupSlots",
+        "kind": "interface",
+        "code": "interface ScriptMapLibrePopupSlots {\n  default?: () => any\n}"
+      }
+    ],
     "matomo-analytics": [
       {
         "name": "MatomoAnalyticsOptions",
         "kind": "const",
-        "code": "export const MatomoAnalyticsOptions = object({\n  /**\n   * The URL of your self-hosted Matomo instance.\n   * Either `matomoUrl` or `cloudId` is required.\n   * @example 'https://matomo.example.com'\n   * @see https://developer.matomo.org/guides/tracking-javascript-guide\n   */\n  matomoUrl: optional(string()),\n  /**\n   * Your Matomo site ID.\n   * @default '1'\n   */\n  siteId: optional(union([string(), number()])),\n  /**\n   * Your Matomo Cloud ID (the subdomain portion of your `*.matomo.cloud` URL).\n   * Either `matomoUrl` or `cloudId` is required.\n   * @example 'mysite.matomo.cloud'\n   */\n  cloudId: optional(string()),\n  /**\n   * A custom tracker URL. Overrides the default tracker endpoint derived from `matomoUrl` or `cloudId`.\n   */\n  trackerUrl: optional(string()),\n  /**\n   * Whether to track the initial page view on load.\n   * @deprecated Use `watch: true` (default) for automatic page view tracking.\n   */\n  trackPageView: optional(boolean()),\n  /**\n   * Enable download and outlink tracking.\n   */\n  enableLinkTracking: optional(boolean()),\n  /**\n   * Disable all tracking cookies for cookieless analytics.\n   */\n  disableCookies: optional(boolean()),\n  /**\n   * Automatically track page views on route change.\n   * @default true\n   */\n  watch: optional(boolean()),\n  /**\n   * Default tracking-consent state applied BEFORE the tracker is initialised.\n   * - `'required'` — call `requireConsent` without granting (user must opt in later).\n   * - `'given'` — call `requireConsent` then `setConsentGiven`.\n   * - `'not-required'` — no consent gating (default Matomo behaviour).\n   * @see https://developer.matomo.org/guides/tracking-consent\n   */\n  defaultConsent: optional(union([literal('required'), literal('given'), literal('not-required')])),\n})"
+        "code": "export const MatomoAnalyticsOptions = object({\n  /**\n   * The URL of your self-hosted Matomo instance.\n   * Either `matomoUrl` or `cloudId` is required.\n   * @example 'https://matomo.example.com'\n   * @see https://developer.matomo.org/guides/tracking-javascript-guide\n   */\n  matomoUrl: optional(string()),\n  /**\n   * Your Matomo site ID.\n   * @default '1'\n   */\n  siteId: optional(union([string(), number()])),\n  /**\n   * Your Matomo Cloud ID (the subdomain portion of your `*.matomo.cloud` URL).\n   * Either `matomoUrl` or `cloudId` is required.\n   * @example 'mysite.matomo.cloud'\n   */\n  cloudId: optional(string()),\n  /**\n   * A custom tracker URL. Overrides the default tracker endpoint derived from `matomoUrl` or `cloudId`.\n   */\n  trackerUrl: optional(string()),\n  /**\n   * Enable download and outlink tracking.\n   */\n  enableLinkTracking: optional(boolean()),\n  /**\n   * Disable all tracking cookies for cookieless analytics.\n   */\n  disableCookies: optional(boolean()),\n  /**\n   * Automatically track page views on route change.\n   * @default true\n   */\n  watch: optional(boolean()),\n  /**\n   * Default tracking-consent state applied BEFORE the tracker is initialised.\n   * - `'required'` — call `requireConsent` without granting (user must opt in later).\n   * - `'given'` — call `requireConsent` then `setConsentGiven`.\n   * - `'not-required'` — no consent gating (default Matomo behaviour).\n   * @see https://developer.matomo.org/guides/tracking-consent\n   */\n  defaultConsent: optional(union([literal('required'), literal('given'), literal('not-required')])),\n})"
       },
       {
         "name": "MatomoAnalyticsApi",
@@ -838,12 +987,12 @@
       {
         "name": "PlausibleAnalyticsOptions",
         "kind": "interface",
-        "code": "export interface PlausibleAnalyticsOptions {\n  /**\n   * Unique script ID for your site (recommended - new format as of October 2025)\n   * Get this from your Plausible dashboard under Site Installation\n   *\n   * Extract it from your Plausible script URL:\n   * ```\n   * <script src=\"https://plausible.io/js/pa-gYyxvZhkMzdzXBAtSeSNz.js\"></script>\n   *                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^\n   *                                       scriptId: 'gYyxvZhkMzdzXBAtSeSNz'\n   * ```\n   * @example 'gYyxvZhkMzdzXBAtSeSNz'\n   */\n  scriptId?: string\n  /**\n   * Your site domain\n   * @deprecated Use `scriptId` instead (new October 2025 format)\n   * @example 'example.com'\n   */\n  domain?: string\n  /**\n   * Script extensions for additional features\n   * @deprecated Use init options like `hashBasedRouting`, `captureOnLocalhost`, etc. instead (new October 2025 format)\n   */\n  extension?: 'hash' | 'outbound-links' | 'file-downloads' | 'tagged-events' | 'revenue' | 'pageview-props' | 'compat' | 'local' | 'manual' | Array<'hash' | 'outbound-links' | 'file-downloads' | 'tagged-events' | 'revenue' | 'pageview-props' | 'compat' | 'local' | 'manual'>\n  /** Custom properties to track with every pageview */\n  customProperties?: Record<string, any>\n  /** Custom tracking endpoint URL */\n  endpoint?: string\n  /** Configure file download tracking */\n  fileDownloads?: {\n    /** File extensions to track (default: pdf, xlsx, docx, txt, rtf, csv, exe, key, pps, ppt, pptx, 7z, pkg, rar, gz, zip, avi, mov, mp4, mpeg, wmv, midi, mp3, wav, wma, dmg) */\n    fileExtensions?: string[]\n  }\n  /** Enable hash-based routing for single-page apps */\n  hashBasedRouting?: boolean\n  /** Set to false to manually trigger pageviews */\n  autoCapturePageviews?: boolean\n  /** Enable tracking on localhost */\n  captureOnLocalhost?: boolean\n  /** Enable form submission tracking */\n  trackForms?: boolean\n}"
+        "code": "export interface PlausibleAnalyticsOptions {\n  /**\n   * Unique script ID for your site.\n   * Get this from your Plausible dashboard under Site Installation\n   *\n   * Extract it from your Plausible script URL:\n   * ```\n   * <script src=\"https://plausible.io/js/pa-gYyxvZhkMzdzXBAtSeSNz.js\"></script>\n   *                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^\n   *                                       scriptId: 'gYyxvZhkMzdzXBAtSeSNz'\n   * ```\n   * @example 'gYyxvZhkMzdzXBAtSeSNz'\n   */\n  scriptId: string\n  /** Custom properties to track with every pageview */\n  customProperties?: Record<string, any>\n  /** Custom tracking endpoint URL */\n  endpoint?: string\n  /** Configure file download tracking */\n  fileDownloads?: {\n    /** File extensions to track (default: pdf, xlsx, docx, txt, rtf, csv, exe, key, pps, ppt, pptx, 7z, pkg, rar, gz, zip, avi, mov, mp4, mpeg, wmv, midi, mp3, wav, wma, dmg) */\n    fileExtensions?: string[]\n  }\n  /** Enable hash-based routing for single-page apps */\n  hashBasedRouting?: boolean\n  /** Set to false to manually trigger pageviews */\n  autoCapturePageviews?: boolean\n  /** Enable tracking on localhost */\n  captureOnLocalhost?: boolean\n  /** Enable form submission tracking */\n  trackForms?: boolean\n}"
       },
       {
         "name": "PlausibleInitOptions",
         "kind": "interface",
-        "code": "export interface PlausibleInitOptions {\n  customProperties?: Record<string, any>\n  endpoint?: string\n  fileDownloads?: {\n    fileExtensions?: string[]\n  }\n  hashBasedRouting?: boolean\n  autoCapturePageviews?: boolean\n  captureOnLocalhost?: boolean\n}"
+        "code": "export interface PlausibleInitOptions {\n  customProperties?: Record<string, any>\n  endpoint?: string\n  fileDownloads?: {\n    fileExtensions?: string[]\n  }\n  hashBasedRouting?: boolean\n  autoCapturePageviews?: boolean\n  captureOnLocalhost?: boolean\n  trackForms?: boolean\n}"
       },
       {
         "name": "PlausibleFunction",
@@ -904,7 +1053,7 @@
       {
         "name": "RybbitAnalyticsApi",
         "kind": "interface",
-        "code": "export interface RybbitAnalyticsApi {\n  /**\n   * Tracks a page view\n   */\n  pageview: () => void\n\n  /**\n   * Tracks a custom event\n   * @param name Name of the event\n   * @param properties Optional properties for the event\n   */\n  event: (name: string, properties?: Record<string, any>) => void\n\n  /**\n   * Sets a custom user ID for tracking logged-in users\n   * @param userId The user ID to set (will be stored in localStorage)\n   */\n  identify: (userId: string) => void\n\n  /**\n   * Clears the stored user ID\n   */\n  clearUserId: () => void\n\n  /**\n   * Gets the currently set user ID\n   * @returns The current user ID or null if not set\n   */\n  getUserId: () => string | null\n  /**\n   * @deprecated use top level functions instead\n   */\n  rybbit: RybbitAnalyticsApi\n}"
+        "code": "export interface RybbitAnalyticsApi {\n  /**\n   * Tracks a page view\n   */\n  pageview: () => void\n\n  /**\n   * Tracks a custom event\n   * @param name Name of the event\n   * @param properties Optional properties for the event\n   */\n  event: (name: string, properties?: Record<string, any>) => void\n\n  /**\n   * Sets a custom user ID for tracking logged-in users\n   * @param userId The user ID to set (will be stored in localStorage)\n   */\n  identify: (userId: string) => void\n\n  /**\n   * Clears the stored user ID\n   */\n  clearUserId: () => void\n\n  /**\n   * Gets the currently set user ID\n   * @returns The current user ID or null if not set\n   */\n  getUserId: () => string | null\n}"
       },
       {
         "name": "RybbitQueueState",
@@ -1032,14 +1181,9 @@
         "code": "export interface TtqInstance {\n  /** Track a page view. */\n  page: () => void\n  /** Track a standard or custom conversion event. */\n  track: (event: StandardEvents | (string & {}), properties?: EventProperties, options?: TrackOptions) => void\n  /** Associate advanced-matching identifiers with the current user. */\n  identify: (properties: IdentifyProperties) => void\n  /** Opt user in to tracking. Queued before the script loads; live once `events.js` binds. */\n  grantConsent: () => void\n  /** Opt user out of tracking. Queued before the script loads; live once `events.js` binds. */\n  revokeConsent: () => void\n  /** Defer consent until an explicit grant/revoke. Queued before the script loads; live once `events.js` binds. */\n  holdConsent: () => void\n  enableCookie: () => void\n  disableCookie: () => void\n}"
       },
       {
-        "name": "TtqCallable",
-        "kind": "type",
-        "code": "type TtqCallable\n  = ((cmd: 'track', event: StandardEvents | (string & {}), properties?: EventProperties, options?: TrackOptions) => void)\n    & ((cmd: 'page') => void)\n    & ((cmd: 'identify', properties: IdentifyProperties) => void)\n    & ((cmd: (string & {}), ...args: any[]) => void)"
-      },
-      {
         "name": "Ttq",
         "kind": "type",
-        "code": "export type Ttq = TtqCallable & TtqInstance & {\n  /** Resolve the per-pixel method bag for a specific pixel id. */\n  instance: (id: string) => TtqInstance\n}"
+        "code": "export type Ttq = TtqInstance & {\n  /** Resolve the per-pixel method bag for a specific pixel id. */\n  instance: (id: string) => TtqInstance\n}"
       },
       {
         "name": "TikTokPixelApi",
@@ -1208,7 +1352,7 @@
       {
         "name": "YouTubePlayerApi",
         "kind": "interface",
-        "code": "export interface YouTubePlayerApi {\n  YT: MaybePromise<{\n    Player: YT.Player\n    PlayerState: YT.PlayerState\n    get: (k: string) => any\n    loaded: 0 | 1\n    loading: 0 | 1\n    ready: (f: () => void) => void\n    scan: () => void\n    setConfig: (config: YT.PlayerOptions) => void\n    subscribe: <EventName extends keyof YT.Events>(\n      event: EventName,\n      listener: YT.Events[EventName],\n      context?: any,\n    ) => void\n    unsubscribe: <EventName extends keyof YT.Events>(\n      event: EventName,\n      listener: YT.Events[EventName],\n      context?: any,\n    ) => void\n  }>\n}"
+        "code": "export interface YouTubePlayerApi {\n  YT: {\n    Player: YT.Player\n    PlayerState: YT.PlayerState\n    get: (k: string) => any\n    loaded: 0 | 1\n    loading: 0 | 1\n    ready: (f: () => void) => void\n    scan: () => void\n    setConfig: (config: YT.PlayerOptions) => void\n    subscribe: <EventName extends keyof YT.Events>(\n      event: EventName,\n      listener: YT.Events[EventName],\n      context?: any,\n    ) => void\n    unsubscribe: <EventName extends keyof YT.Events>(\n      event: EventName,\n      listener: YT.Events[EventName],\n      context?: any,\n    ) => void\n  }\n}"
       },
       {
         "name": "ScriptYouTubePlayerProps",
@@ -1290,6 +1434,37 @@
         "name": "region",
         "type": "string[]",
         "required": false
+      }
+    ],
+    "LeafletOptions": [
+      {
+        "name": "injectStyles",
+        "type": "boolean",
+        "required": false,
+        "description": "Inject the Leaflet 1.9.4 styles and default marker images when the script begins loading. Disable this when supplying your own Leaflet stylesheet.",
+        "defaultValue": "true"
+      }
+    ],
+    "MapLibreOptions": [
+      {
+        "name": "injectStyles",
+        "type": "boolean",
+        "required": false,
+        "description": "Inject the MapLibre GL JS 5.24.0 stylesheet when the script begins loading. Disable this when supplying the stylesheet through Nuxt.",
+        "defaultValue": "true"
+      },
+      {
+        "name": "stylesheetUrl",
+        "type": "string",
+        "required": false,
+        "description": "Stylesheet URL used when `injectStyles` is enabled.",
+        "defaultValue": "'https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css'"
+      },
+      {
+        "name": "workerUrl",
+        "type": "string",
+        "required": false,
+        "description": "Worker URL for the CSP-compatible MapLibre build. Pair this with a custom `scriptInput.src` that loads `maplibre-gl-csp.js`."
       }
     ],
     "AhrefsAnalyticsOptions": [
@@ -1964,12 +2139,6 @@
         "type": "string",
         "required": false,
         "description": "A custom tracker URL. Overrides the default tracker endpoint derived from `matomoUrl` or `cloudId`."
-      },
-      {
-        "name": "trackPageView",
-        "type": "boolean",
-        "required": false,
-        "description": "Whether to track the initial page view on load."
       },
       {
         "name": "enableLinkTracking",
@@ -2669,6 +2838,123 @@
         "defaultValue": "'g'"
       }
     ],
+    "ScriptGoogleMapsProps": [
+      {
+        "name": "trigger",
+        "type": "ElementScriptTrigger",
+        "required": false,
+        "description": "Defines the trigger event to load the script.",
+        "defaultValue": "['mouseenter', 'mouseover', 'mousedown']"
+      },
+      {
+        "name": "apiKey",
+        "type": "string",
+        "required": false,
+        "description": "Defines the Google Maps API key. Must have access to the Static Maps API as well."
+      },
+      {
+        "name": "mapOptions",
+        "type": "google.maps.MapOptions",
+        "required": false,
+        "description": "Options for the map."
+      },
+      {
+        "name": "region",
+        "type": "string",
+        "required": false,
+        "description": "Defines the region of the map."
+      },
+      {
+        "name": "language",
+        "type": "string",
+        "required": false,
+        "description": "Defines the language of the map."
+      },
+      {
+        "name": "version",
+        "type": "string",
+        "required": false,
+        "description": "Defines the version of google maps js API."
+      },
+      {
+        "name": "width",
+        "type": "number | string",
+        "required": false,
+        "description": "Defines the width of the map.",
+        "defaultValue": "640"
+      },
+      {
+        "name": "height",
+        "type": "number | string",
+        "required": false,
+        "description": "Defines the height of the map.",
+        "defaultValue": "400"
+      },
+      {
+        "name": "rootAttrs",
+        "type": "HTMLAttributes & ReservedProps & Record<string, unknown>",
+        "required": false,
+        "description": "Customize the root element attributes."
+      },
+      {
+        "name": "mapIds",
+        "type": "{ light?: string, dark?: string }",
+        "required": false,
+        "description": "Map IDs for light and dark color modes. When provided, the map will automatically switch styles based on color mode. Requires @nuxtjs/color-mode or manual colorMode prop."
+      },
+      {
+        "name": "colorMode",
+        "type": "'light' | 'dark'",
+        "required": false,
+        "description": "Manual color mode control. When provided, overrides auto-detection from @nuxtjs/color-mode. Accepts 'light' or 'dark'."
+      }
+    ],
+    "ScriptGoogleMapsEvents": [
+      {
+        "name": "ready",
+        "type": "ScriptGoogleMapsExpose",
+        "required": false,
+        "description": "Fired when the Google Maps instance is fully loaded and ready to use. Provides access to the maps API."
+      },
+      {
+        "name": "error",
+        "type": "-",
+        "required": false,
+        "description": "Fired when the Google Maps script fails to load."
+      }
+    ],
+    "ScriptGoogleMapsSlots": [
+      {
+        "name": "default",
+        "type": "-",
+        "required": false,
+        "description": "Default slot for rendering child components (e.g. markers, info windows) that depend on the map being ready."
+      },
+      {
+        "name": "loading",
+        "type": "-",
+        "required": false,
+        "description": "Slot displayed while the map is loading. Can be used to show a custom loading indicator."
+      },
+      {
+        "name": "awaitingLoad",
+        "type": "-",
+        "required": false,
+        "description": "Slot displayed when the script is awaiting user interaction to load (based on the `trigger` prop)."
+      },
+      {
+        "name": "error",
+        "type": "-",
+        "required": false,
+        "description": "Slot displayed if the script fails to load."
+      },
+      {
+        "name": "placeholder",
+        "type": "-",
+        "required": false,
+        "description": "Slot displayed as a placeholder before the map is ready. Useful for showing a static map or skeleton."
+      }
+    ],
     "ScriptGoogleMapsCircleProps": [
       {
         "name": "options",
@@ -2851,14 +3137,6 @@
         "description": "Fired when a feature's property is removed."
       }
     ],
-    "ScriptGoogleMapsHeatmapLayerProps": [
-      {
-        "name": "options",
-        "type": "Omit<HeatmapLayerOptions, 'map'>",
-        "required": false,
-        "description": "Configuration options for the heatmap layer visualization."
-      }
-    ],
     "ScriptGoogleMapsInfoWindowProps": [
       {
         "name": "options",
@@ -3024,8 +3302,75 @@
     ],
     "ScriptGoogleMapsOverlayViewProps": [
       {
+        "name": "position",
+        "type": "google.maps.LatLng | google.maps.LatLngLiteral",
+        "required": false,
+        "description": "Geographic position for the overlay. Falls back to parent marker position if omitted. Accepts either a plain `LatLngLiteral` (`{ lat, lng }`) or a `google.maps.LatLng` instance."
+      },
+      {
+        "name": "defaultOpen",
+        "type": "boolean",
+        "required": false,
+        "description": "Initial open state for the uncontrolled mode (when `v-model:open` is not bound). When omitted, the overlay opens on mount, matching v0 behaviour. Has no effect when `v-model:open` is used; pass an initial value to the bound ref instead.",
+        "defaultValue": "true"
+      },
+      {
+        "name": "anchor",
+        "type": "ScriptGoogleMapsOverlayAnchor",
+        "required": false,
+        "description": "Anchor point of the overlay relative to its position.",
+        "defaultValue": "'bottom-center'"
+      },
+      {
+        "name": "offset",
+        "type": "{ x: number, y: number }",
+        "required": false,
+        "description": "Pixel offset from the anchor position."
+      },
+      {
+        "name": "pane",
+        "type": "ScriptGoogleMapsOverlayPane",
+        "required": false,
+        "description": "The map pane on which to render the overlay.",
+        "defaultValue": "'floatPane'"
+      },
+      {
+        "name": "zIndex",
+        "type": "number",
+        "required": false,
+        "description": "CSS z-index for the overlay element."
+      },
+      {
+        "name": "blockMapInteraction",
+        "type": "boolean",
+        "required": false,
+        "description": "Whether to block map click and gesture events from passing through the overlay.",
+        "defaultValue": "true"
+      },
+      {
+        "name": "panOnOpen",
+        "type": "boolean | number",
+        "required": false,
+        "description": "Pan the map so the overlay is fully visible when opened, similar to InfoWindow behavior. Set to `true` for default 40px padding, or a number for custom padding.",
+        "defaultValue": "true"
+      },
+      {
+        "name": "hideWhenClustered",
+        "type": "boolean",
+        "required": false,
+        "description": "Automatically hide the overlay when its parent marker joins a cluster (on zoom out). Only applies when nested inside a ScriptGoogleMapsMarkerClusterer.",
+        "defaultValue": "true"
+      },
+      {
         "name": "v-model:open",
         "type": "boolean",
+        "required": false
+      }
+    ],
+    "ScriptGoogleMapsOverlayViewSlots": [
+      {
+        "name": "default",
+        "type": "-",
         "required": false
       }
     ],
@@ -3261,6 +3606,663 @@
         "type": "google.maps.MapMouseEvent",
         "required": false,
         "description": "Fired when the DOM mouseup event is fired on the rectangle."
+      }
+    ],
+    "ScriptLeafletGeoJsonProps": [
+      {
+        "name": "data",
+        "type": "GeoJsonObject | GeoJsonObject[]",
+        "required": true
+      },
+      {
+        "name": "options",
+        "type": "Leaflet.GeoJSONOptions",
+        "required": false
+      }
+    ],
+    "ScriptLeafletGeoJsonEvents": [
+      {
+        "name": "click",
+        "type": "Leaflet.LeafletMouseEvent",
+        "required": false
+      },
+      {
+        "name": "dblclick",
+        "type": "Leaflet.LeafletMouseEvent",
+        "required": false
+      },
+      {
+        "name": "mousedown",
+        "type": "Leaflet.LeafletMouseEvent",
+        "required": false
+      },
+      {
+        "name": "mouseover",
+        "type": "Leaflet.LeafletMouseEvent",
+        "required": false
+      },
+      {
+        "name": "mouseout",
+        "type": "Leaflet.LeafletMouseEvent",
+        "required": false
+      },
+      {
+        "name": "contextmenu",
+        "type": "Leaflet.LeafletMouseEvent",
+        "required": false
+      },
+      {
+        "name": "layeradd",
+        "type": "Leaflet.LayerEvent",
+        "required": false
+      },
+      {
+        "name": "layerremove",
+        "type": "Leaflet.LayerEvent",
+        "required": false
+      }
+    ],
+    "ScriptLeafletMapProps": [
+      {
+        "name": "trigger",
+        "type": "ElementScriptTrigger",
+        "required": false,
+        "description": "Defines when the Leaflet script loads.",
+        "defaultValue": "'visible'"
+      },
+      {
+        "name": "center",
+        "type": "Leaflet.LatLngExpression",
+        "required": true
+      },
+      {
+        "name": "zoom",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "options",
+        "type": "Leaflet.MapOptions",
+        "required": false
+      },
+      {
+        "name": "injectStyles",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "width",
+        "type": "number | string",
+        "required": false
+      },
+      {
+        "name": "height",
+        "type": "number | string",
+        "required": false
+      },
+      {
+        "name": "ariaLabel",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "interactive",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "rootAttrs",
+        "type": "HTMLAttributes & ReservedProps & Record<string, unknown>",
+        "required": false
+      }
+    ],
+    "ScriptLeafletMapEvents": [
+      {
+        "name": "ready",
+        "type": "ScriptLeafletMapExpose",
+        "required": false
+      },
+      {
+        "name": "error",
+        "type": "Error",
+        "required": false
+      },
+      {
+        "name": "click",
+        "type": "Leaflet.LeafletMouseEvent",
+        "required": false
+      },
+      {
+        "name": "move",
+        "type": "Leaflet.LeafletEvent",
+        "required": false
+      },
+      {
+        "name": "moveend",
+        "type": "Leaflet.LeafletEvent",
+        "required": false
+      },
+      {
+        "name": "zoom",
+        "type": "Leaflet.LeafletEvent",
+        "required": false
+      },
+      {
+        "name": "zoomend",
+        "type": "Leaflet.LeafletEvent",
+        "required": false
+      },
+      {
+        "name": "update:center",
+        "type": "Leaflet.LatLng",
+        "required": false
+      },
+      {
+        "name": "update:zoom",
+        "type": "number",
+        "required": false
+      }
+    ],
+    "ScriptLeafletMapSlots": [
+      {
+        "name": "default",
+        "type": "-",
+        "required": false
+      },
+      {
+        "name": "loading",
+        "type": "-",
+        "required": false
+      },
+      {
+        "name": "awaitingLoad",
+        "type": "-",
+        "required": false
+      },
+      {
+        "name": "error",
+        "type": "{ error: Error }",
+        "required": false
+      },
+      {
+        "name": "placeholder",
+        "type": "-",
+        "required": false
+      }
+    ],
+    "ScriptLeafletMarkerProps": [
+      {
+        "name": "position",
+        "type": "Leaflet.LatLngExpression",
+        "required": true
+      },
+      {
+        "name": "alt",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "title",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "options",
+        "type": "Leaflet.MarkerOptions",
+        "required": false
+      }
+    ],
+    "ScriptLeafletMarkerEvents": [
+      {
+        "name": "click",
+        "type": "Leaflet.LeafletMouseEvent",
+        "required": false
+      },
+      {
+        "name": "dblclick",
+        "type": "Leaflet.LeafletMouseEvent",
+        "required": false
+      },
+      {
+        "name": "mousedown",
+        "type": "Leaflet.LeafletMouseEvent",
+        "required": false
+      },
+      {
+        "name": "mouseover",
+        "type": "Leaflet.LeafletMouseEvent",
+        "required": false
+      },
+      {
+        "name": "mouseout",
+        "type": "Leaflet.LeafletMouseEvent",
+        "required": false
+      },
+      {
+        "name": "contextmenu",
+        "type": "Leaflet.LeafletMouseEvent",
+        "required": false
+      },
+      {
+        "name": "dragstart",
+        "type": "Leaflet.LeafletEvent",
+        "required": false
+      },
+      {
+        "name": "drag",
+        "type": "Leaflet.LeafletEvent",
+        "required": false
+      },
+      {
+        "name": "dragend",
+        "type": "Leaflet.DragEndEvent",
+        "required": false
+      },
+      {
+        "name": "move",
+        "type": "Leaflet.LeafletEvent",
+        "required": false
+      }
+    ],
+    "ScriptLeafletMarkerSlots": [
+      {
+        "name": "default",
+        "type": "-",
+        "required": false
+      }
+    ],
+    "ScriptLeafletPopupProps": [
+      {
+        "name": "position",
+        "type": "Leaflet.LatLngExpression",
+        "required": false
+      },
+      {
+        "name": "open",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "options",
+        "type": "Leaflet.PopupOptions",
+        "required": false
+      }
+    ],
+    "ScriptLeafletPopupEvents": [
+      {
+        "name": "open",
+        "type": "Leaflet.LeafletEvent",
+        "required": false
+      },
+      {
+        "name": "close",
+        "type": "Leaflet.LeafletEvent",
+        "required": false
+      }
+    ],
+    "ScriptLeafletPopupSlots": [
+      {
+        "name": "default",
+        "type": "-",
+        "required": false
+      }
+    ],
+    "ScriptLeafletTileLayerProps": [
+      {
+        "name": "url",
+        "type": "string",
+        "required": true
+      },
+      {
+        "name": "options",
+        "type": "Leaflet.TileLayerOptions",
+        "required": false
+      }
+    ],
+    "ScriptLeafletTileLayerEvents": [
+      {
+        "name": "loading",
+        "type": "Leaflet.LeafletEvent",
+        "required": false
+      },
+      {
+        "name": "load",
+        "type": "Leaflet.LeafletEvent",
+        "required": false
+      },
+      {
+        "name": "tileloadstart",
+        "type": "Leaflet.TileEvent",
+        "required": false
+      },
+      {
+        "name": "tileload",
+        "type": "Leaflet.TileEvent",
+        "required": false
+      },
+      {
+        "name": "tileabort",
+        "type": "Leaflet.TileEvent",
+        "required": false
+      },
+      {
+        "name": "tileerror",
+        "type": "Leaflet.TileErrorEvent",
+        "required": false
+      }
+    ],
+    "ScriptMapLibreGeoJsonProps": [
+      {
+        "name": "sourceId",
+        "type": "string",
+        "required": true
+      },
+      {
+        "name": "data",
+        "type": "GeoJSON | string",
+        "required": true
+      },
+      {
+        "name": "sourceOptions",
+        "type": "Omit<MapLibreGl.GeoJSONSourceSpecification, 'type' | 'data'>",
+        "required": false
+      },
+      {
+        "name": "layers",
+        "type": "ScriptMapLibreGeoJsonLayer[]",
+        "required": true
+      },
+      {
+        "name": "beforeId",
+        "type": "string",
+        "required": false
+      }
+    ],
+    "ScriptMapLibreMapProps": [
+      {
+        "name": "trigger",
+        "type": "ElementScriptTrigger",
+        "required": false,
+        "description": "Defines when the MapLibre script loads.",
+        "defaultValue": "'visible'"
+      },
+      {
+        "name": "mapStyle",
+        "type": "string | MapLibre.StyleSpecification",
+        "required": true
+      },
+      {
+        "name": "center",
+        "type": "MapLibre.LngLatLike",
+        "required": true
+      },
+      {
+        "name": "zoom",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "bearing",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "pitch",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "options",
+        "type": "Omit<MapLibre.MapOptions, 'container'>",
+        "required": false
+      },
+      {
+        "name": "injectStyles",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "stylesheetUrl",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "workerUrl",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "width",
+        "type": "number | string",
+        "required": false
+      },
+      {
+        "name": "height",
+        "type": "number | string",
+        "required": false
+      },
+      {
+        "name": "ariaLabel",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "interactive",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "rootAttrs",
+        "type": "HTMLAttributes & ReservedProps & Record<string, unknown>",
+        "required": false
+      }
+    ],
+    "ScriptMapLibreMapEvents": [
+      {
+        "name": "ready",
+        "type": "ScriptMapLibreMapExpose",
+        "required": false
+      },
+      {
+        "name": "error",
+        "type": "Error",
+        "required": false
+      },
+      {
+        "name": "click",
+        "type": "MapLibre.MapEventType['click']",
+        "required": false
+      },
+      {
+        "name": "move",
+        "type": "MapLibre.MapEventType['move']",
+        "required": false
+      },
+      {
+        "name": "moveend",
+        "type": "MapLibre.MapEventType['moveend']",
+        "required": false
+      },
+      {
+        "name": "zoom",
+        "type": "MapLibre.MapEventType['zoom']",
+        "required": false
+      },
+      {
+        "name": "zoomend",
+        "type": "MapLibre.MapEventType['zoomend']",
+        "required": false
+      },
+      {
+        "name": "rotate",
+        "type": "MapLibre.MapEventType['rotate']",
+        "required": false
+      },
+      {
+        "name": "rotateend",
+        "type": "MapLibre.MapEventType['rotateend']",
+        "required": false
+      },
+      {
+        "name": "pitch",
+        "type": "MapLibre.MapEventType['pitch']",
+        "required": false
+      },
+      {
+        "name": "pitchend",
+        "type": "MapLibre.MapEventType['pitchend']",
+        "required": false
+      },
+      {
+        "name": "update:center",
+        "type": "MapLibre.LngLat",
+        "required": false
+      },
+      {
+        "name": "update:zoom",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "update:bearing",
+        "type": "number",
+        "required": false
+      },
+      {
+        "name": "update:pitch",
+        "type": "number",
+        "required": false
+      }
+    ],
+    "ScriptMapLibreMapSlots": [
+      {
+        "name": "default",
+        "type": "-",
+        "required": false
+      },
+      {
+        "name": "loading",
+        "type": "-",
+        "required": false
+      },
+      {
+        "name": "awaitingLoad",
+        "type": "-",
+        "required": false
+      },
+      {
+        "name": "error",
+        "type": "{ error: Error }",
+        "required": false
+      },
+      {
+        "name": "placeholder",
+        "type": "-",
+        "required": false
+      },
+      {
+        "name": "description",
+        "type": "-",
+        "required": false
+      }
+    ],
+    "ScriptMapLibreMarkerProps": [
+      {
+        "name": "position",
+        "type": "MapLibre.LngLatLike",
+        "required": true
+      },
+      {
+        "name": "ariaLabel",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "title",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "options",
+        "type": "MapLibre.MarkerOptions",
+        "required": false
+      }
+    ],
+    "ScriptMapLibreMarkerEvents": [
+      {
+        "name": "click",
+        "type": "MouseEvent",
+        "required": false
+      },
+      {
+        "name": "dragstart",
+        "type": "MapLibre.Event",
+        "required": false
+      },
+      {
+        "name": "drag",
+        "type": "MapLibre.Event",
+        "required": false
+      },
+      {
+        "name": "dragend",
+        "type": "MapLibre.Event",
+        "required": false
+      }
+    ],
+    "ScriptMapLibreMarkerSlots": [
+      {
+        "name": "default",
+        "type": "-",
+        "required": false
+      }
+    ],
+    "ScriptMapLibreNavigationControlProps": [
+      {
+        "name": "position",
+        "type": "MapLibre.ControlPosition",
+        "required": false
+      },
+      {
+        "name": "options",
+        "type": "MapLibre.NavigationControlOptions",
+        "required": false
+      }
+    ],
+    "ScriptMapLibrePopupProps": [
+      {
+        "name": "position",
+        "type": "MapLibre.LngLatLike",
+        "required": false
+      },
+      {
+        "name": "open",
+        "type": "boolean",
+        "required": false
+      },
+      {
+        "name": "options",
+        "type": "MapLibre.PopupOptions",
+        "required": false
+      }
+    ],
+    "ScriptMapLibrePopupEvents": [
+      {
+        "name": "open",
+        "type": "MapLibre.Event",
+        "required": false
+      },
+      {
+        "name": "close",
+        "type": "MapLibre.Event",
+        "required": false
+      }
+    ],
+    "ScriptMapLibrePopupSlots": [
+      {
+        "name": "default",
+        "type": "-",
+        "required": false
       }
     ],
     "ScriptBlueskyEmbedProps": [

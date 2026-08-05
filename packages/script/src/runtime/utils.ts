@@ -16,7 +16,8 @@ import { createError, useRuntimeConfig } from 'nuxt/app'
 import { parseQuery, parseURL, withQuery } from 'ufo'
 import { parse } from 'valibot'
 import { useScript } from './composables/useScript'
-import { createNpmScriptStub } from './npm-script-stub'
+import { createNpmScriptApiState } from './npm-script-api-state'
+import { createNpmScriptProxy } from './npm-script-proxy'
 import { attachGcmConsent } from './registry/_gcm-consent'
 
 // Dev-only: stack trace parsing for component location detection (only referenced inside import.meta.dev)
@@ -24,6 +25,7 @@ const URL_MATCH_RE = /https?:\/\/[^/]+\/_nuxt\/(.+\.vue)(?:\?[^)]*)?:(\d+):(\d+)
 const URL_PAREN_MATCH_RE = /\(https?:\/\/[^/]+\/_nuxt\/(.+\.vue)(?:\?[^)]*)?:(\d+):(\d+)\)/
 const VUE_MATCH_RE = /([^/\s]+\.vue):(\d+):(\d+)/
 const CLEAN_CALLER_RE = /^\s*at\s+/
+const NPM_SCRIPT_PROXY_DECORATED = Symbol('nuxt-scripts:npm-proxy-decorated')
 
 export type MaybePromise<T> = Promise<T> | T
 
@@ -43,14 +45,21 @@ type OptionsFn<O> = (options: InferIfSchema<O>, ctx: { scriptInput?: UseScriptIn
   scriptInput?: UseScriptInput
   scriptOptions?: NuxtUseScriptOptions
   schema?: O extends ObjectSchema<any, any> | UnionSchema<any, any> ? O : undefined
-  clientInit?: () => void | Promise<any>
-  scriptMode?: 'external' | 'npm' // NEW: external = CDN script (default), npm = NPM package only
+  clientInit?: (ctx?: { signal: AbortSignal }) => any | Promise<any>
+  scriptMode?: 'external' | 'npm'
   /**
    * Opt-in: this script consumes GCMv2 Consent Mode. `useRegistryScript` auto-attaches
    * a `consent: { default, update }` API + dev validation against the canonical schema.
    */
   gcmConsent?: GcmConsentContract
 })
+
+function resolveClientUse(use?: NuxtUseScriptOptions['use']): NuxtUseScriptOptions['use'] | undefined {
+  if (!import.meta.client && use) {
+    return (() => undefined) as typeof use
+  }
+  return use
+}
 
 export function scriptRuntimeConfig<T extends RegistryScriptKey>(key: T): ScriptRegistry[T] {
   return ((useRuntimeConfig().public.scripts || {}) as ScriptRegistry)[key]
@@ -75,14 +84,33 @@ export function useRegistryScript<T extends Record<string | symbol, any>, O = Em
   const userOptions = defu(_userOptions || {}, typeof scriptConfig === 'object' ? scriptConfig : {})
   const options = optionsFn(userOptions as InferIfSchema<O>, { scriptInput: userOptions.scriptInput as UseScriptInput & { src?: string } })
 
-  // NEW: Handle NPM-only scripts differently
   if (options.scriptMode === 'npm') {
-    return createNpmScriptStub<T>({
+    const scriptOptions = { ...userOptions.scriptOptions, ...options.scriptOptions } as NuxtUseScriptOptions<T>
+    const resolveApi = scriptOptions.use
+    const clientUse = resolveClientUse(resolveApi)
+    delete scriptOptions.use
+    if (typeof scriptOptions.trigger === 'undefined')
+      scriptOptions.trigger = 'client'
+
+    const apiState = createNpmScriptApiState(clientUse as (() => T | undefined) | undefined)
+    const instance = useScript<T>({
       key: String(registryKey),
-      use: options.scriptOptions?.use,
-      clientInit: options.clientInit,
-      trigger: userOptions.scriptOptions?.trigger as any,
-    }) as any as UseScriptContext<UseFunctionType<NuxtUseScriptOptions<T>, T>>
+      async loader({ signal }: { signal: AbortSignal }) {
+        const initialized = await options.clientInit?.({ signal })
+        if (signal.aborted)
+          throw signal.reason || new Error(`Loading ${String(registryKey)} was aborted`)
+        return apiState.load(resolveApi as (() => T | Promise<T> | undefined) | undefined, initialized as T | undefined)
+      },
+    } as any, scriptOptions) as UseScriptContext<UseFunctionType<NuxtUseScriptOptions<T>, T>>
+
+    const sharedInstance = ((instance as any).script || instance) as UseScriptContext<T> & {
+      [NPM_SCRIPT_PROXY_DECORATED]?: boolean
+    }
+    if (!sharedInstance[NPM_SCRIPT_PROXY_DECORATED]) {
+      sharedInstance.proxy = createNpmScriptProxy(sharedInstance.proxy, apiState.current)
+      Object.defineProperty(sharedInstance, NPM_SCRIPT_PROXY_DECORATED, { value: true })
+    }
+    return instance
   }
 
   let finalScriptInput = options.scriptInput
@@ -112,6 +140,9 @@ export function useRegistryScript<T extends Record<string | symbol, any>, O = Em
 
   const scriptInput = defu(finalScriptInput as any, userOptions.scriptInput as any, { key: registryKey }) as any as UseScriptInput
   const scriptOptions = { ...userOptions?.scriptOptions, ...options.scriptOptions }
+  if (scriptOptions.use) {
+    scriptOptions.use = resolveClientUse(scriptOptions.use as NuxtUseScriptOptions['use']) as typeof scriptOptions.use
+  }
   if (import.meta.dev) {
     // Capture where the component was loaded from
     const error = new Error('Stack trace for component location')

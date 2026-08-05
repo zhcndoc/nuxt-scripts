@@ -4,16 +4,23 @@
  * that route matching URLs through the proxy. AST rewriting transforms
  * native API calls to use these wrappers at build time.
  *
- * Any non-same-origin URL is proxied through `proxyPrefix/<host><path>`.
+ * Any non-same-origin URL is proxied through `proxyPrefix/<host-or-alias><path>`.
  * No domain allowlist needed: only AST-rewritten third-party scripts call __nuxtScripts.
+ *
+ * `domainAliases` (real domain → path alias) is embedded so runtime-constructed URLs
+ * (e.g. self-hosted analytics endpoints) use the same opaque path segment as build-time
+ * rewrites, keeping hostnames out of client URLs.
  */
-export function generateInterceptPluginContents(proxyPrefix: string, options?: { testMode?: boolean }): string {
+export function generateInterceptPluginContents(proxyPrefix: string, options?: { testMode?: boolean, domainAliases?: Record<string, string> }): string {
   const testMode = options?.testMode ?? false
-  return `export default defineNuxtPlugin({
+  return `import { defineNuxtPlugin } from 'nuxt/app'
+
+export default defineNuxtPlugin({
   name: 'nuxt-scripts:intercept',
   enforce: 'pre',
   setup() {
     const proxyPrefix = ${JSON.stringify(proxyPrefix)};
+    const domainAliases = Object.assign(Object.create(null), ${JSON.stringify(options?.domainAliases ?? {})});
     const origBeacon = typeof navigator !== 'undefined' && navigator.sendBeacon
       ? navigator.sendBeacon.bind(navigator)
       : () => false;
@@ -22,9 +29,11 @@ export function generateInterceptPluginContents(proxyPrefix: string, options?: {
     function proxyUrl(url) {
       try {
         const parsed = new URL(url, location.origin);
-        if (parsed.origin !== location.origin)
-          return location.origin + proxyPrefix + '/' + parsed.host + parsed.pathname + parsed.search;
-      } catch {}
+        if ((parsed.protocol === 'http:' || parsed.protocol === 'https:') && parsed.origin !== location.origin) {
+          const seg = domainAliases[parsed.host] || parsed.host;
+          return location.origin + proxyPrefix + '/' + seg + parsed.pathname + parsed.search;
+        }
+      } catch { /* Invalid URL inputs retain native behavior. */ }
       return url;
     }
 

@@ -1,6 +1,6 @@
 ---
 title: PostHog
-description: 在您的 Nuxt 应用中使用 PostHog。
+description: 加载支持第一方代理、功能标志以及选择加入或退出控制的 posthog-js。
 links:
 - label: 源码
   icon: i-simple-icons-github
@@ -8,9 +8,9 @@ links:
   size: xs
 ---
 
-[PostHog](https://posthog.com) 是一个开源的产品分析平台，提供分析、会话回放、功能标志、A/B 测试等功能。
+[PostHog](https://posthog.com) 是一个开源的产品分析平台，提供会话回放、功能标志和实验功能。Nuxt Scripts 从 [npm](https://www.npmjs.com/) 加载 PostHog 官方的 [`posthog-js` 浏览器 SDK](https://posthog.com/docs/libraries/js)。
 
-Nuxt Scripts 提供了一个注册脚本组合式函数 [`useScriptPostHog()`{lang="ts"}](/scripts/posthog){lang="ts"}，方便您在 Nuxt 应用中集成 PostHog。
+使用 [`useScriptPostHog()`{lang="ts"}](/scripts/posthog){lang="ts"} 加载 SDK 并访问 PostHog 客户端。
 
 ::script-stats
 ::
@@ -45,9 +45,9 @@ export default defineNuxtConfig({
 
 ## 第一方代理
 
-当 [第一方模式](/docs/guides/first-party) 处于活动状态时（为支持的脚本自动启用），您的服务器会自动代理 PostHog 请求。这通过避免广告拦截器来提高事件捕获的可靠性。Nuxt 不会应用隐私匿名化；PostHog 是一个受信任的开源工具，需要完整保真度的数据来进行 GeoIP 丰富、功能标志和会话回放。
+当[第一方模式](/docs/guides/first-party)处于启用状态时（支持该模式的脚本会自动启用），您的服务器会自动代理 PostHog 请求。PostHog [建议使用反向代理](https://posthog.com/docs/advanced/proxy)来更可靠地捕获事件，因为广告拦截器可能会拒绝发送到已知分析域名的请求。Nuxt 会将客户端 IP 地址匿名化到子网级别；其他数据会直接通过，以确保会话回放和功能标志等功能继续正常运行。
 
-无需额外配置。该模块会自动设置 `apiHost` 以通过您服务器的代理端点进行路由：
+该模块会将 `apiHost` 设置为您服务器的代理端点：
 
 ```ts
 export default defineNuxtConfig({
@@ -62,7 +62,7 @@ export default defineNuxtConfig({
 })
 ```
 
-代理处理 API 请求和静态资源（例如会话录制 SDK），将它们路由到正确的 PostHog 端点。
+该代理会处理 API 请求和静态资源，包括会话录制 SDK。
 
 ## 自定义 API 主机
 
@@ -103,7 +103,7 @@ onLoaded(({ posthog }) => {
 
 ## 同意模式
 
-PostHog 提供 [`opt_in_capturing` / `opt_out_capturing`](https://posthog.com/docs/privacy/opting-out)。使用 `defaultConsent` 设置启动时默认值，并在运行时调用 `consent.optIn()`{lang="ts"} / `consent.optOut()`{lang="ts"}。
+PostHog 提供 [`opt_in_capturing` / `opt_out_capturing`](https://posthog.com/docs/libraries/js#opt-out-of-data-capture)。使用 `defaultConsent` 设置启动时的默认值，并在运行时调用 `consent.optIn()`{lang="ts"} / `consent.optOut()`{lang="ts"}。
 
 ### `defaultConsent`
 

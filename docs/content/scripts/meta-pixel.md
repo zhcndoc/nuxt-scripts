@@ -1,6 +1,6 @@
 ---
 title: Meta Pixel
-description: 在你的 Nuxt 应用中使用 Meta Pixel。
+description: 加载 Meta Pixel，通过 fbq 发送事件，并管理其二元同意状态。
 links:
 - label: 源码
   icon: i-simple-icons-github
@@ -8,9 +8,9 @@ links:
   size: xs
 ---
 
-[Meta Pixel](https://www.facebook.com/business/tools/meta-pixel) 让你能够衡量、优化并为你的 Facebook 广告活动建立受众。
+[Meta Pixel](https://www.facebook.com/business/tools/meta-pixel) 向 Meta Ads 发送转化和受众事件。
 
-Nuxt Scripts 提供了注册脚本组合函数 [`useScriptMetaPixel()`{lang="ts"}](/scripts/meta-pixel){lang="ts"}，方便你在 Nuxt 应用中集成 Meta Pixel。
+[`useScriptMetaPixel()`{lang="ts"}](/scripts/meta-pixel){lang="ts"} 加载像素代码并公开 `fbq` 队列。
 
 ::script-stats
 ::
@@ -41,4 +41,4 @@ function rejectAds() {
 </script>
 ```
 
-详情请参阅 [Meta 的同意文档](https://www.facebook.com/business/help/1151321516677370)。
+`defaultConsent: 'denied'` 会在像素初始化之前将撤销命令加入队列，但不会延迟 SDK 请求。如果您的同意政策要求在用户选择加入之前不得向 Meta 发起请求，请为脚本本身使用[二元加载门](/docs/guides/consent#binary-load-gate)。

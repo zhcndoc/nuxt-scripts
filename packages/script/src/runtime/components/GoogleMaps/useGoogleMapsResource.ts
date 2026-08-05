@@ -1,6 +1,7 @@
 import type { InjectionKey, Ref, ShallowRef } from 'vue'
 import { whenever } from '@vueuse/core'
 import { effectScope, inject, onUnmounted, ref, shallowRef, watch } from 'vue'
+import { createAbortablePromise, createAbortError } from '../../utils/abortable-promise'
 
 export const MAP_INJECTION_KEY = Symbol('map') as InjectionKey<{
   map: ShallowRef<google.maps.Map | undefined>
@@ -61,64 +62,6 @@ export function normalizeLatLng(
 }
 
 /**
- * Defines a deprecated property alias on an exposed object. Reading the alias
- * returns the value of the canonical key and emits a one-shot
- * `console.warn` (so repeated reads don't spam the console).
- *
- * Used to provide backward-compatible renames on `defineExpose` payloads
- * without breaking existing template-ref consumers. Call sites should wrap
- * this in `if (import.meta.dev)` so production builds skip the getter
- * entirely and the alias stays a plain data property.
- */
-export function defineDeprecatedAlias<T extends object, K extends keyof T>(
-  target: T,
-  alias: string,
-  canonicalKey: K,
-  message: string,
-): T {
-  let warned = false
-  Object.defineProperty(target, alias, {
-    get() {
-      if (!warned) {
-        warned = true
-        console.warn(message)
-      }
-      return target[canonicalKey]
-    },
-    enumerable: true,
-    configurable: true,
-  })
-  return target
-}
-
-/**
- * Emits dev-mode deprecation warnings for the legacy top-level `center` and
- * `zoom` props on `<ScriptGoogleMaps>`. Both props still work, but new code
- * should pass them via `mapOptions` instead.
- *
- * Returns the number of warnings emitted (useful for tests).
- */
-export function warnDeprecatedTopLevelMapProps(props: {
-  center?: unknown
-  zoom?: unknown
-}): number {
-  let warned = 0
-  if (props.center !== undefined) {
-    warned++
-    console.warn(
-      '[nuxt-scripts] <ScriptGoogleMaps> prop "center" is deprecated; use `:map-options="{ center: ... }"` instead. See https://scripts.nuxt.com/docs/migration-guide/v0-to-v1',
-    )
-  }
-  if (props.zoom !== undefined) {
-    warned++
-    console.warn(
-      '[nuxt-scripts] <ScriptGoogleMaps> prop "zoom" is deprecated; use `:map-options="{ zoom: ... }"` instead. See https://scripts.nuxt.com/docs/migration-guide/v0-to-v1',
-    )
-  }
-  return warned
-}
-
-/**
  * Wait until the Google Maps API and a Map instance are both available.
  *
  * Triggers script loading via `load()` if not already loaded. Uses an
@@ -135,48 +78,56 @@ export async function waitForMapsReady({
   map,
   status,
   load,
+  signal,
 }: {
   mapsApi: ShallowRef<typeof google.maps | undefined>
   map: ShallowRef<google.maps.Map | undefined>
   status: Ref<string>
   load: () => Promise<unknown> | unknown
+  signal?: AbortSignal
 }): Promise<void> {
+  const abortMessage = 'Google Maps readiness wait was aborted'
+  const throwIfAborted = () => {
+    if (signal?.aborted)
+      throw createAbortError(abortMessage)
+  }
+
+  throwIfAborted()
   if (mapsApi.value && map.value)
     return
   if (status.value === 'error')
     throw new Error('Google Maps script failed to load')
 
-  await load()
+  await createAbortablePromise<void>((resolve, reject) => {
+    Promise.resolve(load()).then(() => resolve(), reject)
+  }, { signal, abortMessage })
 
   // load() may have populated both refs synchronously — re-check before
   // installing a watcher to avoid the race that hangs the promise forever.
+  throwIfAborted()
   if (mapsApi.value && map.value)
     return
   if (status.value === 'error')
     throw new Error('Google Maps script failed to load')
 
   const scope = effectScope(true)
-  try {
-    await new Promise<void>((resolve, reject) => {
-      scope.run(() => {
-        watch(
-          [mapsApi, map, status],
-          ([api, m, s]) => {
-            if (api && m) {
-              resolve()
-              return
-            }
-            if (s === 'error')
-              reject(new Error('Google Maps script failed to load'))
-          },
-          { immediate: true },
-        )
-      })
+  await createAbortablePromise<void>((resolve, reject) => {
+    scope.run(() => {
+      watch(
+        [mapsApi, map, status],
+        ([api, m, s]) => {
+          if (api && m) {
+            resolve()
+            return
+          }
+          if (s === 'error')
+            reject(new Error('Google Maps script failed to load'))
+        },
+        { immediate: true },
+      )
     })
-  }
-  finally {
-    scope.stop()
-  }
+    return () => scope.stop()
+  }, { signal, abortMessage })
 }
 
 /**
@@ -209,20 +160,26 @@ export function useGoogleMapsResource<T>({
   whenever(
     () => mapContext?.map.value && mapContext.mapsApi.value && (!ready || ready()),
     () => {
-      Promise.resolve(create({
-        map: mapContext!.map.value!,
-        mapsApi: mapContext!.mapsApi.value!,
-      }))
-        .then((result) => {
-          if (isUnmounted.value) {
-            // Resource was created during the async gap after unmount — clean it up immediately
-            if (cleanup && mapContext?.mapsApi.value) {
-              cleanup(result, { mapsApi: mapContext.mapsApi.value })
-            }
-            return
+      let creation: Promise<T>
+      try {
+        creation = Promise.resolve(create({
+          map: mapContext!.map.value!,
+          mapsApi: mapContext!.mapsApi.value!,
+        }))
+      }
+      catch (error) {
+        creation = Promise.reject(error)
+      }
+      creation.then((result) => {
+        if (isUnmounted.value) {
+          // Resource was created during the async gap after unmount — clean it up immediately
+          if (cleanup && mapContext?.mapsApi.value) {
+            cleanup(result, { mapsApi: mapContext.mapsApi.value })
           }
-          resource.value = result
-        })
+          return
+        }
+        resource.value = result
+      })
         .catch((err) => {
           if (import.meta.dev) {
             console.error('[nuxt-scripts] Google Maps resource creation failed:', err)

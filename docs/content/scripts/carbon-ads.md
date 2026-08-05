@@ -8,9 +8,9 @@ links:
     size: xs
 ---
 
-[Carbon Ads](https://www.carbonads.net/) 是一种广告服务，提供对网站展示广告的性能友好型方案。
+[Carbon Ads](https://www.carbonads.net/) 通过标准嵌入脚本投放广告。
 
-Nuxt Scripts 提供了一个无头（headless）`ScriptCarbonAds` 组件，用于在您的 Nuxt 应用中嵌入碳广告。
+使用无头 [`<ScriptCarbonAds>`{lang="html"}](/scripts/carbon-ads){lang="html"} 组件，在 Nuxt 页面中放置一个广告。
 
 ::script-stats
 ::
@@ -18,7 +18,13 @@ Nuxt Scripts 提供了一个无头（headless）`ScriptCarbonAds` 组件，用�
 ::script-docs
 ::
 
-默认情况下，组件使用 CarbonAds 的最佳实践，即在挂载时立即加载。如果您希望在特定事件触发时加载广告，可以使用 [元素事件触发器](/docs/guides/script-triggers#element-event-triggers)。
+## [`<ScriptCarbonAds>`{lang="html"}](/scripts/carbon-ads){lang="html"}
+
+与其他 Nuxt Scripts 组件不同，`<ScriptCarbonAds>`{lang="html"} 不使用 [`useScript()`{lang="ts"}](/docs/api/use-script){lang="ts"}，而是将 Carbon 脚本插入其自身的 `div` 中。
+
+组件挂载时加载。如果广告应等待特定交互，请传入一个[元素事件触发器](/docs/guides/script-triggers#element-event-triggers)。
+
+Carbon 的[展示政策](https://www.carbonads.net/placement-policy)要求每个页面只加载一次广告代码，并禁止修改或自行托管该脚本。请为当前页面渲染一个组件。该组件会直接请求 Carbon 的 CDN 脚本，但不会强制限制只能使用一个组件。
 
 ```vue
 <template>
@@ -32,7 +38,7 @@ Nuxt Scripts 提供了一个无头（headless）`ScriptCarbonAds` 组件，用�
 
 ### 处理广告拦截器
 
-当 Carbon Ads 被拦截时，您可以使用这些插槽来添加备用内容。
+当 Carbon Ads 被拦截时，使用 `error` 插槽：
 
 ```vue
 <template>
@@ -51,7 +57,7 @@ Nuxt Scripts 提供了一个无头（headless）`ScriptCarbonAds` 组件，用�
 
 ### 添加用户界面样式
 
-该组件无头渲染，意味着没有内置样式。如果您想自定义广告外观，可以使用来自 nuxt.com 的示例。
+该组件不会继承任何样式。以下示例使用了 nuxt.com 中的样式：
 
 ```vue
 <template>
@@ -162,7 +168,9 @@ Nuxt Scripts 提供了一个无头（headless）`ScriptCarbonAds` 组件，用�
 
 完整的 props、事件和插槽请参阅 [门面组件 API](/docs/guides/facade-components#facade-components-api)。
 
-注意：Carbon Ads 脚本**不**扩展 [`useScript()`{lang="ts"}](/docs/api/use-script){lang="ts"} 组合函数。访问该脚本会返回 `HTMLScriptElement`。
+完整的 props、事件和插槽请参阅[门面组件 API](/docs/guides/facade-components#facade-components-api)。
+
+组件的 `ready` 事件会接收注入的 `HTMLScriptElement`。
 
 ::script-types
 ::

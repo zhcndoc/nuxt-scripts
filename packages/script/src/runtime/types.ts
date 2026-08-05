@@ -1,4 +1,4 @@
-import type { UseScriptInput, UseScriptOptions, VueScriptInstance } from '@unhead/vue'
+import type { UseScriptInput, UseScriptOptions, VueScriptInstance, VueScriptScope } from '@unhead/vue/scripts'
 import type {
   Script,
 } from '@unhead/vue/types'
@@ -24,8 +24,10 @@ import type { GravatarInput } from './registry/gravatar'
 import type { HotjarInput } from './registry/hotjar'
 import type { InstagramEmbedInput } from './registry/instagram-embed'
 import type { IntercomInput } from './registry/intercom'
+import type { LeafletInput } from './registry/leaflet'
 import type { LemonSqueezyInput } from './registry/lemon-squeezy'
 import type { LinkedInInsightInput } from './registry/linkedin-insight'
+import type { MapLibreInput } from './registry/maplibre'
 import type { MatomoAnalyticsInput } from './registry/matomo-analytics'
 import type { MetaPixelInput } from './registry/meta-pixel'
 import type { MixpanelAnalyticsInput } from './registry/mixpanel-analytics'
@@ -92,7 +94,7 @@ export interface GcmConsentApi {
   update: (state: ConsentState) => void
 }
 
-export type UseScriptContext<T extends Record<symbol | string, any>, C = unknown> = VueScriptInstance<T> & {
+export type UseScriptContext<T extends Record<symbol | string, any>, C = unknown> = VueScriptScope<T> & {
   /**
    * Remove and reload the script. Useful for scripts that need to re-execute
    * after SPA navigation (e.g., DOM-scanning scripts like iubenda).
@@ -262,6 +264,8 @@ export interface ScriptRegistry {
   googleAdsense?: GoogleAdsenseInput
   googleAnalytics?: GoogleAnalyticsInput
   googleMaps?: GoogleMapsInput
+  leaflet?: LeafletInput
+  maplibre?: MapLibreInput
   googleRecaptcha?: GoogleRecaptchaInput
   googleSignIn?: GoogleSignInInput
   lemonSqueezy?: LemonSqueezyInput
@@ -299,7 +303,7 @@ export interface ScriptRegistry {
 export type BuiltInRegistryScriptKey
   = | 'ahrefsAnalytics' | 'bingUet' | 'blueskyEmbed' | 'calendly' | 'carbonAds' | 'crisp' | 'clarity' | 'cloudflareWebAnalytics'
     | 'databuddyAnalytics' | 'metaPixel' | 'fathomAnalytics' | 'instagramEmbed'
-    | 'plausibleAnalytics' | 'googleAdsense' | 'googleAnalytics' | 'googleMaps'
+    | 'plausibleAnalytics' | 'googleAdsense' | 'googleAnalytics' | 'googleMaps' | 'leaflet' | 'maplibre'
     | 'googleRecaptcha' | 'googleSignIn' | 'lemonSqueezy' | 'googleTagManager'
     | 'hotjar' | 'intercom' | 'linkedinInsight' | 'paypal' | 'posthog' | 'matomoAnalytics'
     | 'mixpanelAnalytics' | 'rybbitAnalytics' | 'redditPixel' | 'segment' | 'stripe' | 'tiktokPixel'
@@ -314,7 +318,7 @@ export type RegistryScriptKey = Exclude<keyof ScriptRegistry, `${string}-npm`>
 
 type RegistryConfigInput<T> = 0 extends 1 & T ? Record<string, any> : [T] extends [true] ? Record<string, never> : T
 
-export type NuxtConfigScriptRegistryEntry<T> = true | false | 'mock' | (RegistryConfigInput<T> & { trigger?: NuxtUseScriptOptionsSerializable['trigger'] | false, proxy?: boolean, bundle?: boolean, partytown?: boolean, privacy?: ProxyPrivacyInput })
+export type NuxtConfigScriptRegistryEntry<T> = false | 'mock' | (RegistryConfigInput<T> & { trigger?: NuxtUseScriptOptionsSerializable['trigger'] | false, proxy?: boolean, bundle?: boolean, partytown?: boolean, privacy?: ProxyPrivacyInput })
 
 // Internal mapped type: derives config entry types from ScriptRegistry.
 // Excludes the `${string}-npm` pattern since it's covered by the string index signature.
@@ -336,8 +340,10 @@ export interface NuxtConfigScriptRegistry extends _NuxtConfigScriptRegistryEntri
 }
 
 export type UseFunctionType<T, U> = T extends {
-  use: infer V
-} ? V extends (...args: any) => any ? ReturnType<V> : U : U
+  resolve: infer V
+} ? V extends (...args: any) => any ? NonNullable<Awaited<ReturnType<V>>> : U : T extends {
+    use: infer V
+  } ? V extends (...args: any) => any ? NonNullable<Awaited<ReturnType<V>>> : U : U
 
 export type EmptyOptionsSchema = ObjectSchema<ObjectEntries, undefined>
 
@@ -363,14 +369,6 @@ export interface RegistryScriptServerHandler {
   route: string
   handler: string
   middleware?: boolean
-  /**
-   * Whether this handler verifies HMAC signatures via `withSigning()`.
-   *
-   * When any enabled script registers a handler with `requiresSigning: true`,
-   * the module enforces that `NUXT_SCRIPTS_PROXY_SECRET` is set in production,
-   * and the `/_scripts/sign` endpoint will accept this route as a signable path.
-   */
-  requiresSigning?: boolean
 }
 
 /**
@@ -466,6 +464,29 @@ export type SdkPatch
    * lands on a 404 instead of the proxy. This patch redirects it through the proxy.
    */
     | { type: 'replace-new-url-origin', fromDomain: string }
+  /**
+   * Replace `new URL(<expr>).host` / `.hostname` with a known vendor host.
+   * Used by SDKs that detect self-hosting from their own script URL and switch
+   * into a different endpoint mode when bundled.
+   *
+   * Applies to EVERY `new URL(...).host` / `.hostname` in the bundle, not just
+   * the self-src detection — only use it for SDKs that don't parse other URLs
+   * (e.g. referrers, click-throughs) with this pattern.
+   */
+    | { type: 'replace-new-url-host', host: string }
+  /**
+   * Replace script loader calls that receive a known path prefix with the
+   * configured proxied domain. This covers SDKs that assemble URLs from
+   * minified variables before passing them to a script `src` helper or
+   * `importScripts`, where ordinary string literal URL rewriting cannot see
+   * the final host.
+   *
+   * The loader's whole first argument is replaced with
+   * `origin + proxyPath + <matched path expression>` — any parts of the
+   * argument outside the matched path expression (e.g. an appended query
+   * string) are dropped.
+   */
+    | { type: 'replace-script-loader-url', fromDomain: string, pathPrefix: string }
 
 /**
  * Partytown capability config. When present, the script can run in a

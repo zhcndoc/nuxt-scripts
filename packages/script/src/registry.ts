@@ -32,7 +32,9 @@ import {
   HotjarOptions,
   InstagramEmbedOptions,
   IntercomOptions,
+  LeafletOptions,
   LinkedInInsightOptions,
+  MapLibreOptions,
   MatomoAnalyticsOptions,
   MetaPixelOptions,
   MixpanelAnalyticsOptions,
@@ -158,6 +160,8 @@ export const registryMeta: RegistryScriptMeta[] = [
   m('vimeoPlayer', 'Vimeo Player', 'video', 'useScriptVimeoPlayer', { bundle: true, proxy: true }, PRIVACY_IP_ONLY),
   // content
   m('googleMaps', 'Google Maps', 'content', 'useScriptGoogleMaps', {}, null),
+  m('leaflet', 'Leaflet', 'content', 'useScriptLeaflet', { bundle: true }, null),
+  m('maplibre', 'MapLibre GL JS', 'content', 'useScriptMapLibre', { bundle: true }, null),
   m('instagramEmbed', 'Instagram Embed', 'content', false, {}, null),
   m('xEmbed', 'X Embed', 'content', false, {}, null),
   m('blueskyEmbed', 'Bluesky Embed', 'content', false, {}, null),
@@ -300,7 +304,7 @@ export async function registry(resolve?: (path: string) => Promise<string>): Pro
     def('plausibleAnalytics', {
       label: 'Plausible Analytics',
       category: 'analytics',
-      envDefaults: { domain: '' },
+      envDefaults: { scriptId: '' },
       bundle: {
         resolve: (options?: PlausibleAnalyticsInput) => {
           // Self-hosted Plausible: when a custom `scriptInput.src` is provided,
@@ -308,10 +312,9 @@ export async function registry(resolve?: (path: string) => Promise<string>): Pro
           const userSrc = (options as any)?.scriptInput?.src
           if (typeof userSrc === 'string' && userSrc.trim().length > 0)
             return userSrc.trim()
-          if (options?.scriptId)
-            return `https://plausible.io/js/pa-${options.scriptId}.js`
-          const extensions = Array.isArray(options?.extension) ? options.extension.join('.') : [options?.extension]
-          return options?.extension ? `https://plausible.io/js/script.${extensions}.js` : 'https://plausible.io/js/script.js'
+          if (!options?.scriptId)
+            throw new TypeError('plausibleAnalytics requires scriptId')
+          return `https://plausible.io/js/pa-${options.scriptId}.js`
         },
       },
       proxy: {
@@ -519,10 +522,16 @@ export async function registry(resolve?: (path: string) => Promise<string>): Pro
       src: 'https://sc-static.net/scevent.min.js',
       category: 'ad',
       envDefaults: { id: '' },
-      bundle: true,
+      bundle: {
+        sdkPatches: [{ type: 'replace-new-url-host', host: 'sc-static.net' }],
+      },
       proxy: {
         domains: ['sc-static.net', 'tr.snapchat.com', 'pixel.tapad.com'],
         privacy: PRIVACY_FULL,
+        sdkPatches: [
+          { type: 'replace-new-url-host', host: 'sc-static.net' },
+          { type: 'replace-script-loader-url', fromDomain: 'tr.snapchat.com', pathPrefix: '/config' },
+        ],
       },
       partytown: { forwards: ['snaptr'] },
     }),
@@ -628,10 +637,11 @@ export async function registry(resolve?: (path: string) => Promise<string>): Pro
         // Clarity buckets visitors across letter/hash-prefixed shards (a/b/c/d/e/k/...).
         // Microsoft adds shards over time, so an enumerated list silently 403s
         // through the proxy when an unlisted letter is rolled out (#728-class bug).
-        // `*.clarity.ms` covers the full surface at runtime; `www.clarity.ms` is
-        // kept literal so the build-time URL rewrite (which filters wildcards)
-        // can still rewrite `https://www.clarity.ms/tag/<id>` in bundled SDKs.
-        domains: ['www.clarity.ms', '*.clarity.ms'],
+        // `*.clarity.ms` covers the full surface at runtime. Literal hosts are
+        // also required because build-time URL rewriting filters wildcards; the
+        // bootstrap currently loads its SDK from `scripts`, uploads to `p`, and
+        // synchronizes consent through `c`.
+        domains: ['www.clarity.ms', 'scripts.clarity.ms', 'p.clarity.ms', 'c.clarity.ms', '*.clarity.ms'],
         privacy: PRIVACY_HEATMAP,
       },
       partytown: { forwards: ['clarity'] },
@@ -684,10 +694,21 @@ export async function registry(resolve?: (path: string) => Promise<string>): Pro
       label: 'Google Maps',
       envDefaults: { apiKey: '' },
       category: 'content',
-      serverHandlers: [
-        { route: '/_scripts/proxy/google-static-maps', handler: './runtime/server/google-static-maps-proxy', requiresSigning: true },
-        { route: '/_scripts/proxy/google-maps-geocode', handler: './runtime/server/google-maps-geocode-proxy', requiresSigning: true },
-      ],
+    }),
+    def('leaflet', {
+      schema: LeafletOptions,
+      label: 'Leaflet',
+      src: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+      category: 'content',
+      bundle: true,
+    }),
+    def('maplibre', {
+      composableName: 'useScriptMapLibre',
+      schema: MapLibreOptions,
+      label: 'MapLibre GL JS',
+      src: 'https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js',
+      category: 'content',
+      bundle: true,
     }),
     def('blueskyEmbed', {
       composableName: false,
@@ -695,8 +716,8 @@ export async function registry(resolve?: (path: string) => Promise<string>): Pro
       label: 'Bluesky Embed',
       category: 'content',
       serverHandlers: [
-        { route: '/_scripts/embed/bluesky', handler: './runtime/server/bluesky-embed', requiresSigning: true },
-        { route: '/_scripts/embed/bluesky-image', handler: './runtime/server/bluesky-embed-image', requiresSigning: true },
+        { route: '/_scripts/embed/bluesky', handler: './runtime/server/bluesky-embed' },
+        { route: '/_scripts/embed/bluesky-image', handler: './runtime/server/bluesky-embed-image' },
       ],
     }),
     def('instagramEmbed', {
@@ -705,9 +726,9 @@ export async function registry(resolve?: (path: string) => Promise<string>): Pro
       label: 'Instagram Embed',
       category: 'content',
       serverHandlers: [
-        { route: '/_scripts/embed/instagram', handler: './runtime/server/instagram-embed', requiresSigning: true },
-        { route: '/_scripts/embed/instagram-image', handler: './runtime/server/instagram-embed-image', requiresSigning: true },
-        { route: '/_scripts/embed/instagram-asset', handler: './runtime/server/instagram-embed-asset', requiresSigning: true },
+        { route: '/_scripts/embed/instagram', handler: './runtime/server/instagram-embed' },
+        { route: '/_scripts/embed/instagram-image', handler: './runtime/server/instagram-embed-image' },
+        { route: '/_scripts/embed/instagram-asset', handler: './runtime/server/instagram-embed-asset' },
       ],
     }),
     def('xEmbed', {
@@ -716,8 +737,8 @@ export async function registry(resolve?: (path: string) => Promise<string>): Pro
       label: 'X Embed',
       category: 'content',
       serverHandlers: [
-        { route: '/_scripts/embed/x', handler: './runtime/server/x-embed', requiresSigning: true },
-        { route: '/_scripts/embed/x-image', handler: './runtime/server/x-embed-image', requiresSigning: true },
+        { route: '/_scripts/embed/x', handler: './runtime/server/x-embed' },
+        { route: '/_scripts/embed/x-image', handler: './runtime/server/x-embed-image' },
       ],
     }),
     // support
@@ -850,7 +871,7 @@ export async function registry(resolve?: (path: string) => Promise<string>): Pro
         privacy: PRIVACY_IP_ONLY,
       },
       serverHandlers: [
-        { route: '/_scripts/proxy/gravatar', handler: './runtime/server/gravatar-proxy', requiresSigning: true },
+        { route: '/_scripts/proxy/gravatar', handler: './runtime/server/gravatar-proxy' },
       ],
     }),
     def('speedcurve', {
@@ -869,12 +890,17 @@ export async function registry(resolve?: (path: string) => Promise<string>): Pro
 /**
  * Generate a Partytown `resolveUrl` function string for proxy routing.
  * Partytown calls this for every network request made by worker-executed scripts.
- * Any non-same-origin URL is proxied through `proxyPrefix/<host><path>`.
+ * Any non-same-origin URL is proxied through `proxyPrefix/<host-or-alias><path>`.
+ *
+ * `domainAliases` (real domain → path alias) is embedded so worker requests use the
+ * same opaque path segment as build-time rewrites, keeping hostnames out of URLs.
  */
-export function generatePartytownResolveUrl(proxyPrefix: string): string {
+export function generatePartytownResolveUrl(proxyPrefix: string, domainAliases: Record<string, string> = {}): string {
   return `function(url, location, type) {
-  if (url.origin !== location.origin) {
-    return new URL(${JSON.stringify(proxyPrefix)} + '/' + url.host + url.pathname + url.search, location.origin);
+  if ((url.protocol === 'http:' || url.protocol === 'https:') && url.origin !== location.origin) {
+    var aliases = Object.assign(Object.create(null), ${JSON.stringify(domainAliases)});
+    var seg = aliases[url.host] || url.host;
+    return new URL(${JSON.stringify(proxyPrefix)} + '/' + seg + url.pathname + url.search, location.origin);
   }
 }`
 }

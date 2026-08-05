@@ -1,6 +1,6 @@
 ---
 title: Ahrefs Web Analytics
-description: 在你的 Nuxt 应用中使用 Ahrefs Web Analytics，通过隐私优先、无 Cookie 的分析脚本来跟踪页面浏览量和自定义事件。
+description: 在 Nuxt 中使用 Ahrefs Web Analytics 跟踪页面浏览量和自定义事件。
 links:
   - label: 来源
     icon: i-simple-icons-github
@@ -8,7 +8,7 @@ links:
     size: xs
 ---
 
-[Ahrefs Web Analytics](https://ahrefs.com/web-analytics) 是来自 [Ahrefs](https://ahrefs.com) 的一项隐私优先、无 Cookie 的 Web 分析服务，可在不与第三方共享访客数据的情况下跟踪页面浏览量和自定义事件。
+[Ahrefs Web Analytics](https://help.ahrefs.com/en/articles/10247870-about-ahrefs-web-analytics) 无需使用 Cookie 或持久化标识符即可跟踪页面浏览量和自定义事件。它会在推导出粗略位置数据后丢弃原始 IP 地址。
 
 ::script-stats
 ::
@@ -16,10 +16,11 @@ links:
 ::script-docs
 ::
 
-该组合式函数具有以下默认值：
-- **触发时机：客户端** 当 Nuxt 正在挂载时，脚本将加载。
+默认：
 
-你可以直接将 `AhrefsAnalytics` 对象作为代理访问，或者等待 `$script` Promise 以访问该对象。对于任何无返回值函数，建议使用代理。
+- **触发器：`onNuxtReady`** 脚本会在 Nuxt 应用准备就绪时加载。
+
+对于无返回值调用，请使用代理。需要加载完成的 `AhrefsAnalytics` 对象时，请等待 `$script`。[Ahrefs 跟踪事件指南](https://help.ahrefs.com/en/articles/11381932-tracked-events-in-ahrefs-web-analytics)介绍了 JavaScript API 和事件属性结构。
 
 ::code-group
 
@@ -49,22 +50,7 @@ onLoaded(({ AhrefsAnalytics }) => {
 
 ## SPA 导航
 
-Ahrefs Analytics 原生支持单页应用导航：加载的 `analytics.js` 会补丁 `history.pushState` 并监听 `popstate`，每当 URL 发生变化时就会触发一次新的页面浏览量。Nuxt 路由变化无需额外配置。
+Ahrefs Analytics 原生跟踪单页应用导航：加载的 [`analytics.js`](https://analytics.ahrefs.com/analytics.js) 会修改 `history.pushState` 并监听 `popstate`，在 URL 发生变化时触发新的页面浏览。Nuxt 路由变化无需额外配置。
 
 ::script-types
 ::
-
-## 示例
-
-在 Nuxt 准备就绪时，通过 `app.vue` 加载 Ahrefs Web Analytics。
-
-```vue [app.vue]
-<script setup lang="ts">
-useScriptAhrefsAnalytics({
-  key: 'your-project-key',
-  scriptOptions: {
-    trigger: 'onNuxtReady'
-  }
-})
-</script>
-```

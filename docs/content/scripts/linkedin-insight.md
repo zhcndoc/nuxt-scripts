@@ -1,6 +1,6 @@
 ---
-title: LinkedIn Insight 标签
-description: 在你的 Nuxt 应用中使用 LinkedIn Insight Tag 跟踪转化、重定向访问者并了解你的受众。
+title: LinkedIn Insight Tag
+description: 跟踪 LinkedIn Ads 转化、增强型匹配和 SPA 页面浏览。
 links:
 - label: 源代码
   icon: i-simple-icons-github
@@ -8,9 +8,9 @@ links:
   size: xs
 ---
 
-[LinkedIn Insight Tag](https://business.linkedin.com/marketing-solutions/insight-tag) 是一个轻量级的 JavaScript 片段，用于在 LinkedIn Ads 活动中进行转化跟踪、重定向以及受众洞察。
+[LinkedIn Insight Tag](https://business.linkedin.com/marketing-solutions/insight-tag) 跟踪转化，并向 LinkedIn Ads 发送受众信号。
 
-Nuxt Scripts 提供了一个注册表脚本组合式函数 [`useScriptLinkedInInsight()`{lang="ts"}](/scripts/linkedin-insight)，用于将其集成到你的 Nuxt 应用中。
+[`useScriptLinkedInInsight()`{lang="ts"}](/scripts/linkedin-insight) 注册合作伙伴 ID，并公开 `lintrk` 命令队列。
 
 ::script-stats
 ::
@@ -61,7 +61,7 @@ function trackSignup() {
 
 ```vue
 <script setup lang="ts">
-const { proxy } = useScriptLinkedInInsight({
+useScriptLinkedInInsight({
   id: '111143',
   eventId: 'page-load-event-id-123',
 })
@@ -84,8 +84,6 @@ function onSignupSuccess(email: string) {
 </script>
 ```
 
-Insight Tag 会将哈希后的邮箱存储在 `localStorage["li_hem"]` 中，并在下一次页面浏览时通过向 `https://px.ads.linkedin.com/wa/...`（WebsiteActions 网关）发起单独的 POST 请求来传输它。紧随 `setUserData` 之后的页面浏览的 `/collect` URL 不会携带它；LinkedIn 会在下一次完整页面加载时，通过引导脚本从 `localStorage` 中读回它来获取。
-
 ### SPA 虚拟页面浏览
 
 默认情况下，Insight Tag 在脚本加载时只会触发一次页面浏览，因此 SPA 路由变化不会被跟踪。可以通过 `enableAutoSpaTracking` 开启按路由跟踪：
@@ -99,7 +97,7 @@ useScriptLinkedInInsight({
 </script>
 ```
 
-启用后，该组合式函数会抑制脚本内置的自动页面浏览（通过 `window._wait_for_lintrk = true`），并在 Nuxt 的 `page:finish` 钩子上触发 `lintrk('track')`{lang="ts"}，这样每个路由（包括初始页面）都会恰好生成一次 `/collect` 信标。
+启用后，组合式函数会抑制脚本内置的自动页面浏览功能（通过设置 `window._wait_for_lintrk = true`），并在 Nuxt 的 `page:finish` 钩子上触发 `lintrk('track')`{lang="ts"}。在标准的 `<NuxtPage />`{lang="html"} 生命周期下，这会为每个路由（包括初始页面）生成一个 `/collect` 信标。Keep-alive 或重叠的页面过渡可能会注册多个钩子，因此在这些设置中，请在生命周期较长的组件中只调用一次该组合式函数。
 
 ### 多个 Partner ID
 

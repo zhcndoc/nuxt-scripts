@@ -1,6 +1,6 @@
 ---
-title: Vercel 分析
-description: 在你的 Nuxt 应用中使用 Vercel 分析。
+title: Vercel Analytics
+description: 加载 Vercel Web Analytics 并发送页面浏览量或自定义事件。
 links:
   - label: 源码
     icon: i-simple-icons-github
@@ -8,7 +8,7 @@ links:
     size: xs
 ---
 
-[Vercel Analytics](https://vercel.com/docs/analytics) 为你的 Nuxt 应用提供轻量级且注重隐私的网页分析。在部署于 [Vercel](https://vercel.com) 时，它能够零配置地追踪页面浏览和自定义事件。
+[Vercel Web Analytics](https://vercel.com/docs/analytics) 会记录页面浏览量和自定义事件。其[隐私与合规](https://vercel.com/docs/analytics/privacy-policy)指南介绍了数据收集和访客识别模型。
 
 ::script-stats
 ::
@@ -18,7 +18,7 @@ links:
 
 ### 非 Vercel 部署
 
-当在 Vercel 之外部署时，需要显式提供你的 DSN：
+在 [Vercel](https://vercel.com) 之外进行部署时，请显式提供 DSN。其[分析包参考](https://vercel.com/docs/analytics/package)文档介绍了此情况下的 `dsn` 选项：
 
 ```ts
 useScriptVercelAnalytics({
@@ -28,13 +28,13 @@ useScriptVercelAnalytics({
 
 ### 第一方模式
 
-Vercel 分析会自动启用第一方模式。Nuxt 在本地打包分析脚本，并通过你的服务器代理数据收集请求。这可以防止广告拦截器阻止分析，并从第三方请求中移除敏感数据。
+此注册表条目启用了第一方模式。Nuxt 会在本地打包脚本，并通过你的服务器代理数据接收请求。该代理会将客户端 IP 匿名化为子网，但不会对事件正文或 URL 进行脱敏处理。
 
 ```ts
 export default defineNuxtConfig({
   scripts: {
     registry: {
-      vercelAnalytics: { trigger: 'onNuxtReady' },
+      vercelAnalytics: { trigger: 'client' },
     }
   }
 })
@@ -42,9 +42,13 @@ export default defineNuxtConfig({
 
 ## 默认设置
 
-- **触发时机：客户端** 脚本将在 Nuxt 进行 hydration 时加载，以保持网页关键性能指标的准确性。
+- **触发器：客户端** 脚本在 Nuxt hydration 期间加载，以确保 Web Vitals 指标的准确性。
 
-你可以直接通过代理访问 `track` 和 `pageview` 方法，或等待 `$script` Promise 来访问对象。对于任何无返回值的函数，建议使用代理。
+注册表会将此触发器固定为 `client`。调用方传入的 `scriptOptions.trigger` 值会被覆盖。
+
+构建环境会选择文件：开发构建使用 `script.debug.js`，而生产构建使用 `script.js`。`mode` 选项用于设置 Vercel 的 `window.vam` 运行时值；它不会改变文件选择。当前的 `debug` 映射仅会在开发环境中传递 `debug: false`，因此在生产构建中设置 `debug: true` 不会启用调试脚本。
+
+通过代理调用返回 void 的 `track` 和 `pageview` 方法。你也可以等待 `$script`，以访问已加载的对象。
 
 ::code-group
 
@@ -67,15 +71,11 @@ onLoaded(({ track }) => {
 
 ## 示例
 
-当 Nuxt 准备好时通过 `app.vue` 加载 Vercel 分析。
+通过 `app.vue` 加载 Vercel Analytics：
 
 ```vue [app.vue]
 <script setup lang="ts">
-const { proxy } = useScriptVercelAnalytics({
-  scriptOptions: {
-    trigger: 'onNuxtReady',
-  },
-})
+const { proxy } = useScriptVercelAnalytics()
 
 // 追踪自定义事件
 proxy.track('signup', { plan: 'pro' })
@@ -84,7 +84,7 @@ proxy.track('signup', { plan: 'pro' })
 
 ### 手动追踪
 
-如果你想完全控制追踪内容，可以禁用自动追踪，并手动调用 `track` / `pageview`。
+禁用自动追踪，并自行调用 `track` 或 `pageview`：
 
 ```vue [app.vue]
 <script setup lang="ts">
@@ -102,7 +102,7 @@ proxy.pageview({ path: '/custom-page' })
 
 ### beforeSend
 
-使用 `beforeSend` 在事件发送到 Vercel 前过滤或修改事件。返回 `null` 可取消事件。
+使用 `beforeSend` 在事件发送到 Vercel 之前对其进行筛选或修改。返回 `null` 可取消事件。Vercel 也建议在此处[编辑敏感的 URL 数据](https://vercel.com/docs/analytics/redacting-sensitive-data)。
 
 ```vue [app.vue]
 <script setup lang="ts">
