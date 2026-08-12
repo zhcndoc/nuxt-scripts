@@ -54,7 +54,7 @@ onLoaded(({ Calendly }) => {
 })
 ```
 
-::】【。
+::
 
 ## [`<ScriptCalendlyInlineWidget>`{lang="html"}](/scripts/calendly){lang="html"}
 
