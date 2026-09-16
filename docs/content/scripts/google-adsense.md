@@ -78,7 +78,7 @@ Google 建议添加 `ads.txt` 文件，以识别获授权出售您广告资源�
    ```plaintext
    google.com, pub-<your-id>, DIRECT, f08c47fec0942fa0
    ```  
-3. 将 `<your-id>` 替换为您的 **AdSense 发布者 ID**。  
+3. 将 `<your-id>` 替换为您的 **AdSense 发布商 ID**。  
 
 ::callout{icon="i-heroicons-light-bulb" to="https://support.google.com/adsense/answer/12171612" target="_blank"}
 `ads.txt` 文件不能替代 AdSense 的网站审核。发布该文件后，请在您的 AdSense 控制台中检查文件状态。
@@ -141,15 +141,16 @@ Google 建议添加 `ads.txt` 文件，以识别获授权出售您广告资源�
 
 | 属性                         | 描述                                                               |
 | ---------------------------- | ------------------------------------------------------------------ |
-| `data-ad-client`             | 您的 **Google AdSense 发布商 ID**（`ca-pub-XXXXXXXXXX`）。          |
-| `data-ad-slot`               | 您的 **广告位 ID**（可在 AdSense 信息中心获取）。                   |
+| `data-ad-client`             | 您的 **Google AdSense 发布商 ID**（`ca-pub-XXXXXXXXXX`）。           |
+| `data-ad-slot`               | 您的 **广告位 ID**（可在 AdSense 信息中心找到）。                    |
 | `data-ad-format`             | 广告格式类型（`auto`、`rectangle`、`horizontal`、`vertical`、`fluid`、`autorelaxed`）。 |
-| `data-ad-layout`             | 布局（`in-article`、`in-feed`、`fixed`）。                          |
-| `data-full-width-responsive` | **设置为 `true`** 以使广告具有响应式效果。                         |
+| `data-ad-layout`             | 布局：`in-article`，或用于信息流的 `image-top`、`image-side`、`text-only`。 |
+| `data-ad-layout-key`         | AdSense 为信息流单元生成的布局键。                                  |
+| `data-full-width-responsive` | **设置为 `true`** 以使广告具有响应式布局。                          |
 
 #### 使用 `data-ad-layout` 的示例
 
-为 `in-article` 等布局设置 `data-ad-layout`：
+为文章内单元设置 `data-ad-layout`：
 
 ```vue
 <template>
@@ -158,6 +159,21 @@ Google 建议添加 `ads.txt` 文件，以识别获授权出售您广告资源�
     data-ad-slot="1234567890"
     data-ad-format="fluid"
     data-ad-layout="in-article"
+  />
+</template>
+```
+
+#### 使用 `data-ad-layout-key` 的示例
+
+从 AdSense 生成的信息流单元中复制布局键：
+
+```vue
+<template>
+  <ScriptGoogleAdsense
+    data-ad-client="ca-pub-<your-id>"
+    data-ad-slot="1234567890"
+    data-ad-format="fluid"
+    data-ad-layout-key="-6t+ed+2i-1n-4w"
   />
 </template>
 ```

@@ -14,14 +14,14 @@ links:
 
 [MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/) 是一个用于交互式矢量地图的开源 WebGL 渲染器。它负责渲染地图并处理交互；样式、瓦片源、归属信息、地理编码和路径规划服务则由你分别选择。
 
-Nuxt Scripts 通过 [`useScriptMapLibre()`{lang="ts"}](/scripts/maplibre/api/use-script-maplibre) 组合式函数，以及用于常见地图资源的声明式组件，支持 MapLibre GL JS 5.24。第一方模式可以打包 JavaScript SDK。默认情况下，Nuxt Scripts 会单独加载所需的 MapLibre 样式表。
+Nuxt Scripts 通过 [`useScriptMapLibre()`{lang="ts"}](/scripts/maplibre/api/use-script-maplibre) 组合式函数以及用于常见地图资源的声明式组件支持 MapLibre GL JS v6。MapLibre v6 仅支持 ESM，因此 Nuxt Scripts 会从 `maplibre-gl` 包加载它，而不是使用 CDN 脚本标签。样式表也来自同一个包。
 
 ::script-types{exclude-components}
 ::
 
 ## 设置
 
-安装 MapLibre 以获取其 TypeScript 类型定义，然后启用注册表条目：
+安装 MapLibre v6，然后启用注册表条目：
 
 ```bash
 pnpm add -D maplibre-gl

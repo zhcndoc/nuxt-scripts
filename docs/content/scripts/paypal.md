@@ -44,7 +44,7 @@ Nuxt Scripts 通过以下方式集成 [PayPal JavaScript SDK v6](https://develop
 pnpm add -D @paypal/paypal-js
 ```
 
-v6 类型定义可从 `@paypal/paypal-js/sdk-v6` 获取。
+Nuxt Scripts 要求使用 `@paypal/paypal-js` v11 或更高版本。v6 SDK 类型可从 `@paypal/paypal-js/sdk-v6` 获取。
 
 ### 示例
 

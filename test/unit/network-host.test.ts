@@ -1,4 +1,7 @@
+import type { AddressInfo } from 'node:net'
+import { createServer } from 'node:http'
 import { describe, expect, it, vi } from 'vitest'
+import { createNetworkDispatcher as createPlatformNetworkDispatcher } from '../../packages/script/src/runtime/server/utils/network-dispatcher.platform'
 import { createPublicNetworkDispatcher, createPublicNetworkLookup, isPrivateNetworkResolutionError, isPublicNetworkHostname } from '../../packages/script/src/runtime/server/utils/network-host'
 
 describe('public network hostname boundary', () => {
@@ -63,6 +66,31 @@ describe('public network hostname boundary', () => {
     })
 
     expect(error).toMatchObject({ code: 'ERR_NUXT_SCRIPTS_PRIVATE_ADDRESS' })
+  })
+
+  it('returns a fetch that works when called as a method on the dispatcher', async () => {
+    const server = createServer((_request, response) => {
+      response.writeHead(200)
+      response.end('ok')
+    })
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
+    const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+
+    const network = await createPlatformNetworkDispatcher()
+    try {
+      // Called as a method on the dispatcher object, the way proxy-handler.ts
+      // calls it. workerd rejects a detached `globalThis.fetch` reference with
+      // `TypeError: Illegal invocation` (verified in workerd by
+      // network-dispatcher-workerd.test.ts); the receiver must be pinned.
+      const response = await network.fetch(`${origin}/hello`)
+      expect(response.status).toBe(200)
+      expect(await response.text()).toBe('ok')
+    }
+    finally {
+      await network.close()
+      await new Promise<void>(resolve => server.close(() => resolve()))
+    }
+    await expect(network.close()).resolves.toBeUndefined()
   })
 
   it('uses the validated lookup for the actual Node fetch connection', async () => {

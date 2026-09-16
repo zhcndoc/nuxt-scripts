@@ -142,6 +142,12 @@ export const scriptMeta = {
     trackedData: ['user-identity', 'events'],
     testId: 'akg5rmxb',
   },
+  deskcrew: {
+    urls: ['https://deskcrew.io/desk.js'],
+    trackedData: ['user-identity', 'events', 'errors'],
+    testId: 'pub_deskcrewdemo',
+  },
+
   crisp: {
     urls: ['https://client.crisp.chat/l.js'],
     trackedData: ['user-identity', 'events'],
@@ -182,7 +188,8 @@ export const scriptMeta = {
     trackedData: [],
   },
   maplibre: {
-    urls: ['https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js'],
+    // Loaded from the `maplibre-gl` package, not a CDN.
+    urls: [],
     trackedData: [],
   },
 

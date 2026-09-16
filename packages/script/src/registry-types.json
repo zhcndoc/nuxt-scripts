@@ -2,6 +2,16 @@
   "types": {
     "_gcm-consent": [
       {
+        "name": "AssertNever",
+        "kind": "type",
+        "code": "type AssertNever<T extends never> = T"
+      },
+      {
+        "name": "_ConsentKeysChecked",
+        "kind": "type",
+        "code": "type _ConsentKeysChecked = AssertNever<Exclude<keyof ConsentState, typeof CONSENT_CATEGORIES[number] | 'wait_for_update' | 'region'>>"
+      },
+      {
         "name": "GcmConsentContract",
         "kind": "interface",
         "code": "export interface GcmConsentContract {\n  /** Forward a `consent`,`<action>`, `<state>` call to the script's transport (dataLayer or gtag). */\n  push: (proxy: any, action: 'default' | 'update', state: ConsentState) => void\n}"
@@ -238,6 +248,38 @@
         "code": "export interface DatabuddyAnalyticsApi {\n  /**\n   * Track a custom event.\n   * @param eventName Name of the event (use snake_case)\n   * @param properties Optional event properties\n   */\n  track: (eventName: string, properties?: Record<string, any>) => Promise<any> | any | void\n\n  /**\n   * Manually record a page / screen view. Useful for SPA route changes.\n   * @param path Optional path to record (defaults to current location)\n   * @param properties Optional additional properties for the screen view\n   */\n  screenView: (path?: string, properties?: Record<string, any>) => void\n\n  /**\n   * Set properties that will be attached to all future events (e.g. user_id).\n   * @param properties Key/value map of properties to attach globally\n   */\n  setGlobalProperties: (properties: Record<string, any>) => void\n\n  /**\n   * Track a custom event alias (compatibility helper present on the global)\n   * @param eventName Name of the event\n   * @param properties Optional event properties\n   */\n  trackCustomEvent: (eventName: string, properties?: Record<string, any>) => void\n\n  /**\n   * Clears session and anonymous identifiers (useful on logout).\n   */\n  clear: () => void\n\n  /**\n   * Force immediate sending of any queued/batched events.\n   */\n  flush: () => void\n}"
       }
     ],
+    "deskcrew": [
+      {
+        "name": "DeskCrewOptions",
+        "kind": "const",
+        "code": "export const DeskCrewOptions = object({\n  /**\n   * The DeskCrew public widget key, for example `pub_xxxxxxxx`.\n   * Rendered as the `data-key` attribute. Find it in the DeskCrew dashboard under Install.\n   * @see https://deskcrew.io/integrations/nuxt\n   */\n  // minLength(1) rather than a bare string(): envDefaults resolves an unset key to '',\n  // which would validate happily and render data-key=\"\" onto the tag, booting a keyless\n  // widget that silently talks to no workspace. Failing loudly in dev is the point.\n  widgetKey: pipe(string(), minLength(1)),\n  /**\n   * The workspace board slug, lowercase letters, numbers and dashes only.\n   * Rendered as the `data-board` attribute. Required for the help centre, changelog and\n   * embedded portal surfaces; the chat launcher works without it.\n   */\n  board: optional(string()),\n  /**\n   * Accent colour as a 6 digit hex value, for example `#4f46e5`.\n   * Rendered as the `data-color` attribute. Overrides the accent configured on the workspace.\n   */\n  color: optional(string()),\n  /**\n   * Which side of the viewport the launcher sits on.\n   * Rendered as the `data-position` attribute.\n   * @default 'right'\n   */\n  position: optional(union([literal('left'), literal('right')])),\n  /**\n   * Greeting text shown in the widget header, overriding the workspace default.\n   * Rendered as the `data-greeting` attribute.\n   */\n  greeting: optional(string()),\n  /**\n   * Render the workspace logo in the launcher bubble instead of the default icon.\n   * Rendered as the `data-launcher` attribute.\n   */\n  launcher: optional(literal('logo')),\n})"
+      },
+      {
+        "name": "DeskCrewIdentity",
+        "kind": "interface",
+        "code": "export interface DeskCrewIdentity {\n  /** A signed identity token minted by your backend. */\n  token: string\n}"
+      },
+      {
+        "name": "DeskCrewEmbedOptions",
+        "kind": "interface",
+        "code": "export interface DeskCrewEmbedOptions {\n  /** Target element, or a selector for it. */\n  el: string | HTMLElement\n  /** Board slug, defaults to the `board` option. */\n  board?: string\n  /** Path the portal is mounted under, defaults to the current pathname. */\n  basePath?: string\n  /** Which portal view to open first. */\n  view?: string\n  theme?: 'light' | 'dark'\n}"
+      },
+      {
+        "name": "DeskCrewChangelogOptions",
+        "kind": "interface",
+        "code": "export interface DeskCrewChangelogOptions {\n  /** `'inline'` requires `selector`. */\n  mode?: 'inline' | 'floating'\n  selector?: string\n  basePath?: string\n  position?: 'left' | 'right'\n}"
+      },
+      {
+        "name": "DeskCrewSurveyOptions",
+        "kind": "interface",
+        "code": "export interface DeskCrewSurveyOptions {\n  /** Reserved. Surveys are opt in and may only be invoked once per page. */\n  [key: string]: unknown\n}"
+      },
+      {
+        "name": "DeskCrewApi",
+        "kind": "interface",
+        "code": "export interface DeskCrewApi {\n  /** Open the support panel. */\n  open: () => void\n  /** Close the support panel. */\n  close: () => void\n  /** Attach a signed identity token to the current session. */\n  identify: (identity: DeskCrewIdentity) => void\n  /** Mount the embedded support portal into an element. May only be called once per page. */\n  embed: (options: DeskCrewEmbedOptions) => void\n  /** Mount the changelog widget. May only be called once per page. */\n  changelog: (options?: DeskCrewChangelogOptions) => void\n  /** Show an eligible survey. Opt in, may only be called once per page. */\n  surveys: (options?: DeskCrewSurveyOptions) => void\n  /** Report an error to Signals. No-op unless the workspace has error capture enabled. */\n  captureError: (error: unknown, context?: Record<string, any>) => void\n}"
+      }
+    ],
     "fathom-analytics": [
       {
         "name": "FathomAnalyticsOptions",
@@ -264,7 +306,7 @@
       {
         "name": "ScriptGoogleAdsenseProps",
         "kind": "interface",
-        "code": "interface ScriptGoogleAdsenseProps {\n  dataAdClient: string\n  dataAdSlot: string\n  dataAdFormat?: 'auto' | 'rectangle' | 'vertical' | 'horizontal' | 'fluid' | 'autorelaxed'\n  dataAdLayout?: 'in-article' | 'in-feed' | 'fixed'\n  dataFullWidthResponsive?: boolean\n  /**\n   * Defines the trigger event to load the script.\n   */\n  trigger?: ElementScriptTrigger\n}"
+        "code": "interface ScriptGoogleAdsenseProps {\n  dataAdClient: string\n  dataAdSlot: string\n  dataAdFormat?: 'auto' | 'rectangle' | 'vertical' | 'horizontal' | 'fluid' | 'autorelaxed'\n  dataAdLayout?: 'in-article' | 'image-top' | 'image-side' | 'text-only'\n  dataAdLayoutKey?: string\n  dataFullWidthResponsive?: boolean\n  /**\n   * Defines the trigger event to load the script.\n   */\n  trigger?: ElementScriptTrigger\n}"
       },
       {
         "name": "ScriptGoogleAdsenseEvents",
@@ -790,7 +832,7 @@
       {
         "name": "MapLibreOptions",
         "kind": "const",
-        "code": "export const MapLibreOptions = object({\n  /**\n   * Inject the MapLibre GL JS 5.24.0 stylesheet when the script begins\n   * loading. Disable this when supplying the stylesheet through Nuxt.\n   * @default true\n   */\n  injectStyles: optional(boolean()),\n  /**\n   * Stylesheet URL used when `injectStyles` is enabled.\n   * @default 'https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css'\n   */\n  stylesheetUrl: optional(string()),\n  /**\n   * Worker URL for the CSP-compatible MapLibre build. Pair this with a custom\n   * `scriptInput.src` that loads `maplibre-gl-csp.js`.\n   */\n  workerUrl: optional(string()),\n})"
+        "code": "export const MapLibreOptions = object({\n  /**\n   * Inject the MapLibre stylesheet when the script begins loading. Disable\n   * this when supplying the stylesheet through Nuxt.\n   * @default true\n   */\n  injectStyles: optional(boolean()),\n  /**\n   * Stylesheet URL used when `injectStyles` is enabled. Defaults to the\n   * stylesheet shipped in the `maplibre-gl` package.\n   */\n  stylesheetUrl: optional(string()),\n  /**\n   * Worker URL passed to `maplibregl.setWorkerUrl()`. Set this when serving\n   * the MapLibre worker from your own origin.\n   */\n  workerUrl: optional(string()),\n})"
       },
       {
         "name": "MapLibreApi",
@@ -805,7 +847,7 @@
       {
         "name": "ScriptMapLibreMapProps",
         "kind": "interface",
-        "code": "interface ScriptMapLibreMapProps {\n  /**\n   * Defines when the MapLibre script loads.\n   * @default 'visible'\n   */\n  trigger?: ElementScriptTrigger\n  /** MapLibre style URL or inline style specification. */\n  mapStyle: string | MapLibre.StyleSpecification\n  /** Initial and reactively controlled map center. */\n  center: MapLibre.LngLatLike\n  /** Initial and reactively controlled zoom level. @default 12 */\n  zoom?: number\n  /** Initial and reactively controlled bearing in degrees. @default 0 */\n  bearing?: number\n  /** Initial and reactively controlled pitch in degrees. @default 0 */\n  pitch?: number\n  /** Options passed to `new maplibregl.Map()`. Dedicated props take precedence. */\n  options?: Omit<MapLibre.MapOptions, 'container'>\n  /** Inject MapLibre's stylesheet when the script begins loading. @default true */\n  injectStyles?: boolean\n  /** Custom MapLibre stylesheet URL. */\n  stylesheetUrl?: string\n  /** Worker URL used with MapLibre's CSP-compatible build. */\n  workerUrl?: string\n  /** Width reserved before the map loads. @default 640 */\n  width?: number | string\n  /** Height reserved before the map loads. @default 400 */\n  height?: number | string\n  /** Accessible name for an interactive map. @default 'Interactive map' */\n  ariaLabel?: string\n  /** Disable map input and remove it from the accessibility tree when decorative. @default true */\n  interactive?: boolean\n  /** Attributes applied to the outer layout container. */\n  rootAttrs?: HTMLAttributes & ReservedProps & Record<string, unknown>\n}"
+        "code": "interface ScriptMapLibreMapProps {\n  /**\n   * Defines when the MapLibre script loads.\n   * @default 'visible'\n   */\n  trigger?: ElementScriptTrigger\n  /** MapLibre style URL or inline style specification. */\n  mapStyle: string | MapLibre.StyleSpecification\n  /** Initial and reactively controlled map center. */\n  center: MapLibre.LngLatLike\n  /** Initial and reactively controlled zoom level. @default 12 */\n  zoom?: number\n  /** Initial and reactively controlled bearing in degrees. @default 0 */\n  bearing?: number\n  /** Initial and reactively controlled pitch in degrees. @default 0 */\n  pitch?: number\n  /** Options passed to `new maplibregl.Map()`. Dedicated props take precedence. */\n  options?: Omit<MapLibre.MapOptions, 'container'>\n  /** Inject MapLibre's stylesheet when the script begins loading. @default true */\n  injectStyles?: boolean\n  /** Custom MapLibre stylesheet URL. */\n  stylesheetUrl?: string\n  /** Worker URL passed to `maplibregl.setWorkerUrl()`. */\n  workerUrl?: string\n  /** Width reserved before the map loads. @default 640 */\n  width?: number | string\n  /** Height reserved before the map loads. @default 400 */\n  height?: number | string\n  /** Accessible name for an interactive map. @default 'Interactive map' */\n  ariaLabel?: string\n  /** Disable map input and remove it from the accessibility tree when decorative. @default true */\n  interactive?: boolean\n  /** Attributes applied to the outer layout container. */\n  rootAttrs?: HTMLAttributes & ReservedProps & Record<string, unknown>\n}"
       },
       {
         "name": "ScriptMapLibreMapEvents",
@@ -1125,6 +1167,26 @@
         "name": "SpeedCurveApi",
         "kind": "interface",
         "code": "export interface SpeedCurveApi {\n  LUX: LuxGlobal\n}"
+      },
+      {
+        "name": "ComposableOnlyKey",
+        "kind": "type",
+        "code": "type ComposableOnlyKey = 'id' | 'spaMode' | 'autoTrackSpaNavigations'"
+      },
+      {
+        "name": "ForwardedKey",
+        "kind": "type",
+        "code": "type ForwardedKey = Exclude<keyof InferInput<typeof SpeedCurveOptions>, ComposableOnlyKey>"
+      },
+      {
+        "name": "AssertNever",
+        "kind": "type",
+        "code": "type AssertNever<T extends never> = T"
+      },
+      {
+        "name": "_AllForwardedKeysListed",
+        "kind": "type",
+        "code": "type _AllForwardedKeysListed = AssertNever<Exclude<ForwardedKey, typeof LUX_USER_CONFIG_KEYS[number]>>"
       }
     ],
     "stripe": [
@@ -1450,21 +1512,20 @@
         "name": "injectStyles",
         "type": "boolean",
         "required": false,
-        "description": "Inject the MapLibre GL JS 5.24.0 stylesheet when the script begins loading. Disable this when supplying the stylesheet through Nuxt.",
+        "description": "Inject the MapLibre stylesheet when the script begins loading. Disable this when supplying the stylesheet through Nuxt.",
         "defaultValue": "true"
       },
       {
         "name": "stylesheetUrl",
         "type": "string",
         "required": false,
-        "description": "Stylesheet URL used when `injectStyles` is enabled.",
-        "defaultValue": "'https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css'"
+        "description": "Stylesheet URL used when `injectStyles` is enabled. Defaults to the stylesheet shipped in the `maplibre-gl` package."
       },
       {
         "name": "workerUrl",
         "type": "string",
         "required": false,
-        "description": "Worker URL for the CSP-compatible MapLibre build. Pair this with a custom `scriptInput.src` that loads `maplibre-gl-csp.js`."
+        "description": "Worker URL passed to `maplibregl.setWorkerUrl()`. Set this when serving the MapLibre worker from your own origin."
       }
     ],
     "AhrefsAnalyticsOptions": [
@@ -1761,6 +1822,45 @@
         "type": "boolean",
         "required": false,
         "description": "Enable error tracking via observability."
+      }
+    ],
+    "DeskCrewOptions": [
+      {
+        "name": "widgetKey",
+        "type": "string",
+        "required": true,
+        "description": "The DeskCrew public widget key, for example `pub_xxxxxxxx`. Rendered as the `data-key` attribute. Find it in the DeskCrew dashboard under Install."
+      },
+      {
+        "name": "board",
+        "type": "string",
+        "required": false,
+        "description": "The workspace board slug, lowercase letters, numbers and dashes only. Rendered as the `data-board` attribute. Required for the help centre, changelog and embedded portal surfaces; the chat launcher works without it."
+      },
+      {
+        "name": "color",
+        "type": "string",
+        "required": false,
+        "description": "Accent colour as a 6 digit hex value, for example `#4f46e5`. Rendered as the `data-color` attribute. Overrides the accent configured on the workspace."
+      },
+      {
+        "name": "position",
+        "type": "'left' | 'right'",
+        "required": false,
+        "description": "Which side of the viewport the launcher sits on. Rendered as the `data-position` attribute.",
+        "defaultValue": "'right'"
+      },
+      {
+        "name": "greeting",
+        "type": "string",
+        "required": false,
+        "description": "Greeting text shown in the widget header, overriding the workspace default. Rendered as the `data-greeting` attribute."
+      },
+      {
+        "name": "launcher",
+        "type": "'logo'",
+        "required": false,
+        "description": "Render the workspace logo in the launcher bubble instead of the default icon. Rendered as the `data-launcher` attribute."
       }
     ],
     "FathomAnalyticsOptions": [
@@ -4445,7 +4545,12 @@
       },
       {
         "name": "dataAdLayout",
-        "type": "'in-article' | 'in-feed' | 'fixed'",
+        "type": "'in-article' | 'image-top' | 'image-side' | 'text-only'",
+        "required": false
+      },
+      {
+        "name": "dataAdLayoutKey",
+        "type": "string",
         "required": false
       },
       {

@@ -27,7 +27,7 @@ export interface ScriptMapLibreMapProps {
   injectStyles?: boolean
   /** Custom MapLibre stylesheet URL. */
   stylesheetUrl?: string
-  /** Worker URL used with MapLibre's CSP-compatible build. */
+  /** Worker URL passed to `maplibregl.setWorkerUrl()`. */
   workerUrl?: string
   /** Width reserved before the map loads. @default 640 */
   width?: number | string
@@ -152,8 +152,9 @@ function bindMapEvents(instance: MapLibre.Map): void {
     emit('update:pitch', instance.getPitch())
   })
   instance.on('error', (event) => {
-    loadError.value = event.error
-    emit('error', event.error)
+    const error = event.error instanceof Error ? event.error : new Error(event.error.message, { cause: event.error })
+    loadError.value = error
+    emit('error', error)
   })
 }
 

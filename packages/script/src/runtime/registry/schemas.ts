@@ -30,19 +30,19 @@ export const LeafletOptions = object({
 
 export const MapLibreOptions = object({
   /**
-   * Inject the MapLibre GL JS 5.24.0 stylesheet when the script begins
-   * loading. Disable this when supplying the stylesheet through Nuxt.
+   * Inject the MapLibre stylesheet when the script begins loading. Disable
+   * this when supplying the stylesheet through Nuxt.
    * @default true
    */
   injectStyles: optional(boolean()),
   /**
-   * Stylesheet URL used when `injectStyles` is enabled.
-   * @default 'https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css'
+   * Stylesheet URL used when `injectStyles` is enabled. Defaults to the
+   * stylesheet shipped in the `maplibre-gl` package.
    */
   stylesheetUrl: optional(string()),
   /**
-   * Worker URL for the CSP-compatible MapLibre build. Pair this with a custom
-   * `scriptInput.src` that loads `maplibre-gl-csp.js`.
+   * Worker URL passed to `maplibregl.setWorkerUrl()`. Set this when serving
+   * the MapLibre worker from your own origin.
    */
   workerUrl: optional(string()),
 })
@@ -288,6 +288,45 @@ export const DatabuddyAnalyticsOptions = object({
    * Enable error tracking via observability.
    */
   enableErrorTracking: optional(boolean()),
+})
+
+export const DeskCrewOptions = object({
+  /**
+   * The DeskCrew public widget key, for example `pub_xxxxxxxx`.
+   * Rendered as the `data-key` attribute. Find it in the DeskCrew dashboard under Install.
+   * @see https://deskcrew.io/integrations/nuxt
+   */
+  // minLength(1) rather than a bare string(): envDefaults resolves an unset key to '',
+  // which would validate happily and render data-key="" onto the tag, booting a keyless
+  // widget that silently talks to no workspace. Failing loudly in dev is the point.
+  widgetKey: pipe(string(), minLength(1)),
+  /**
+   * The workspace board slug, lowercase letters, numbers and dashes only.
+   * Rendered as the `data-board` attribute. Required for the help centre, changelog and
+   * embedded portal surfaces; the chat launcher works without it.
+   */
+  board: optional(string()),
+  /**
+   * Accent colour as a 6 digit hex value, for example `#4f46e5`.
+   * Rendered as the `data-color` attribute. Overrides the accent configured on the workspace.
+   */
+  color: optional(string()),
+  /**
+   * Which side of the viewport the launcher sits on.
+   * Rendered as the `data-position` attribute.
+   * @default 'right'
+   */
+  position: optional(union([literal('left'), literal('right')])),
+  /**
+   * Greeting text shown in the widget header, overriding the workspace default.
+   * Rendered as the `data-greeting` attribute.
+   */
+  greeting: optional(string()),
+  /**
+   * Render the workspace logo in the launcher bubble instead of the default icon.
+   * Rendered as the `data-launcher` attribute.
+   */
+  launcher: optional(literal('logo')),
 })
 
 export const FathomAnalyticsOptions = object({
