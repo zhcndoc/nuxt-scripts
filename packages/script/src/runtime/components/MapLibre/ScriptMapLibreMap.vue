@@ -1,82 +1,18 @@
 <script lang="ts">
-import type * as MapLibre from 'maplibre-gl'
-import type { CSSProperties, HTMLAttributes, ReservedProps, ShallowRef, ShallowRef as VueShallowRef } from 'vue'
-import type { ElementScriptTrigger } from '#nuxt-scripts/types'
+export type {
+  ScriptMapLibreMapEmits,
+  ScriptMapLibreMapExpose,
+  ScriptMapLibreMapProps,
+  ScriptMapLibreMapSlots,
+} from './types'
 
 export { MAPLIBRE_MAP_INJECTION_KEY } from './useMapLibreResource'
-
-export interface ScriptMapLibreMapProps {
-  /**
-   * Defines when the MapLibre script loads.
-   * @default 'visible'
-   */
-  trigger?: ElementScriptTrigger
-  /** MapLibre style URL or inline style specification. */
-  mapStyle: string | MapLibre.StyleSpecification
-  /** Initial and reactively controlled map center. */
-  center: MapLibre.LngLatLike
-  /** Initial and reactively controlled zoom level. @default 12 */
-  zoom?: number
-  /** Initial and reactively controlled bearing in degrees. @default 0 */
-  bearing?: number
-  /** Initial and reactively controlled pitch in degrees. @default 0 */
-  pitch?: number
-  /** Options passed to `new maplibregl.Map()`. Dedicated props take precedence. */
-  options?: Omit<MapLibre.MapOptions, 'container'>
-  /** Inject MapLibre's stylesheet when the script begins loading. @default true */
-  injectStyles?: boolean
-  /** Custom MapLibre stylesheet URL. */
-  stylesheetUrl?: string
-  /** Worker URL passed to `maplibregl.setWorkerUrl()`. */
-  workerUrl?: string
-  /** Width reserved before the map loads. @default 640 */
-  width?: number | string
-  /** Height reserved before the map loads. @default 400 */
-  height?: number | string
-  /** Accessible name for an interactive map. @default 'Interactive map' */
-  ariaLabel?: string
-  /** Disable map input and remove it from the accessibility tree when decorative. @default true */
-  interactive?: boolean
-  /** Attributes applied to the outer layout container. */
-  rootAttrs?: HTMLAttributes & ReservedProps & Record<string, unknown>
-}
-
-export interface ScriptMapLibreMapExpose {
-  maplibre: ShallowRef<typeof MapLibre | undefined>
-  map: ShallowRef<MapLibre.Map | undefined>
-  load: () => Promise<unknown> | unknown
-}
-
-export interface ScriptMapLibreMapEmits {
-  'ready': [payload: ScriptMapLibreMapExpose]
-  'error': [error: Error]
-  'click': [event: MapLibre.MapEventType['click']]
-  'move': [event: MapLibre.MapEventType['move']]
-  'moveend': [event: MapLibre.MapEventType['moveend']]
-  'zoom': [event: MapLibre.MapEventType['zoom']]
-  'zoomend': [event: MapLibre.MapEventType['zoomend']]
-  'rotate': [event: MapLibre.MapEventType['rotate']]
-  'rotateend': [event: MapLibre.MapEventType['rotateend']]
-  'pitch': [event: MapLibre.MapEventType['pitch']]
-  'pitchend': [event: MapLibre.MapEventType['pitchend']]
-  'update:center': [center: MapLibre.LngLat]
-  'update:zoom': [zoom: number]
-  'update:bearing': [bearing: number]
-  'update:pitch': [pitch: number]
-}
-
-export interface ScriptMapLibreMapSlots {
-  default?: () => any
-  loading?: () => any
-  awaitingLoad?: () => any
-  error?: (props: { error: Error }) => any
-  placeholder?: () => any
-  /** Text or links that expose the canvas map's essential information to assistive technology. */
-  description?: () => any
-}
 </script>
 
 <script setup lang="ts">
+import type * as MapLibre from 'maplibre-gl'
+import type { CSSProperties, HTMLAttributes, ShallowRef as VueShallowRef } from 'vue'
+import type { ScriptMapLibreMapEmits, ScriptMapLibreMapExpose, ScriptMapLibreMapProps, ScriptMapLibreMapSlots } from './types'
 import type { MapLibreMapContext } from './useMapLibreResource'
 import { computed, onBeforeUnmount, onMounted, onUnmounted, provide, shallowRef, toRaw, useId, useTemplateRef, watch } from 'vue'
 import { useScriptTriggerElement } from '#nuxt-scripts/composables/useScriptTriggerElement'
@@ -111,6 +47,7 @@ const { load, status, onLoaded, onError } = useScriptMapLibre({
 
 const maplibre = shallowRef() as VueShallowRef<typeof MapLibre | undefined>
 const map = shallowRef<MapLibre.Map>()
+const defaultAttributionControl = shallowRef<MapLibre.AttributionControl>()
 const isMapReady = shallowRef(false)
 const loadError = shallowRef(new Error('MapLibre failed to load'))
 const initializationError = shallowRef<Error>()
@@ -122,14 +59,49 @@ onError((error?: Error) => {
   emit('error', loadError.value)
 })
 
-const exposed: ScriptMapLibreMapExpose = { maplibre, map, load }
+/** Moves the camera so the bounds fit the viewport. */
+function fitBounds(bounds: MapLibre.LngLatBoundsLike, options?: MapLibre.FitBoundsOptions): void {
+  map.value?.fitBounds(bounds, options)
+}
+
+/** Animates the camera along a straight path. */
+function easeTo(options: MapLibre.EaseToOptions): void {
+  map.value?.easeTo(options)
+}
+
+/** Animates the camera along a curved flight path. */
+function flyTo(options: MapLibre.FlyToOptions): void {
+  map.value?.flyTo(options)
+}
+
+/**
+ * Options for a fit to the `bounds` prop. A fit resets the bearing to 0 by
+ * default, so it keeps the `bearing` prop unless the options set one.
+ */
+function boundsFitOptions(): MapLibre.FitBoundsOptions {
+  return { bearing: props.bearing, ...toRaw(props.fitBoundsOptions) }
+}
+
+/** Coordinates of the bounds the camera last fitted, as `[[west, south], [east, north]]`. */
+let fittedBounds: string | undefined
+
+function boundsKey(bounds: MapLibre.LngLatBoundsLike, library: typeof MapLibre): string {
+  return JSON.stringify(library.LngLatBounds.convert(toRaw(bounds)).toArray())
+}
+
+const exposed: ScriptMapLibreMapExpose = { maplibre, map, load, fitBounds, easeTo, flyTo }
 defineExpose<ScriptMapLibreMapExpose>(exposed)
 provide(MAPLIBRE_MAP_INJECTION_KEY, {
   maplibre: maplibre as unknown as MapLibreMapContext['maplibre'],
   map,
+  defaultAttributionControl,
 })
 
 function bindMapEvents(instance: MapLibre.Map): void {
+  instance.on('load', event => emit('load', event))
+  // MapLibre drops every source and layer on `setStyle`. Anything added on the
+  // raw map must be added again when this fires.
+  instance.on('style.load', event => emit('styleload', event))
   instance.on('click', event => emit('click', event))
   instance.on('move', event => emit('move', event))
   instance.on('moveend', (event) => {
@@ -158,6 +130,22 @@ function bindMapEvents(instance: MapLibre.Map): void {
   })
 }
 
+/**
+ * MapLibre makes its canvas a focusable `region` named "Map". This component's
+ * container is already the labelled region, so the canvas drops its nested
+ * landmark. The keyboard handler only works while the canvas has focus, so the
+ * canvas stays a tab stop only while that handler is enabled.
+ */
+function configureCanvasAccessibility(instance: MapLibre.Map): void {
+  const canvas = instance.getCanvas()
+  canvas.removeAttribute('role')
+  if (props.interactive && instance.keyboard.isEnabled())
+    return
+  canvas.setAttribute('tabindex', '-1')
+  canvas.setAttribute('aria-hidden', 'true')
+  canvas.removeAttribute('aria-label')
+}
+
 onMounted(() => {
   onLoaded((instance: { maplibregl: typeof MapLibre }) => {
     if (isUnmounted || !mapEl.value)
@@ -166,8 +154,14 @@ onMounted(() => {
     maplibre.value = instance.maplibregl
     let mapInstance: MapLibre.Map | undefined
     try {
+      // MapLibre jumps to `center` and `zoom` first, then fits `bounds`, so
+      // `bounds` wins for the initial center and zoom.
+      const attributionOptions = toRaw(props.options)?.attributionControl
       mapInstance = new instance.maplibregl.Map({
         ...toRaw(props.options),
+        // The component adds the default attribution control itself, so
+        // `<ScriptMapLibreAttributionControl>` can replace it through the public API.
+        attributionControl: false,
         container: mapEl.value,
         style: toRaw(props.mapStyle),
         center: toRaw(props.center),
@@ -175,7 +169,14 @@ onMounted(() => {
         bearing: props.bearing,
         pitch: props.pitch,
         interactive: props.interactive,
+        ...(props.bounds ? { bounds: toRaw(props.bounds), fitBoundsOptions: boundsFitOptions() } : {}),
       })
+      fittedBounds = props.bounds ? boundsKey(props.bounds, instance.maplibregl) : undefined
+      if (attributionOptions !== false) {
+        defaultAttributionControl.value = new instance.maplibregl.AttributionControl(typeof attributionOptions === 'object' ? attributionOptions : undefined)
+        mapInstance.addControl(defaultAttributionControl.value)
+      }
+      configureCanvasAccessibility(mapInstance)
       bindMapEvents(mapInstance)
       map.value = mapInstance
       mapInstance.once('load', () => {
@@ -188,6 +189,7 @@ onMounted(() => {
     }
     catch (error) {
       mapInstance?.remove()
+      defaultAttributionControl.value = undefined
       const cause = error instanceof Error ? error : new Error('MapLibre map initialization failed')
       initializationError.value = cause
       loadError.value = cause
@@ -201,13 +203,33 @@ watch(() => props.mapStyle, (mapStyle) => {
 }, { deep: 2 })
 
 watch(() => props.center, (center) => {
-  if (!map.value || !maplibre.value)
+  if (!map.value || !maplibre.value || !center)
     return
   const current = map.value.getCenter()
   const next = maplibre.value.LngLat.convert(toRaw(center))
   if (current.lng !== next.lng || current.lat !== next.lat)
     map.value.jumpTo({ center: next })
 }, { deep: 1 })
+
+// A fit runs only when the coordinates change. A new array with the same
+// coordinates, such as an inline literal on a parent render, keeps the camera
+// where the user moved it. A change to `fitBoundsOptions` alone does not fit.
+watch(() => props.bounds, (bounds) => {
+  // Removing bounds keeps the camera. Forget the last fit, so bounds that come
+  // back with the same coordinates fit again.
+  if (!bounds) {
+    fittedBounds = undefined
+    return
+  }
+  if (!map.value || !maplibre.value)
+    return
+  const key = boundsKey(bounds, maplibre.value)
+  if (key === fittedBounds)
+    return
+  fittedBounds = key
+  // Camera props jump without animation, so a bounds change fits the same way.
+  map.value.fitBounds(toRaw(bounds), { ...boundsFitOptions(), duration: 0 })
+}, { deep: 2 })
 
 watch(() => props.zoom, (zoom) => {
   if (map.value && map.value.getZoom() !== zoom)

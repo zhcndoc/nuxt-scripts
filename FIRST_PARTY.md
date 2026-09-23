@@ -131,42 +131,42 @@ useScriptPlausibleAnalytics({
 | `PRIVACY_HEATMAP` | ip、language、hardware | GA、Clarity、Hotjar |
 | `PRIVACY_IP_ONLY` | 仅 ip | PostHog、Plausible、Umami、Rybbit、Databuddy、Ahrefs、Fathom、CF Web Analytics、Vercel、Matomo、Carbon Ads、Lemon Squeezy、Intercom、Gravatar、YouTube、Vimeo、Calendly |
 
-注意：GTM、Segment、Crisp、Mixpanel、Bing UET 和 SpeedCurve 没有代理能力，因此不会应用隐私转换。
+注意：GTM、Segment、Crisp、Mixpanel、Bing UET、SpeedCurve 和 Pulse 没有代理能力，因此不会应用隐私转换。
 
 ## 脚本支持
 
 | 配置键 | 注册表脚本 | 隐私 | 机制 |
 |---|---|---|---|
-| `googleAnalytics` | googleAnalytics, **googleAdsense** | `PRIVACY_HEATMAP` | Path A |
-| `metaPixel` | metaPixel | `PRIVACY_FULL` | Path A |
-| `tiktokPixel` | tiktokPixel | `PRIVACY_FULL` | Path A |
-| `xPixel` | xPixel | `PRIVACY_FULL` | Path A |
-| `snapchatPixel` | snapchatPixel | `PRIVACY_FULL` | Path A |
-| `redditPixel` | redditPixel | `PRIVACY_FULL` | Path A |
-| `linkedinInsight` | linkedinInsight | `PRIVACY_FULL` | Path A |
-| `ahrefsAnalytics` | ahrefsAnalytics | `PRIVACY_IP_ONLY` | Path A |
-| `clarity` | clarity | `PRIVACY_HEATMAP` | Path A |
-| `hotjar` | hotjar | `PRIVACY_HEATMAP` | Path A |
-| `posthog` | posthog | `PRIVACY_IP_ONLY` | **Path B**（仅 npm）+ autoInject |
-| `plausibleAnalytics` | plausibleAnalytics | `PRIVACY_IP_ONLY` | Path A + autoInject |
-| `umamiAnalytics` | umamiAnalytics | `PRIVACY_IP_ONLY` | Path A + autoInject |
-| `rybbitAnalytics` | rybbitAnalytics | `PRIVACY_IP_ONLY` | Path A + autoInject + postProcess |
-| `databuddyAnalytics` | databuddyAnalytics | `PRIVACY_IP_ONLY` | Path A + autoInject |
-| `fathomAnalytics` | fathomAnalytics | `PRIVACY_IP_ONLY` | Path A + postProcess |
-| `cloudflareWebAnalytics` | cloudflareWebAnalytics | `PRIVACY_IP_ONLY` | Path A |
-| `vercelAnalytics` | vercelAnalytics | `PRIVACY_IP_ONLY` | Path A |
-| `matomoAnalytics` | matomoAnalytics | `PRIVACY_IP_ONLY` | Path A |
-| `carbonAds` | carbonAds | `PRIVACY_IP_ONLY` | Path A |
-| `lemonSqueezy` | lemonSqueezy | `PRIVACY_IP_ONLY` | Path A |
-| `youtubePlayer` | youtubePlayer | `PRIVACY_IP_ONLY` | Path A |
-| `vimeoPlayer` | vimeoPlayer | `PRIVACY_IP_ONLY` | Path A |
-| `intercom` | intercom | `PRIVACY_IP_ONLY` | Path A |
-| `gravatar` | gravatar | `PRIVACY_IP_ONLY` | Path A |
-| `calendly` | calendly | `PRIVACY_IP_ONLY` | Path A |
+| `googleAnalytics` | googleAnalytics, **googleAdsense** | `PRIVACY_HEATMAP` | 路径 A |
+| `metaPixel` | metaPixel | `PRIVACY_FULL` | 路径 A |
+| `tiktokPixel` | tiktokPixel | `PRIVACY_FULL` | 路径 A |
+| `xPixel` | xPixel | `PRIVACY_FULL` | 路径 A |
+| `snapchatPixel` | snapchatPixel | `PRIVACY_FULL` | 路径 A |
+| `redditPixel` | redditPixel | `PRIVACY_FULL` | 路径 A |
+| `linkedinInsight` | linkedinInsight | `PRIVACY_FULL` | 路径 A |
+| `ahrefsAnalytics` | ahrefsAnalytics | `PRIVACY_IP_ONLY` | 路径 A |
+| `clarity` | clarity | `PRIVACY_HEATMAP` | 路径 A |
+| `hotjar` | hotjar | `PRIVACY_HEATMAP` | 路径 A |
+| `posthog` | posthog | `PRIVACY_IP_ONLY` | **路径 B**（仅 npm）+ autoInject |
+| `plausibleAnalytics` | plausibleAnalytics | `PRIVACY_IP_ONLY` | 路径 A + autoInject |
+| `umamiAnalytics` | umamiAnalytics | `PRIVACY_IP_ONLY` | 路径 A + autoInject |
+| `rybbitAnalytics` | rybbitAnalytics | `PRIVACY_IP_ONLY` | 路径 A + autoInject + postProcess |
+| `databuddyAnalytics` | databuddyAnalytics | `PRIVACY_IP_ONLY` | 路径 A + autoInject |
+| `fathomAnalytics` | fathomAnalytics | `PRIVACY_IP_ONLY` | 路径 A + postProcess |
+| `cloudflareWebAnalytics` | cloudflareWebAnalytics | `PRIVACY_IP_ONLY` | 路径 A |
+| `vercelAnalytics` | vercelAnalytics | `PRIVACY_IP_ONLY` | 路径 A |
+| `matomoAnalytics` | matomoAnalytics | `PRIVACY_IP_ONLY` | 路径 A |
+| `carbonAds` | carbonAds | `PRIVACY_IP_ONLY` | 路径 A |
+| `lemonSqueezy` | lemonSqueezy | `PRIVACY_IP_ONLY` | 路径 A |
+| `youtubePlayer` | youtubePlayer | `PRIVACY_IP_ONLY` | 路径 A |
+| `vimeoPlayer` | vimeoPlayer | `PRIVACY_IP_ONLY` | 路径 A |
+| `intercom` | intercom | `PRIVACY_IP_ONLY` | 路径 A |
+| `gravatar` | gravatar | `PRIVACY_IP_ONLY` | 路径 A |
+| `calendly` | calendly | `PRIVACY_IP_ONLY` | 路径 A |
 | `googleTagManager` | googleTagManager | n/a | 仅打包 |
 | `segment` | segment | n/a | 仅打包 |
 | `crisp` | crisp | n/a | 仅打包 |
-| `speedcurve` | speedcurve | n/a | 无代理（ID 参数化的 CDN URL） |
+| `speedcurve` | speedcurve | n/a | 无代理（ID 参数化的 CDN URL）|
 
 ### 从第一方模式排除（`proxy: false`）
 

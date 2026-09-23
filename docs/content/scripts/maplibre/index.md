@@ -90,13 +90,18 @@ OpenFreeMap 的公共实例无需 API 密钥，但不提供 SLA。在选择生�
 ## 组件
 
 - [`<ScriptMapLibreMap>`{lang="html"}](/scripts/maplibre/api/script-maplibre-map) 创建地图并控制延迟加载。
-- [`<ScriptMapLibreMarker>`{lang="html"}](/scripts/maplibre/api/marker) 添加可访问且具有响应性的标记。
+- [`<ScriptMapLibreMarker>`{lang="html"}](/scripts/maplibre/api/marker) 添加无障碍、响应式标记。
 - [`<ScriptMapLibrePopup>`{lang="html"}](/scripts/maplibre/api/popup) 将插槽中的 HTML 绑定到标记或坐标。
-- [`<ScriptMapLibreNavigationControl>`{lang="html"}](/scripts/maplibre/api/navigation-control) 添加缩放、指南针和俯仰控制。
-- [`<ScriptMapLibreGeoJson>`{lang="html"}](/scripts/maplibre/api/geojson) 管理 GeoJSON 源及其样式图层。
+- [`<ScriptMapLibreNavigationControl>`{lang="html"}](/scripts/maplibre/api/navigation-control) 添加缩放、罗盘和倾斜控制。
+- [`<ScriptMapLibreScaleControl>`{lang="html"}](/scripts/maplibre/api/scale-control) 添加比例尺。
+- [`<ScriptMapLibreGeolocateControl>`{lang="html"}](/scripts/maplibre/api/geolocate-control) 查找用户的位置。
+- [`<ScriptMapLibreFullscreenControl>`{lang="html"}](/scripts/maplibre/api/fullscreen-control) 切换全屏模式。
+- [`<ScriptMapLibreAttributionControl>`{lang="html"}](/scripts/maplibre/api/attribution-control) 移动地图归属信息或更改其样式。
+- [`<ScriptMapLibreGeoJson>`{lang="html"}](/scripts/maplibre/api/geojson) 管理 GeoJSON 源及其样式图层，包括[聚类](/scripts/maplibre/api/geojson#clustering)。
 
 ## 指南
 
-- [配送追踪器](/scripts/maplibre/guides/delivery-tracker) 使用响应式标记和样式化 GeoJSON 构建实用的路线追踪器。
+- [配送跟踪器](/scripts/maplibre/guides/delivery-tracker) 使用响应式标记和样式化 GeoJSON 构建实用的路线跟踪器。
 - [样式与提供商](/scripts/maplibre/guides/styles-and-providers) 区分渲染器、样式、瓦片服务和地图数据的选择。
-- [性能、CSP 与无障碍](/scripts/maplibre/guides/performance-csp-and-accessibility) 涵盖加载触发器、WebGL 回退方案、工作线程和装饰性地图。
+- [性能、CSP 与无障碍](/scripts/maplibre/guides/performance-csp-and-accessibility) 介绍加载触发器、WebGL 回退方案、worker 和装饰性地图。
+- [原始地图实例](/scripts/maplibre/guides/raw-map-instance) 介绍图层事件、筛选、要素状态和相机动画移动。

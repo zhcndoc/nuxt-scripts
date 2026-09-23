@@ -5,6 +5,11 @@ import { inject, onUnmounted, shallowRef, watch } from 'vue'
 export interface MapLibreMapContext {
   map: ShallowRef<MapLibre.Map | undefined>
   maplibre: ShallowRef<typeof MapLibre | undefined>
+  /**
+   * The attribution control that `<ScriptMapLibreMap>` adds for the
+   * `attributionControl` map option. It is `undefined` when that option is `false`.
+   */
+  defaultAttributionControl: ShallowRef<MapLibre.AttributionControl | undefined>
 }
 
 export const MAPLIBRE_MAP_INJECTION_KEY = Symbol('maplibre-map') as InjectionKey<MapLibreMapContext>
@@ -19,6 +24,19 @@ export interface MapLibreResourceContext {
 }
 
 /**
+ * Logs a MapLibre resource failure and hands it to the owning component, so the
+ * consumer can surface it instead of only seeing a console message.
+ */
+export function reportMapLibreResourceError(error: unknown, onError?: (error: Error) => void): Error {
+  const failure = error instanceof Error
+    ? error
+    : new Error('MapLibre resource creation failed', { cause: error })
+  console.error('[nuxt-scripts] MapLibre resource creation failed:', error)
+  onError?.(failure)
+  return failure
+}
+
+/**
  * Creates a MapLibre resource after its parent map and any component-specific
  * DOM refs are ready, then removes it synchronously during unmount.
  */
@@ -26,10 +44,13 @@ export function useMapLibreResource<T>({
   ready,
   create,
   cleanup,
+  onError,
 }: {
   ready?: () => boolean
   create: (context: MapLibreResourceContext) => T
   cleanup: (resource: T, context: MapLibreResourceContext) => void
+  /** Called when `create` throws, after the failure is logged. */
+  onError?: (error: Error) => void
 }): ShallowRef<T | undefined> {
   const mapContext = inject(MAPLIBRE_MAP_INJECTION_KEY, undefined)
   const resource = shallowRef<T>() as ShallowRef<T | undefined>
@@ -52,7 +73,7 @@ export function useMapLibreResource<T>({
         resource.value = create(resourceContext)
       }
       catch (error) {
-        console.error('[nuxt-scripts] MapLibre resource creation failed:', error)
+        reportMapLibreResourceError(error, onError)
       }
       finally {
         creating = false

@@ -48,6 +48,10 @@ export const scriptMeta = {
     urls: ['https://app.rybbit.io/api/script.js'],
     trackedData: ['page-views', 'events'],
   },
+  pulseAnalytics: {
+    urls: ['https://js.ciphera.net/script.js'],
+    trackedData: ['page-views', 'events', 'conversions', 'scrolls'],
+  },
   databuddyAnalytics: {
     urls: ['https://cdn.databuddy.cc/databuddy.js'],
     trackedData: ['page-views', 'events'],
@@ -146,6 +150,11 @@ export const scriptMeta = {
     urls: ['https://deskcrew.io/desk.js'],
     trackedData: ['user-identity', 'events', 'errors'],
     testId: 'pub_deskcrewdemo',
+  },
+  tawkTo: {
+    urls: ['https://embed.tawk.to/68496650ddf9cd19094b4530/1itfbfagd'],
+    trackedData: ['user-identity', 'events'],
+    testId: '68496650ddf9cd19094b4530',
   },
 
   crisp: {

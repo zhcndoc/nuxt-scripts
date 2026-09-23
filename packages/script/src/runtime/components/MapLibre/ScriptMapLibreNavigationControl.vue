@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import type * as MapLibre from 'maplibre-gl'
+import type { ScriptMapLibreNavigationControlProps } from './types'
 import { useMapLibreResource } from './useMapLibreResource'
 
-const props = defineProps<{
-  /** Position of the navigation control. */
-  position?: MapLibre.ControlPosition
-  /** Options passed to `new maplibregl.NavigationControl()`. */
-  options?: MapLibre.NavigationControlOptions
-}>()
+// Renders no DOM of its own. A render function that returns `null` gives a
+// comment node on the server and the client. A comment-only template does not:
+// a production build strips the comment, so the server renders nothing and
+// hydration reports a mismatch.
+defineOptions({ render: () => null })
+
+const props = defineProps<ScriptMapLibreNavigationControlProps>()
 
 const control = useMapLibreResource<MapLibre.NavigationControl>({
   create({ maplibre, map }) {
@@ -23,7 +25,3 @@ const control = useMapLibreResource<MapLibre.NavigationControl>({
 
 defineExpose({ control })
 </script>
-
-<template>
-  <!-- nuxt-scripts: MapLibre navigation control -->
-</template>

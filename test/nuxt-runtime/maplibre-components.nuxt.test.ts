@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { h, nextTick, shallowRef } from 'vue'
+import { h, nextTick, reactive, shallowRef } from 'vue'
 import ScriptMapLibreGeoJson from '../../packages/script/src/runtime/components/MapLibre/ScriptMapLibreGeoJson.vue'
 import ScriptMapLibreMarker from '../../packages/script/src/runtime/components/MapLibre/ScriptMapLibreMarker.vue'
 import ScriptMapLibreNavigationControl from '../../packages/script/src/runtime/components/MapLibre/ScriptMapLibreNavigationControl.vue'
@@ -61,15 +61,33 @@ function createMapLibreMock() {
 
   const control = { id: 'navigation' }
   const styleEvents = new Map<string, () => void>()
+  const canvas = document.createElement('canvas')
+  const layerBindings: Array<{
+    type: string
+    layerIds: string[]
+    listener: (event: any) => void
+    subscription: { unsubscribe: ReturnType<typeof vi.fn> }
+  }> = []
   const source = { type: 'geojson', setData: vi.fn() }
   const layers = new Set<string>()
   const sources = new Set<string>()
   const map: Record<string, any> = {
-    on: vi.fn((name: string, callback: () => void) => {
-      styleEvents.set(name, callback)
-      return map
+    on: vi.fn((name: string, layerIdsOrCallback: any, layerCallback?: (event: any) => void) => {
+      if (typeof layerIdsOrCallback === 'function') {
+        styleEvents.set(name, layerIdsOrCallback)
+        return map
+      }
+      const subscription = { unsubscribe: vi.fn() }
+      layerBindings.push({
+        type: name,
+        layerIds: layerIdsOrCallback,
+        listener: layerCallback!,
+        subscription,
+      })
+      return subscription
     }),
     off: vi.fn(() => map),
+    getCanvas: vi.fn(() => canvas),
     isStyleLoaded: vi.fn(() => true),
     addSource: vi.fn((id: string) => {
       sources.add(id)
@@ -89,6 +107,9 @@ function createMapLibreMock() {
       layers.delete(id)
       return map
     }),
+    setPaintProperty: vi.fn(() => map),
+    setLayoutProperty: vi.fn(() => map),
+    setFilter: vi.fn(() => map),
     addControl: vi.fn(() => map),
     hasControl: vi.fn(() => true),
     removeControl: vi.fn(() => map),
@@ -111,7 +132,29 @@ function createMapLibreMock() {
     Popup: vi.fn(PopupConstructor),
     NavigationControl: vi.fn(NavigationControlConstructor),
   }
-  return { maplibre, map, marker, markerElement, popup, control, source, styleEvents }
+  return {
+    maplibre,
+    map,
+    marker,
+    markerElement,
+    popup,
+    control,
+    source,
+    styleEvents,
+    canvas,
+    /** Drops every source and layer, the way MapLibre does on a style swap. */
+    swapStyle() {
+      sources.clear()
+      layers.clear()
+      map.isStyleLoaded.mockReturnValue(false)
+      styleEvents.get('styledataloading')?.()
+    },
+    layerBindings,
+    /** The most recent binding for an event type. */
+    layerBinding(type: string) {
+      return layerBindings.filter(binding => binding.type === type).at(-1)!
+    },
+  }
 }
 
 function provideMap(maplibre: any, map: any) {
@@ -302,6 +345,498 @@ describe('mapLibre components', () => {
 
     expect(mocks.map.removeSource).toHaveBeenCalledWith('melbourne')
     expect(error).toHaveBeenCalledWith('[nuxt-scripts] MapLibre resource creation failed:', creationFailure)
+    wrapper.unmount()
+  })
+
+  it('emits an error when GeoJSON resource creation fails', async () => {
+    const mocks = createMapLibreMock()
+    const creationFailure = new Error('Invalid paint expression')
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    mocks.map.addLayer.mockImplementationOnce(() => {
+      throw creationFailure
+    })
+
+    const wrapper = mount(ScriptMapLibreGeoJson, {
+      props: {
+        sourceId: 'melbourne',
+        data: { type: 'FeatureCollection', features: [] },
+        layers: [{ id: 'invalid-layer', type: 'fill', paint: { 'fill-color': 'not-a-colour' } }],
+      },
+      global: provideMap(mocks.maplibre, mocks.map),
+    })
+    await nextTick()
+
+    expect(wrapper.emitted('error')?.[0]).toEqual([creationFailure])
+
+    // correcting the layer recovers without a remount
+    await wrapper.setProps({
+      layers: [{ id: 'invalid-layer', type: 'fill', paint: { 'fill-color': '#396cb2' } }],
+    })
+    expect(mocks.map.addLayer).toHaveBeenCalledTimes(2)
+    expect(wrapper.emitted('error')).toHaveLength(1)
+
+    error.mockRestore()
+    wrapper.unmount()
+  })
+
+  it('keeps the GeoJSON source when layers and source options keep their content', async () => {
+    const mocks = createMapLibreMock()
+    const data = { type: 'FeatureCollection', features: [] } as const
+    const wrapper = mount(ScriptMapLibreGeoJson, {
+      props: {
+        sourceId: 'melbourne',
+        data,
+        sourceOptions: { cluster: true, clusterRadius: 50 },
+        layers: [{ id: 'melbourne-circle', type: 'circle', paint: { 'circle-color': '#396cb2' } }],
+      },
+      global: provideMap(mocks.maplibre, mocks.map),
+    })
+    await nextTick()
+    expect(mocks.map.addSource).toHaveBeenCalledTimes(1)
+
+    // an inline array literal in a parent template gets a fresh identity on
+    // every re-render, but its content is unchanged
+    await wrapper.setProps({
+      sourceOptions: { cluster: true, clusterRadius: 50 },
+      layers: [{ id: 'melbourne-circle', type: 'circle', paint: { 'circle-color': '#396cb2' } }],
+    })
+
+    expect(mocks.map.removeSource).not.toHaveBeenCalled()
+    expect(mocks.map.removeLayer).not.toHaveBeenCalled()
+    expect(mocks.map.addSource).toHaveBeenCalledTimes(1)
+
+    // a paint change updates the layer in place instead of rebuilding the source
+    await wrapper.setProps({
+      layers: [{ id: 'melbourne-circle', type: 'circle', paint: { 'circle-color': '#b23939' } }],
+    })
+    expect(mocks.map.addSource).toHaveBeenCalledTimes(1)
+    expect(mocks.map.setPaintProperty).toHaveBeenCalledWith('melbourne-circle', 'circle-color', '#b23939')
+
+    wrapper.unmount()
+  })
+
+  it('rebuilds after a skipped sync even when the layers return to the last applied value', async () => {
+    const mocks = createMapLibreMock()
+    const wrapper = mount(ScriptMapLibreGeoJson, {
+      props: {
+        sourceId: 'melbourne',
+        data: { type: 'FeatureCollection', features: [] },
+        layers: [{ id: 'melbourne-circle', type: 'circle' }],
+      },
+      global: provideMap(mocks.maplibre, mocks.map),
+    })
+    await nextTick()
+    expect(mocks.map.addSource).toHaveBeenCalledTimes(1)
+
+    // a style swap drops every source and layer, and the style is not loaded yet
+    mocks.swapStyle()
+    await wrapper.setProps({ layers: [{ id: 'melbourne-heat', type: 'heatmap' }] })
+    expect(mocks.map.addSource).toHaveBeenCalledTimes(1)
+
+    mocks.map.isStyleLoaded.mockReturnValue(true)
+    await wrapper.setProps({ layers: [{ id: 'melbourne-circle', type: 'circle' }] })
+    expect(mocks.map.addSource).toHaveBeenCalledTimes(2)
+    expect(mocks.map.addLayer).toHaveBeenLastCalledWith(expect.objectContaining({ id: 'melbourne-circle' }), undefined)
+
+    wrapper.unmount()
+  })
+
+  it('re-adds the GeoJSON source when style.load fires before the style reports loaded', async () => {
+    const mocks = createMapLibreMock()
+    const wrapper = mount(ScriptMapLibreGeoJson, {
+      props: {
+        sourceId: 'melbourne',
+        data: { type: 'FeatureCollection', features: [] },
+        layers: [{ id: 'melbourne-circle', type: 'circle' }],
+      },
+      global: provideMap(mocks.maplibre, mocks.map),
+    })
+    await nextTick()
+    expect(mocks.map.addSource).toHaveBeenCalledTimes(1)
+
+    // a dark mode toggle swaps the basemap, which drops every source and layer
+    mocks.swapStyle()
+    expect(mocks.map.getSource('melbourne')).toBeUndefined()
+
+    // MapLibre fires style.load while isStyleLoaded() is still false, because
+    // isStyleLoaded() also waits for every tile and the sprite
+    mocks.styleEvents.get('style.load')?.()
+
+    expect(mocks.map.addSource).toHaveBeenCalledTimes(2)
+    expect(mocks.map.getSource('melbourne')).toBeDefined()
+    expect(mocks.map.getLayer('melbourne-circle')).toBeDefined()
+
+    wrapper.unmount()
+  })
+
+  it('retries a sync skipped by an unloaded style once the map goes idle', async () => {
+    const mocks = createMapLibreMock()
+    const wrapper = mount(ScriptMapLibreGeoJson, {
+      props: {
+        sourceId: 'melbourne',
+        data: { type: 'FeatureCollection', features: [] },
+        layers: [{ id: 'melbourne-circle', type: 'circle' }],
+      },
+      global: provideMap(mocks.maplibre, mocks.map),
+    })
+    await nextTick()
+    expect(mocks.map.addSource).toHaveBeenCalledTimes(1)
+
+    mocks.swapStyle()
+    await wrapper.setProps({ sourceId: 'greater-melbourne' })
+    expect(mocks.map.addSource).toHaveBeenCalledTimes(1)
+
+    mocks.map.isStyleLoaded.mockReturnValue(true)
+    mocks.styleEvents.get('idle')?.()
+    expect(mocks.map.addSource).toHaveBeenLastCalledWith('greater-melbourne', expect.anything())
+
+    wrapper.unmount()
+  })
+
+  it('updates paint, layout and filter in place when the layer ids and types hold', async () => {
+    const mocks = createMapLibreMock()
+    const wrapper = mount(ScriptMapLibreGeoJson, {
+      props: {
+        sourceId: 'melbourne',
+        data: { type: 'FeatureCollection', features: [] },
+        sourceOptions: { cluster: true },
+        layers: [{
+          id: 'melbourne-circle',
+          type: 'circle',
+          paint: { 'circle-color': '#396cb2', 'circle-radius': 6 },
+          layout: { visibility: 'visible' },
+          filter: ['has', 'point_count'],
+        }],
+      },
+      global: provideMap(mocks.maplibre, mocks.map),
+    })
+    await nextTick()
+    expect(mocks.map.addSource).toHaveBeenCalledTimes(1)
+
+    // a colour mode toggle rebuilds the layer array with a new palette
+    await wrapper.setProps({
+      layers: [{
+        id: 'melbourne-circle',
+        type: 'circle',
+        paint: { 'circle-color': '#b23939', 'circle-radius': 6 },
+        layout: { visibility: 'none' },
+        filter: ['!', ['has', 'point_count']],
+      }],
+    })
+
+    expect(mocks.map.setPaintProperty).toHaveBeenCalledWith('melbourne-circle', 'circle-color', '#b23939')
+    expect(mocks.map.setPaintProperty).toHaveBeenCalledTimes(1)
+    expect(mocks.map.setLayoutProperty).toHaveBeenCalledWith('melbourne-circle', 'visibility', 'none')
+    expect(mocks.map.setFilter).toHaveBeenCalledWith('melbourne-circle', ['!', ['has', 'point_count']])
+    expect(mocks.map.removeSource).not.toHaveBeenCalled()
+    expect(mocks.map.addSource).toHaveBeenCalledTimes(1)
+
+    wrapper.unmount()
+  })
+
+  it('applies a paint value changed in place on a reactive layer array', async () => {
+    const mocks = createMapLibreMock()
+    const layers = reactive([
+      { id: 'melbourne-circle', type: 'circle', paint: { 'circle-color': '#396cb2' } },
+    ])
+    const wrapper = mount(ScriptMapLibreGeoJson, {
+      props: {
+        sourceId: 'melbourne',
+        data: { type: 'FeatureCollection', features: [] },
+        layers,
+      },
+      global: provideMap(mocks.maplibre, mocks.map),
+    })
+    await nextTick()
+
+    layers[0]!.paint['circle-color'] = '#b23939'
+    await nextTick()
+
+    expect(mocks.map.setPaintProperty).toHaveBeenCalledWith('melbourne-circle', 'circle-color', '#b23939')
+    expect(mocks.map.addSource).toHaveBeenCalledTimes(1)
+
+    wrapper.unmount()
+  })
+
+  it('keeps the source on the map when an in-place layer update fails', async () => {
+    const mocks = createMapLibreMock()
+    const updateFailure = new Error('Invalid paint expression')
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const wrapper = mount(ScriptMapLibreGeoJson, {
+      props: {
+        sourceId: 'melbourne',
+        data: { type: 'FeatureCollection', features: [] },
+        layers: [{ id: 'melbourne-circle', type: 'circle', paint: { 'circle-color': '#396cb2' } }],
+      },
+      global: provideMap(mocks.maplibre, mocks.map),
+    })
+    await nextTick()
+
+    mocks.map.setPaintProperty.mockImplementationOnce(() => {
+      throw updateFailure
+    })
+    await wrapper.setProps({
+      layers: [{ id: 'melbourne-circle', type: 'circle', paint: { 'circle-color': 'not-a-colour' } }],
+    })
+
+    expect(wrapper.emitted('error')?.[0]).toEqual([updateFailure])
+    expect(mocks.map.getSource('melbourne')).toBeDefined()
+    expect(mocks.map.removeSource).not.toHaveBeenCalled()
+
+    // the failed value is not recorded, so a corrected palette is applied again
+    await wrapper.setProps({
+      layers: [{ id: 'melbourne-circle', type: 'circle', paint: { 'circle-color': '#b23939' } }],
+    })
+    expect(mocks.map.setPaintProperty).toHaveBeenLastCalledWith('melbourne-circle', 'circle-color', '#b23939')
+    expect(wrapper.emitted('error')).toHaveLength(1)
+
+    error.mockRestore()
+    wrapper.unmount()
+  })
+
+  it('rebuilds the GeoJSON source when the layer structure changes', async () => {
+    const mocks = createMapLibreMock()
+    const base = { id: 'melbourne-circle', type: 'circle' } as const
+    const wrapper = mount(ScriptMapLibreGeoJson, {
+      props: {
+        sourceId: 'melbourne',
+        data: { type: 'FeatureCollection', features: [] },
+        layers: [base],
+      },
+      global: provideMap(mocks.maplibre, mocks.map),
+    })
+    await nextTick()
+
+    // a zoom range is not a diffable property, so it falls back to a rebuild
+    await wrapper.setProps({ layers: [{ ...base, minzoom: 4 }] })
+    expect(mocks.map.addSource).toHaveBeenCalledTimes(2)
+    expect(mocks.map.setPaintProperty).not.toHaveBeenCalled()
+
+    // an added layer changes the structure
+    await wrapper.setProps({ layers: [{ ...base, minzoom: 4 }, { id: 'melbourne-label', type: 'symbol' }] })
+    expect(mocks.map.addSource).toHaveBeenCalledTimes(3)
+
+    wrapper.unmount()
+  })
+
+  it('emits layer events, applies the hover cursor and rebinds after a rebuild', async () => {
+    const mocks = createMapLibreMock()
+    const wrapper = mount(ScriptMapLibreGeoJson, {
+      props: {
+        sourceId: 'melbourne',
+        data: { type: 'FeatureCollection', features: [] },
+        layers: [{ id: 'melbourne-circle', type: 'circle' }],
+        cursor: 'pointer',
+      },
+      global: provideMap(mocks.maplibre, mocks.map),
+    })
+    await nextTick()
+
+    expect(mocks.layerBinding('click').layerIds).toEqual(['melbourne-circle'])
+
+    const clickEvent = { type: 'click', features: [{ id: 1 }] }
+    mocks.layerBinding('click').listener(clickEvent)
+    expect(wrapper.emitted('click')?.[0]).toEqual([clickEvent])
+
+    mocks.layerBinding('mouseenter').listener({ type: 'mouseenter' })
+    expect(mocks.canvas.style.cursor).toBe('pointer')
+    expect(wrapper.emitted('mouseenter')).toHaveLength(1)
+
+    mocks.layerBinding('mouseleave').listener({ type: 'mouseleave' })
+    expect(mocks.canvas.style.cursor).toBe('')
+    expect(wrapper.emitted('mouseleave')).toHaveLength(1)
+
+    const staleClick = mocks.layerBinding('click')
+    await wrapper.setProps({ layers: [{ id: 'melbourne-heat', type: 'heatmap' }] })
+    expect(staleClick.subscription.unsubscribe).toHaveBeenCalledOnce()
+    expect(mocks.layerBinding('click').layerIds).toEqual(['melbourne-heat'])
+
+    const liveClick = mocks.layerBinding('click')
+    wrapper.unmount()
+    expect(liveClick.subscription.unsubscribe).toHaveBeenCalledOnce()
+  })
+
+  it('tracks the cursor prop while the pointer stays over a layer', async () => {
+    const mocks = createMapLibreMock()
+    mocks.canvas.style.cursor = 'grab'
+    const wrapper = mount(ScriptMapLibreGeoJson, {
+      props: {
+        sourceId: 'melbourne',
+        data: { type: 'FeatureCollection', features: [] },
+        layers: [{ id: 'melbourne-circle', type: 'circle' }],
+        cursor: 'pointer',
+      },
+      global: provideMap(mocks.maplibre, mocks.map),
+    })
+    await nextTick()
+
+    mocks.layerBinding('mouseenter').listener({ type: 'mouseenter' })
+    expect(mocks.canvas.style.cursor).toBe('pointer')
+
+    // changing the prop applies without a mouseleave
+    await wrapper.setProps({ cursor: 'crosshair' })
+    expect(mocks.canvas.style.cursor).toBe('crosshair')
+
+    // clearing the prop restores the canvas default
+    await wrapper.setProps({ cursor: undefined })
+    expect(mocks.canvas.style.cursor).toBe('grab')
+
+    // setting it again while still hovering applies it
+    await wrapper.setProps({ cursor: 'zoom-in' })
+    expect(mocks.canvas.style.cursor).toBe('zoom-in')
+
+    mocks.layerBinding('mouseleave').listener({ type: 'mouseleave' })
+    expect(mocks.canvas.style.cursor).toBe('grab')
+    wrapper.unmount()
+  })
+
+  it('applies a cursor added after the pointer entered a layer', async () => {
+    const mocks = createMapLibreMock()
+    mocks.canvas.style.cursor = 'grab'
+    const wrapper = mount(ScriptMapLibreGeoJson, {
+      props: {
+        sourceId: 'melbourne',
+        data: { type: 'FeatureCollection', features: [] },
+        layers: [{ id: 'melbourne-circle', type: 'circle' }],
+      },
+      global: provideMap(mocks.maplibre, mocks.map),
+    })
+    await nextTick()
+
+    mocks.layerBinding('mouseenter').listener({ type: 'mouseenter' })
+    expect(mocks.canvas.style.cursor).toBe('grab')
+
+    await wrapper.setProps({ cursor: 'pointer' })
+    expect(mocks.canvas.style.cursor).toBe('pointer')
+
+    mocks.layerBinding('mouseleave').listener({ type: 'mouseleave' })
+    expect(mocks.canvas.style.cursor).toBe('grab')
+    wrapper.unmount()
+  })
+
+  it('keeps the hover cursor when a style reload rebuilds the same layers', async () => {
+    const mocks = createMapLibreMock()
+    mocks.canvas.style.cursor = 'grab'
+    const wrapper = mount(ScriptMapLibreGeoJson, {
+      props: {
+        sourceId: 'melbourne',
+        data: { type: 'FeatureCollection', features: [] },
+        layers: [{ id: 'melbourne-circle', type: 'circle' }],
+        cursor: 'pointer',
+      },
+      global: provideMap(mocks.maplibre, mocks.map),
+    })
+    await nextTick()
+
+    mocks.layerBinding('mouseenter').listener({ type: 'mouseenter' })
+    expect(mocks.canvas.style.cursor).toBe('pointer')
+
+    // a style reload re-adds the same layers, and MapLibre does not fire
+    // mouseenter again while the pointer stays still
+    mocks.styleEvents.get('style.load')?.()
+    await nextTick()
+    expect(mocks.canvas.style.cursor).toBe('pointer')
+
+    mocks.layerBinding('mouseleave').listener({ type: 'mouseleave' })
+    expect(mocks.canvas.style.cursor).toBe('grab')
+    wrapper.unmount()
+  })
+
+  it('drops the hover cursor when a prop change rebuilds the same layer IDs', async () => {
+    const mocks = createMapLibreMock()
+    mocks.canvas.style.cursor = 'grab'
+    const wrapper = mount(ScriptMapLibreGeoJson, {
+      props: {
+        sourceId: 'melbourne',
+        data: { type: 'FeatureCollection', features: [] },
+        layers: [{ id: 'melbourne-circle', type: 'circle', filter: ['has', 'point_count'] }],
+        cursor: 'pointer',
+      },
+      global: provideMap(mocks.maplibre, mocks.map),
+    })
+    await nextTick()
+
+    mocks.layerBinding('mouseenter').listener({ type: 'mouseenter' })
+    expect(mocks.canvas.style.cursor).toBe('pointer')
+
+    // the layer ID is unchanged but the filter is not, so the pointer may no
+    // longer sit over a rendered feature
+    await wrapper.setProps({
+      layers: [{ id: 'melbourne-circle', type: 'circle', filter: ['!', ['has', 'point_count']] }],
+    })
+    expect(mocks.canvas.style.cursor).toBe('grab')
+    // the component never invents a pointer event it did not receive
+    expect(wrapper.emitted('mouseleave')).toBeUndefined()
+
+    // MapLibre re-evaluates on the next pointer move, whether the pointer is
+    // still over a feature or over a spot the new filter emptied
+    mocks.layerBinding('mouseenter').listener({ type: 'mouseenter' })
+    expect(mocks.canvas.style.cursor).toBe('pointer')
+
+    mocks.layerBinding('mouseleave').listener({ type: 'mouseleave' })
+    expect(mocks.canvas.style.cursor).toBe('grab')
+    wrapper.unmount()
+  })
+
+  it('drops the hover cursor when a rebuild replaces the layers', async () => {
+    const mocks = createMapLibreMock()
+    mocks.canvas.style.cursor = 'grab'
+    const wrapper = mount(ScriptMapLibreGeoJson, {
+      props: {
+        sourceId: 'melbourne',
+        data: { type: 'FeatureCollection', features: [] },
+        layers: [{ id: 'melbourne-circle', type: 'circle' }],
+        cursor: 'pointer',
+      },
+      global: provideMap(mocks.maplibre, mocks.map),
+    })
+    await nextTick()
+
+    mocks.layerBinding('mouseenter').listener({ type: 'mouseenter' })
+    expect(mocks.canvas.style.cursor).toBe('pointer')
+
+    // different layers may not sit under the pointer, so the cursor resets
+    await wrapper.setProps({ layers: [{ id: 'melbourne-heat', type: 'heatmap' }] })
+    expect(mocks.canvas.style.cursor).toBe('grab')
+    wrapper.unmount()
+  })
+
+  it('leaves the cursor alone while the pointer is away from every layer', async () => {
+    const mocks = createMapLibreMock()
+    mocks.canvas.style.cursor = 'grab'
+    const wrapper = mount(ScriptMapLibreGeoJson, {
+      props: {
+        sourceId: 'melbourne',
+        data: { type: 'FeatureCollection', features: [] },
+        layers: [{ id: 'melbourne-circle', type: 'circle' }],
+      },
+      global: provideMap(mocks.maplibre, mocks.map),
+    })
+    await nextTick()
+
+    await wrapper.setProps({ cursor: 'pointer' })
+    expect(mocks.canvas.style.cursor).toBe('grab')
+    wrapper.unmount()
+  })
+
+  it('leaves the cursor alone without a cursor prop', async () => {
+    const mocks = createMapLibreMock()
+    mocks.canvas.style.cursor = 'grab'
+    const wrapper = mount(ScriptMapLibreGeoJson, {
+      props: {
+        sourceId: 'melbourne',
+        data: { type: 'FeatureCollection', features: [] },
+        layers: [{ id: 'melbourne-circle', type: 'circle' }],
+      },
+      global: provideMap(mocks.maplibre, mocks.map),
+    })
+    await nextTick()
+
+    mocks.layerBinding('mouseenter').listener({ type: 'mouseenter' })
+    expect(mocks.canvas.style.cursor).toBe('grab')
+
+    mocks.layerBinding('mouseleave').listener({ type: 'mouseleave' })
+    expect(mocks.canvas.style.cursor).toBe('grab')
     wrapper.unmount()
   })
 

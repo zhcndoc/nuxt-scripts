@@ -2,8 +2,9 @@ import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'no
 import { join } from 'node:path'
 import { createResolver } from '@nuxt/kit'
 import { getProxyDef, registry } from '@nuxt/scripts/registry'
-import { $fetch, getBrowser, setup, url } from '@nuxt/test-utils/e2e'
+import { $fetch, getBrowser, url } from '@nuxt/test-utils/e2e'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { setupFixture } from '../utils/setup-fixture'
 
 const { resolve } = createResolver(import.meta.url)
 const fixtureDir = resolve('../fixtures/first-party')
@@ -22,7 +23,7 @@ async function tolerateBrowserRace<T>(operation: Promise<T>): Promise<T | undefi
   }
 }
 
-await setup({
+await setupFixture({
   rootDir: fixtureDir,
   browser: true,
   build: true,
@@ -663,6 +664,7 @@ describe('first-party privacy stripping', () => {
       'umamiAnalytics', // umami.track() triggers fetch POST
       // cloudflareWebAnalytics — auto-engagement only, no CTA buttons
       // fathomAnalytics — bundle/proxy disabled (Fathom bot-detection flags self-hosted/proxied traffic, see #720)
+      // pulseAnalytics — bundle only, no proxy (server-side visitor identity needs the real client IP)
     ])
 
     /**
@@ -935,6 +937,7 @@ describe('first-party privacy stripping', () => {
     }, 30000)
 
     // fathomAnalytics — bundle/proxy disabled in registry (see #720), script loads directly from CDN
+    // pulseAnalytics — bundle only, no proxy in registry; beacons go direct to pulse-api.ciphera.net
 
     it('intercom', async () => {
       const { captures, rawCaptures, proxyRequests, externalRequests, preClickProxyCount, postClickProxyCount } = await testProvider('intercom', '/intercom-test')
@@ -998,6 +1001,7 @@ describe('first-party privacy stripping', () => {
       { name: 'umamiAnalytics', path: '/umami' },
       { name: 'databuddyAnalytics', path: '/databuddy' },
       { name: 'fathomAnalytics', path: '/fathom' },
+      { name: 'pulseAnalytics', path: '/pulse' },
       { name: 'intercom', path: '/intercom-test' },
       { name: 'crisp', path: '/crisp-test' },
       { name: 'posthog', path: '/posthog' },
@@ -1183,6 +1187,7 @@ describe('first-party privacy stripping', () => {
       { name: 'umamiAnalytics', path: '/umami' },
       { name: 'databuddyAnalytics', path: '/databuddy' },
       { name: 'fathomAnalytics', path: '/fathom' },
+      { name: 'pulseAnalytics', path: '/pulse' },
       { name: 'intercom', path: '/intercom-test' },
       { name: 'crisp', path: '/crisp-test' },
       { name: 'posthog', path: '/posthog' },

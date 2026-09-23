@@ -36,12 +36,14 @@ import type { NpmInput } from './registry/npm'
 import type { PayPalInput } from './registry/paypal'
 import type { PlausibleAnalyticsInput } from './registry/plausible-analytics'
 import type { PostHogInput } from './registry/posthog'
+import type { PulseAnalyticsInput } from './registry/pulse-analytics'
 import type { RedditPixelInput } from './registry/reddit-pixel'
 import type { RybbitAnalyticsInput } from './registry/rybbit-analytics'
 import type { SegmentInput } from './registry/segment'
 import type { SnapTrPixelInput } from './registry/snapchat-pixel'
 import type { SpeedCurveInput } from './registry/speedcurve'
 import type { StripeInput } from './registry/stripe'
+import type { TawkToInput } from './registry/tawk-to'
 import type { TikTokPixelInput } from './registry/tiktok-pixel'
 import type { UmamiAnalyticsInput } from './registry/umami-analytics'
 import type { UsercentricsInput } from './registry/usercentrics'
@@ -55,6 +57,29 @@ import type { ProxyPrivacyInput } from './server/utils/privacy'
 // Google Maps component types (re-exported for easy user access)
 export type { Cluster, ClusterStats, MarkerClustererContext, MarkerClustererInstance, MarkerClustererOptions } from './components/GoogleMaps/types'
 export { MARKER_CLUSTERER_INJECTION_KEY } from './components/GoogleMaps/types'
+
+// MapLibre component types (re-exported for easy user access)
+export type {
+  ScriptMapLibreAttributionControlProps,
+  ScriptMapLibreFullscreenControlEmits,
+  ScriptMapLibreFullscreenControlProps,
+  ScriptMapLibreGeoJsonEmits,
+  ScriptMapLibreGeoJsonLayer,
+  ScriptMapLibreGeoJsonProps,
+  ScriptMapLibreGeoJsonResource,
+  ScriptMapLibreGeolocateControlEmits,
+  ScriptMapLibreGeolocateControlProps,
+  ScriptMapLibreMapEmits,
+  ScriptMapLibreMapExpose,
+  ScriptMapLibreMapProps,
+  ScriptMapLibreMapSlots,
+  ScriptMapLibreMarkerEmits,
+  ScriptMapLibreMarkerProps,
+  ScriptMapLibreNavigationControlProps,
+  ScriptMapLibrePopupEmits,
+  ScriptMapLibrePopupProps,
+  ScriptMapLibreScaleControlProps,
+} from './components/MapLibre/types'
 
 export type WarmupStrategy = false | 'preload' | 'preconnect' | 'dns-prefetch'
 
@@ -277,6 +302,7 @@ export interface ScriptRegistry {
   linkedinInsight?: LinkedInInsightInput
   paypal?: PayPalInput
   posthog?: PostHogInput
+  pulseAnalytics?: PulseAnalyticsInput
   matomoAnalytics?: MatomoAnalyticsInput
   mixpanelAnalytics?: MixpanelAnalyticsInput
   rybbitAnalytics?: RybbitAnalyticsInput
@@ -284,6 +310,7 @@ export interface ScriptRegistry {
   segment?: SegmentInput
   speedcurve?: SpeedCurveInput
   stripe?: StripeInput
+  tawkTo?: TawkToInput
   tiktokPixel?: TikTokPixelInput
   xEmbed?: XEmbedInput
   xPixel?: XPixelInput
@@ -307,8 +334,8 @@ export type BuiltInRegistryScriptKey
     | 'databuddyAnalytics' | 'deskcrew' | 'metaPixel' | 'fathomAnalytics' | 'instagramEmbed'
     | 'plausibleAnalytics' | 'googleAdsense' | 'googleAnalytics' | 'googleMaps' | 'leaflet' | 'maplibre'
     | 'googleRecaptcha' | 'googleSignIn' | 'lemonSqueezy' | 'googleTagManager'
-    | 'hotjar' | 'intercom' | 'linkedinInsight' | 'paypal' | 'posthog' | 'matomoAnalytics'
-    | 'mixpanelAnalytics' | 'rybbitAnalytics' | 'redditPixel' | 'segment' | 'stripe' | 'tiktokPixel'
+    | 'hotjar' | 'intercom' | 'linkedinInsight' | 'paypal' | 'posthog' | 'pulseAnalytics' | 'matomoAnalytics'
+    | 'mixpanelAnalytics' | 'rybbitAnalytics' | 'redditPixel' | 'segment' | 'stripe' | 'tawkTo' | 'tiktokPixel'
     | 'xEmbed' | 'xPixel' | 'snapchatPixel' | 'speedcurve' | 'youtubePlayer' | 'vercelAnalytics'
     | 'vimeoPlayer' | 'umamiAnalytics' | 'usercentrics' | 'gravatar' | 'npm'
 

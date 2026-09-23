@@ -808,6 +808,35 @@ export const RedditPixelOptions = object({
   id: string(),
 })
 
+export const PulseAnalyticsOptions = object({
+  /**
+   * The site domain as registered in Pulse.
+   * @see https://docs.ciphera.net/pulse/script-installation
+   */
+  domain: string(),
+  /**
+   * The API origin the tracker posts events to. Only needed for a self-hosted
+   * or reverse-proxied Pulse API.
+   * @default 'https://pulse-api.ciphera.net'
+   */
+  apiUrl: optional(string()),
+  /**
+   * Record scroll depth.
+   * @default true
+   */
+  trackScroll: optional(boolean()),
+  /**
+   * Record outbound link clicks as `outbound_link` events.
+   * @default true
+   */
+  trackOutbound: optional(boolean()),
+  /**
+   * Record file download clicks as `file_download` events.
+   * @default true
+   */
+  trackDownloads: optional(boolean()),
+})
+
 export const RybbitAnalyticsOptions = object({
   /**
    * Your Rybbit site ID.
@@ -1172,6 +1201,21 @@ export const StripeOptions = object({
    * @see https://docs.stripe.com/sdks/stripejs-versioning
    */
   version: optional(union([literal('v3'), literal('acacia'), literal('basil'), literal('clover'), literal('dahlia'), string()])),
+})
+
+export const TawkToOptions = object({
+  /**
+   * Your Tawk.to property ID: the first path segment of the widget embed URL
+   * `https://embed.tawk.to/<propertyId>/<widgetId>`.
+   * @see https://dashboard.tawk.to/
+   */
+  propertyId: pipe(string(), minLength(1)),
+  /**
+   * Your Tawk.to widget ID: the second path segment of the widget embed URL
+   * `https://embed.tawk.to/<propertyId>/<widgetId>`.
+   * @see https://dashboard.tawk.to/
+   */
+  widgetId: pipe(string(), minLength(1)),
 })
 
 export const TikTokPixelOptions = object({
